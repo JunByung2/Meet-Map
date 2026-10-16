@@ -212,6 +212,7 @@ p {
   padding: 36px;
   max-width: 1280px;
   width: 100%;
+  margin: 0 auto;
 }
 .page-head {
   display: flex;

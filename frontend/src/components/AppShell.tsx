@@ -1,20 +1,20 @@
-"use client";
+'use client'
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { api } from '@/lib/api'
 
 export type ShellGroup = {
-  id: number;
-  name: string;
-  icon?: string | null;
-  memberNicknames?: string[];
-};
+  id: number
+  name: string
+  icon?: string | null
+  memberNicknames?: string[]
+}
 
-type Me = { nickname?: string };
+type Me = { nickname?: string }
 
-const AVATAR_TONES = ["", "peach", "lavender"];
+const AVATAR_TONES = ['', 'peach', 'lavender']
 
 function Icon({ d }: { d: string }) {
   return (
@@ -30,44 +30,48 @@ function Icon({ d }: { d: string }) {
     >
       <path d={d} />
     </svg>
-  );
+  )
 }
 
 const ICONS = {
-  home: "M3 11l9-8 9 8M5 10v10h14V10",
-  chat: "M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z",
-  calendar: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4",
-  map: "M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14",
+  home: 'M3 11l9-8 9 8M5 10v10h14V10',
+  chat: 'M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z',
+  calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
+  map: 'M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14',
   photo:
-    "M4 5h16v14H4zM8 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM4 17l5-5 4 4 3-3 4 4",
-  archive: "M3 5h18v4H3zM5 9v10h14V9M10 13h4",
-};
+    'M4 5h16v14H4zM8 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM4 17l5-5 4 4 3-3 4 4',
+  archive: 'M3 5h18v4H3zM5 9v10h14V9M10 13h4',
+}
 
 export default function AppShell({
   group,
   children,
 }: {
-  group?: ShellGroup;
-  children: React.ReactNode;
+  group?: ShellGroup
+  children: React.ReactNode
 }) {
-  const router = useRouter();
-  const [nickname, setNickname] = useState("");
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const isMapPage =
+    pathname === '/map' || /^\/groups\/[^/]+\/map(?:\/|$)/.test(pathname)
+  const [nickname, setNickname] = useState('')
 
   useEffect(() => {
-    api<Me>("/auth/me")
-      .then((me) => setNickname(me?.nickname ?? ""))
-      .catch(() => {});
-  }, []);
+    api<Me>('/auth/me')
+      .then((me) => setNickname(me?.nickname ?? ''))
+      .catch(() => {})
+  }, [])
 
   async function logout() {
     try {
-      await api("/auth/logout", { method: "POST" });
+      await api('/auth/logout', { method: 'POST' })
     } finally {
-      router.push("/login");
+      router.push('/login')
     }
   }
 
-  const initial = nickname ? nickname.slice(0, 1) : "나";
+  const initial = nickname ? nickname.slice(0, 1) : '나'
 
   return (
     <>
@@ -94,7 +98,7 @@ export default function AppShell({
           <span>우리만 볼 수 있는 기록</span>
           <div className="header-user">
             <span className="avatar">{initial}</span>
-            <span>{nickname || "나"}</span>
+            <span>{nickname || '나'}</span>
           </div>
           <button className="btn secondary sm" onClick={logout}>
             로그아웃
@@ -108,7 +112,7 @@ export default function AppShell({
             <div className="current-group">
               <div className="label">현재 그룹</div>
               <div className="name">
-                {group.icon ? `${group.icon} ` : ""}
+                {group.icon ? `${group.icon} ` : ''}
                 {group.name}
               </div>
               {group.memberNicknames && (
@@ -125,8 +129,8 @@ export default function AppShell({
 
           <nav className="nav">
             <Link
-              href={group ? `/groups/${group.id}` : "/groups"}
-              className="nav-item active"
+              href={group ? `/groups/${group.id}` : '/groups'}
+              className={`nav-item${isMapPage ? '' : ' active'}`}
             >
               <Icon d={ICONS.home} />
               그룹 홈
@@ -139,10 +143,13 @@ export default function AppShell({
               <Icon d={ICONS.calendar} />
               약속
             </span>
-            <span className="nav-item disabled">
+            <Link
+              href={group ? `/map?groupId=${group.id}&view=transit` : '/map'}
+              className={`nav-item${isMapPage ? ' active' : ''}`}
+            >
               <Icon d={ICONS.map} />
               지도
-            </span>
+            </Link>
             <span className="nav-item disabled">
               <Icon d={ICONS.photo} />
               사진
@@ -180,5 +187,5 @@ export default function AppShell({
         <main className="content">{children}</main>
       </div>
     </>
-  );
+  )
 }

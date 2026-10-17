@@ -8,7 +8,7 @@ from app import models  # noqa: F401  (테이블 정의 등록)
 from app.config import ALLOW_DEV_AUTH
 from app.db import Base, engine
 from app.deps.auth import get_current_user
-from app.routers import auth, group_members, groups, invites, oauth, photos
+from app.routers import auth, group_members, groups, invites, messages, oauth, photos
 
 # 종은 장소추천/이동도우미 (로그인한 사용자만)
 from meeting_tools.api import router as meeting_router
@@ -26,6 +26,7 @@ app.include_router(group_members.router)
 app.include_router(invites.router)
 app.include_router(invites.join_router)
 app.include_router(photos.router)
+app.include_router(messages.router)
 
 # 로그인 없이는 호출할 수 없게 라우터 전체에 get_current_user 를 건다.
 _login_required = [Depends(get_current_user)]

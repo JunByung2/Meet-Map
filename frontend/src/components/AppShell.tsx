@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 
 export type ShellGroup = {
@@ -13,6 +13,8 @@ export type ShellGroup = {
 };
 
 type Me = { nickname?: string };
+
+type ActiveMenu = "home" | "photos" | "map";
 
 const AVATAR_TONES = ["", "peach", "lavender"];
 
@@ -45,15 +47,27 @@ const ICONS = {
 
 export default function AppShell({
   group,
-  active = "home",
+  active,
   children,
 }: {
   group?: ShellGroup;
-  active?: "home" | "photos" | "map";
+  active?: ActiveMenu;
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [nickname, setNickname] = useState("");
+
+  // active 를 직접 받으면 그걸 쓰고, 안 받으면 주소를 보고 현재 메뉴를 판단한다
+  const isMapPage =
+    pathname === "/map" || /^\/groups\/[^/]+\/map(?:\/|$)/.test(pathname);
+  const isPhotosPage = /^\/groups\/[^/]+\/photos(?:\/|$)/.test(pathname);
+  const derived: ActiveMenu = isMapPage
+    ? "map"
+    : isPhotosPage
+      ? "photos"
+      : "home";
+  const current: ActiveMenu = active ?? derived;
 
   useEffect(() => {
     api<Me>("/auth/me")
@@ -128,7 +142,7 @@ export default function AppShell({
           <nav className="nav">
             <Link
               href={group ? `/groups/${group.id}` : "/groups"}
-              className={`nav-item${active === "home" ? " active" : ""}`}
+              className={`nav-item${current === "home" ? " active" : ""}`}
             >
               <Icon d={ICONS.home} />
               그룹 홈
@@ -144,7 +158,7 @@ export default function AppShell({
             {group ? (
               <Link
                 href={`/groups/${group.id}/map`}
-                className={`nav-item${active === "map" ? " active" : ""}`}
+                className={`nav-item${current === "map" ? " active" : ""}`}
               >
                 <Icon d={ICONS.map} />
                 지도
@@ -158,7 +172,7 @@ export default function AppShell({
             {group ? (
               <Link
                 href={`/groups/${group.id}/photos`}
-                className={`nav-item${active === "photos" ? " active" : ""}`}
+                className={`nav-item${current === "photos" ? " active" : ""}`}
               >
                 <Icon d={ICONS.photo} />
                 사진

@@ -14,6 +14,7 @@ from app.routers import auth, group_members, groups, invites, messages, oauth, p
 from meeting_tools.api import router as meeting_router
 from meeting_tools.transit.routes import router as transit_map_router
 from meeting_tools.transit.seoul_bus import router as seoul_bus_router
+from memory_api.routes import router as memory_router
 
 logger = logging.getLogger("meetmap")
 
@@ -27,6 +28,7 @@ app.include_router(invites.router)
 app.include_router(invites.join_router)
 app.include_router(photos.router)
 app.include_router(messages.router)
+app.include_router(memory_router)
 
 # 로그인 없이는 호출할 수 없게 라우터 전체에 get_current_user 를 건다.
 _login_required = [Depends(get_current_user)]

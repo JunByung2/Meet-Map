@@ -14,7 +14,7 @@ export type ShellGroup = {
 
 type Me = { nickname?: string };
 
-type ActiveMenu = "home" | "photos" | "map";
+type ActiveMenu = "home" | "chat" | "photos" | "map";
 
 const AVATAR_TONES = ["", "peach", "lavender"];
 
@@ -62,11 +62,14 @@ export default function AppShell({
   const isMapPage =
     pathname === "/map" || /^\/groups\/[^/]+\/map(?:\/|$)/.test(pathname);
   const isPhotosPage = /^\/groups\/[^/]+\/photos(?:\/|$)/.test(pathname);
+  const isChatPage = /^\/groups\/[^/]+\/chat(?:\/|$)/.test(pathname);
   const derived: ActiveMenu = isMapPage
     ? "map"
     : isPhotosPage
       ? "photos"
-      : "home";
+      : isChatPage
+        ? "chat"
+        : "home";
   const current: ActiveMenu = active ?? derived;
 
   useEffect(() => {
@@ -147,10 +150,20 @@ export default function AppShell({
               <Icon d={ICONS.home} />
               그룹 홈
             </Link>
-            <span className="nav-item disabled">
-              <Icon d={ICONS.chat} />
-              채팅
-            </span>
+            {group ? (
+              <Link
+                href={`/groups/${group.id}/chat`}
+                className={`nav-item${current === "chat" ? " active" : ""}`}
+              >
+                <Icon d={ICONS.chat} />
+                채팅
+              </Link>
+            ) : (
+              <span className="nav-item disabled">
+                <Icon d={ICONS.chat} />
+                채팅
+              </span>
+            )}
             <span className="nav-item disabled">
               <Icon d={ICONS.calendar} />
               약속

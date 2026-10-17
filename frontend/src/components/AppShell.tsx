@@ -45,9 +45,11 @@ const ICONS = {
 
 export default function AppShell({
   group,
+  active = "home",
   children,
 }: {
   group?: ShellGroup;
+  active?: "home" | "photos" | "map";
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -126,7 +128,7 @@ export default function AppShell({
           <nav className="nav">
             <Link
               href={group ? `/groups/${group.id}` : "/groups"}
-              className="nav-item active"
+              className={`nav-item${active === "home" ? " active" : ""}`}
             >
               <Icon d={ICONS.home} />
               그룹 홈
@@ -139,14 +141,34 @@ export default function AppShell({
               <Icon d={ICONS.calendar} />
               약속
             </span>
-            <span className="nav-item disabled">
-              <Icon d={ICONS.map} />
-              지도
-            </span>
-            <span className="nav-item disabled">
-              <Icon d={ICONS.photo} />
-              사진
-            </span>
+            {group ? (
+              <Link
+                href={`/groups/${group.id}/map`}
+                className={`nav-item${active === "map" ? " active" : ""}`}
+              >
+                <Icon d={ICONS.map} />
+                지도
+              </Link>
+            ) : (
+              <span className="nav-item disabled">
+                <Icon d={ICONS.map} />
+                지도
+              </span>
+            )}
+            {group ? (
+              <Link
+                href={`/groups/${group.id}/photos`}
+                className={`nav-item${active === "photos" ? " active" : ""}`}
+              >
+                <Icon d={ICONS.photo} />
+                사진
+              </Link>
+            ) : (
+              <span className="nav-item disabled">
+                <Icon d={ICONS.photo} />
+                사진
+              </span>
+            )}
             <span className="nav-item disabled">
               <Icon d={ICONS.archive} />
               지난 기록

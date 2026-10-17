@@ -2,48 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import Sidebar, {
+  LAST_GROUP_KEY,
+  type ActiveMenu,
+  type ShellGroup,
+} from "./Sidebar";
 
-export type ShellGroup = {
-  id: number;
-  name: string;
-  icon?: string | null;
-  memberNicknames?: string[];
-};
+// 다른 파일들이 AppShell 에서 가져다 쓰던 타입은 그대로 쓸 수 있게 다시 내보낸다
+export type { ShellGroup };
 
 type Me = { nickname?: string };
-
-type ActiveMenu = "home" | "chat" | "photos" | "map";
-
-const AVATAR_TONES = ["", "peach", "lavender"];
-
-function Icon({ d }: { d: string }) {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d={d} />
-    </svg>
-  );
-}
-
-const ICONS = {
-  home: "M3 11l9-8 9 8M5 10v10h14V10",
-  chat: "M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z",
-  calendar: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4",
-  map: "M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14",
-  photo:
-    "M4 5h16v14H4zM8 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM4 17l5-5 4 4 3-3 4 4",
-  archive: "M3 5h18v4H3zM5 9v10h14V9M10 13h4",
-};
 
 export default function AppShell({
   group,
@@ -55,22 +25,7 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
   const [nickname, setNickname] = useState("");
-
-  // active 를 직접 받으면 그걸 쓰고, 안 받으면 주소를 보고 현재 메뉴를 판단한다
-  const isMapPage =
-    pathname === "/map" || /^\/groups\/[^/]+\/map(?:\/|$)/.test(pathname);
-  const isPhotosPage = /^\/groups\/[^/]+\/photos(?:\/|$)/.test(pathname);
-  const isChatPage = /^\/groups\/[^/]+\/chat(?:\/|$)/.test(pathname);
-  const derived: ActiveMenu = isMapPage
-    ? "map"
-    : isPhotosPage
-      ? "photos"
-      : isChatPage
-        ? "chat"
-        : "home";
-  const current: ActiveMenu = active ?? derived;
 
   useEffect(() => {
     api<Me>("/auth/me")
@@ -82,6 +37,12 @@ export default function AppShell({
     try {
       await api("/auth/logout", { method: "POST" });
     } finally {
+      try {
+        // 공용 컴퓨터에 그룹 이름이 남지 않게 지운다
+        localStorage.removeItem(LAST_GROUP_KEY);
+      } catch {
+        /* 무시 */
+      }
       router.push("/login");
     }
   }
@@ -122,110 +83,7 @@ export default function AppShell({
       </header>
 
       <div className="shell-body">
-        <aside className="sidebar">
-          {group ? (
-            <div className="current-group">
-              <div className="label">현재 그룹</div>
-              <div className="name">
-                {group.icon ? `${group.icon} ` : ""}
-                {group.name}
-              </div>
-              {group.memberNicknames && (
-                <div className="sub">친구 {group.memberNicknames.length}명</div>
-              )}
-            </div>
-          ) : (
-            <div className="current-group">
-              <div className="label">내 공간</div>
-              <div className="name">내 그룹</div>
-              <div className="sub">그룹을 고르거나 새로 만들어요</div>
-            </div>
-          )}
-
-          <nav className="nav">
-            <Link
-              href={group ? `/groups/${group.id}` : "/groups"}
-              className={`nav-item${current === "home" ? " active" : ""}`}
-            >
-              <Icon d={ICONS.home} />
-              그룹 홈
-            </Link>
-            {group ? (
-              <Link
-                href={`/groups/${group.id}/chat`}
-                className={`nav-item${current === "chat" ? " active" : ""}`}
-              >
-                <Icon d={ICONS.chat} />
-                채팅
-              </Link>
-            ) : (
-              <span className="nav-item disabled">
-                <Icon d={ICONS.chat} />
-                채팅
-              </span>
-            )}
-            <span className="nav-item disabled">
-              <Icon d={ICONS.calendar} />
-              약속
-            </span>
-            {group ? (
-              <Link
-                href={`/groups/${group.id}/map`}
-                className={`nav-item${current === "map" ? " active" : ""}`}
-              >
-                <Icon d={ICONS.map} />
-                지도
-              </Link>
-            ) : (
-              <span className="nav-item disabled">
-                <Icon d={ICONS.map} />
-                지도
-              </span>
-            )}
-            {group ? (
-              <Link
-                href={`/groups/${group.id}/photos`}
-                className={`nav-item${current === "photos" ? " active" : ""}`}
-              >
-                <Icon d={ICONS.photo} />
-                사진
-              </Link>
-            ) : (
-              <span className="nav-item disabled">
-                <Icon d={ICONS.photo} />
-                사진
-              </span>
-            )}
-            <span className="nav-item disabled">
-              <Icon d={ICONS.archive} />
-              지난 기록
-            </span>
-          </nav>
-
-          {group?.memberNicknames && group.memberNicknames.length > 0 && (
-            <>
-              <hr className="divider" style={{ margin: 0 }} />
-              <div className="side-label">함께 기록하는 친구들</div>
-              <div>
-                {group.memberNicknames.map((n, i) => (
-                  <div className="friend-row" key={`${n}-${i}`}>
-                    <span
-                      className={`avatar sm ${AVATAR_TONES[i % AVATAR_TONES.length]}`}
-                    >
-                      {n.slice(0, 1)}
-                    </span>
-                    <span>{n}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          <div className="lock-note">
-            이 그룹의 사진과 대화는 그룹 친구에게만 보여요.
-          </div>
-        </aside>
-
+        <Sidebar group={group} active={active} />
         <main className="content">{children}</main>
       </div>
     </>

@@ -45,10 +45,13 @@ export function usePlaceSearch() {
     try {
       const found = await searchKeyword(kakaoRef.current, q);
       setResults(found);
-      if (!found.length) setMessage("검색 결과가 없어요. 다른 이름으로 검색해 보세요.");
+      if (!found.length)
+        setMessage("검색 결과가 없어요. 다른 이름으로 검색해 보세요.");
     } catch (e) {
       setResults([]);
-      setMessage(e instanceof Error ? e.message : "장소 검색 중 오류가 발생했어요.");
+      setMessage(
+        e instanceof Error ? e.message : "장소 검색 중 오류가 발생했어요.",
+      );
     } finally {
       setLoading(false);
     }
@@ -59,5 +62,15 @@ export function usePlaceSearch() {
     setMessage("");
   }
 
-  return { keyword, setKeyword, results, loading, ready, error, message, run, clear };
+  return {
+    keyword,
+    setKeyword,
+    results,
+    loading,
+    ready,
+    error,
+    message,
+    run,
+    clear,
+  };
 }

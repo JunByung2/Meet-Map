@@ -1,13 +1,19 @@
 import logging
 import threading
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from sqlalchemy import text
 
 from app import models  # noqa: F401  (테이블 정의 등록)
 from app.config import ALLOW_DEV_AUTH
 from app.db import Base, engine
+from app.deps.auth import get_current_user
 from app.routers import auth, group_members, groups, invites, oauth, photos
+
+# 종은 장소추천/이동도우미 (로그인한 사용자만)
+from meeting_tools.api import router as meeting_router
+from meeting_tools.transit.routes import router as transit_map_router
+from meeting_tools.transit.seoul_bus import router as seoul_bus_router
 
 logger = logging.getLogger("meetmap")
 
@@ -20,6 +26,12 @@ app.include_router(group_members.router)
 app.include_router(invites.router)
 app.include_router(invites.join_router)
 app.include_router(photos.router)
+
+# 로그인 없이는 호출할 수 없게 라우터 전체에 get_current_user 를 건다.
+_login_required = [Depends(get_current_user)]
+app.include_router(meeting_router, dependencies=_login_required)
+app.include_router(transit_map_router, dependencies=_login_required)
+app.include_router(seoul_bus_router, dependencies=_login_required)
 
 # 이미 만들어진 group_photos 표에 뒤늦게 추가된 컬럼(장소)을 채워 넣는다. (PostgreSQL 전용, 이미 있으면 건너뜀)
 _PHOTO_PLACE_COLUMNS = [

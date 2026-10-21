@@ -1,40 +1,40 @@
-"use client";
+'use client'
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { api, ApiError } from "@/lib/api";
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { api, ApiError } from '@/lib/api'
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("error")) {
-      setError("로그인에 실패했어요. 잠시 후 다시 시도해 주세요.");
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('error')) {
+      setError('로그인에 실패했어요. 잠시 후 다시 시도해 주세요.')
     }
-  }, []);
+  }, [])
 
   async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+    e.preventDefault()
+    setError('')
+    setLoading(true)
     try {
-      await api("/auth/login", {
-        method: "POST",
+      await api('/auth/login', {
+        method: 'POST',
         body: { email, password },
-      });
-      router.push("/groups");
+      })
+      router.push('/groups')
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "로그인 중 문제가 생겼어요.",
-      );
+        err instanceof ApiError ? err.message : '로그인 중 문제가 생겼어요.',
+      )
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
@@ -75,11 +75,11 @@ export default function LoginPage() {
 
           <div className="stack" style={{ gap: 10 }}>
             <a className="btn kakao block" href="/api/auth/kakao/login">
-              <img className="btn-icon" src="/icons/kakao.svg" alt="" />
+              <img className="btn-icon" src="/icons/kakao.png" alt="" />
               카카오로 시작하기
             </a>
             <a className="btn google block" href="/api/auth/google/login">
-              <img className="btn-icon" src="/icons/google.svg" alt="" />
+              <img className="btn-icon" src="/icons/google.png" alt="" />
               Google로 시작하기
             </a>
           </div>
@@ -87,7 +87,7 @@ export default function LoginPage() {
           <hr className="divider" />
 
           <p className="meta" style={{ marginBottom: 12 }}>
-            테스트용 이메일 로그인
+            이메일 로그인
           </p>
           <form onSubmit={onSubmit}>
             <div className="field">
@@ -115,19 +115,19 @@ export default function LoginPage() {
               />
             </div>
             <button className="btn block" type="submit" disabled={loading}>
-              {loading ? "로그인 중…" : "로그인"}
+              {loading ? '로그인 중…' : '로그인'}
             </button>
           </form>
 
-          <p className="meta" style={{ textAlign: "center", marginTop: 18 }}>
+          <p className="meta" style={{ textAlign: 'center', marginTop: 18 }}>
             처음이신가요? <Link href="/signup">이메일로 가입하기</Link>
           </p>
         </div>
 
-        <p className="meta" style={{ textAlign: "center", marginTop: 16 }}>
+        <p className="meta" style={{ textAlign: 'center', marginTop: 16 }}>
           우리만 볼 수 있는 기록 · 초대한 친구와만 나눠요
         </p>
       </div>
     </div>
-  );
+  )
 }

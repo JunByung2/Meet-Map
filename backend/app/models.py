@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    BigInteger, CheckConstraint, DateTime, ForeignKey, Integer, String,
+    BigInteger, CheckConstraint, DateTime, Float, ForeignKey, Integer, String,
     UniqueConstraint, func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -110,3 +110,33 @@ class OAuthAccount(Base):
         UniqueConstraint("provider", "provider_user_id", name="uq_oauth_provider_user"),
         CheckConstraint("provider IN ('kakao','google')", name="ck_oauth_provider"),
     )
+
+
+class Photo(Base):
+    """7. 사진 테이블(group_photos) — 그룹 단위로 보관한다. 파일 본체는 Supabase Storage(비공개 버킷)에 있다."""
+    __tablename__ = "group_photos"
+
+    id: Mapped[int] = mapped_column(BigId, primary_key=True, autoincrement=True)
+    group_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # 올린 사람. 회원이 탈퇴해도 사진은 그룹에 남기므로 NULL 로 둔다.
+    user_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    meeting_id: Mapped[int | None] = mapped_column(BigInteger)  # 약속 연결(약속 기능이 생기면 FK 로 바꾼다)
+    # 예: groups/12/photos/{uuid}/original.png  (같은 경로 중복 불가)
+    storage_path: Mapped[str] = mapped_column(String(300), nullable=False, unique=True)
+    url: Mapped[str | None] = mapped_column(String(600))      # 고정 주소(기록용). 비공개 버킷이라 직접 열리지는 않는다.
+    caption: Mapped[str | None] = mapped_column(String(200))  # 사진 한 장마다의 설명
+    title: Mapped[str | None] = mapped_column(String(60))     # 함께 올린 묶음의 제목
+    memo: Mapped[str | None] = mapped_column(String(500))     # 함께 올린 묶음의 한마디 메모
+    batch_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)  # 한 번에 올린 사진끼리 같은 값
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # 찍은 장소 (선택). 같은 묶음의 사진은 같은 장소를 가진다. 추억지도에 이 좌표로 마커가 찍힌다.
+    place_id: Mapped[str | None] = mapped_column(String(40))        # 카카오 장소 id (같은 장소끼리 묶을 때 사용)
+    place_name: Mapped[str | None] = mapped_column(String(100))
+    place_address: Mapped[str | None] = mapped_column(String(200))
+    place_lat: Mapped[float | None] = mapped_column(Float)          # 위도
+    place_lng: Mapped[float | None] = mapped_column(Float)          # 경도
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

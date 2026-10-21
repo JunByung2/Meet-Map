@@ -35,3 +35,13 @@ KAKAO_REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", "http://localhost:3000/api/
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:3000/api/auth/google/callback")
+
+# --- 사진 (Supabase Storage) : 값은 .env 에만 넣는다 ---
+# 사진 파일은 Supabase 의 비공개 버킷에 저장하고, 브라우저는 Supabase 에 직접 접속하지 않는다.
+# 서버(FastAPI)가 service_role 키로만 Storage 에 접근하므로 이 키는 절대 프론트/깃에 넣지 않는다.
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")  # 예: https://abcd1234.supabase.co
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
+PHOTO_BUCKET = os.getenv("PHOTO_BUCKET", "memory-photos")
+PHOTO_MAX_FILES = 20                    # 한 번에 올릴 수 있는 장수
+PHOTO_MAX_BYTES = 20 * 1024 * 1024      # 사진 한 장 최대 용량 (20MB)
+PHOTO_SIGNED_URL_SECONDS = 30 * 60      # 사진 볼 때 쓰는 임시 주소 유효시간 (30분)

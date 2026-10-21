@@ -12,7 +12,12 @@ export interface PlanState {
   group_name: string
   me: { id: number; nickname: string }
   snapshot: string
-  members: { user_id: number; nickname: string; ready: boolean }[]
+  members: {
+    user_id: number
+    nickname: string
+    ready: boolean
+    departure: SavedDeparture | null
+  }[]
   own_departure: SavedDeparture | null
   can_recommend: boolean
   result: {

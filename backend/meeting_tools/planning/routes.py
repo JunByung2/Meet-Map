@@ -64,20 +64,38 @@ def members_and_departures(db, plan):
           if m.user_id in departures else None] for m in members]], sort_keys=True).encode()).hexdigest()
     return members, departures, snapshot
 
+def serialize_departure(departure):
+    if departure is None:
+        return None
+    return {
+        "place_id": departure.place_id,
+        "name": departure.name,
+        "address": departure.address,
+        "latitude": departure.latitude,
+        "longitude": departure.longitude,
+    }
+
+
 def state(db, plan, user):
     members, departures, snapshot = members_and_departures(db, plan)
-    own = departures.get(user.id)
     complete = 2 <= len(members) <= 5 and all(m.user_id in departures for m in members)
-    return {"id": plan.id, "group_id": plan.group_id,
+    # 이 API는 require_group_member를 통과한 같은 그룹 멤버에게만 제공한다.
+    # 순서는 user_id 기준으로 고정하여 모든 접속자의 번호/색상이 같도록 한다.
+    return {
+        "id": plan.id, "group_id": plan.group_id,
         "group_name": db.get(Group, plan.group_id).name,
         "me": {"id": user.id, "nickname": user.nickname},
         "created_at": plan.created_at, "snapshot": snapshot,
-        "members": [{"user_id": m.user_id, "nickname": m.nickname, "ready": m.user_id in departures}
-                    for m in members],
-        "own_departure": ({"place_id": own.place_id, "name": own.name, "address": own.address,
-            "latitude": own.latitude, "longitude": own.longitude} if own else None),
+        "members": [{
+            "user_id": member.user_id,
+            "nickname": member.nickname,
+            "ready": member.user_id in departures,
+            "departure": serialize_departure(departures.get(member.user_id)),
+        } for member in members],
+        "own_departure": serialize_departure(departures.get(user.id)),
         "can_recommend": complete,
-        "result": plan.result if complete and plan.result_snapshot == snapshot else None}
+        "result": plan.result if complete and plan.result_snapshot == snapshot else None,
+    }
 
 @router.post("", status_code=201)
 def create_plan(group_id: int, body: CreatePlan, user: User = Depends(get_current_user),

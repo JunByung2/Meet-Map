@@ -115,10 +115,16 @@ def main():
             check((call("PUT", f"{path}/my-departure", json=location)).status_code == 200, "save own departure")
             state2 = (call("GET", path, user=2)).json()
             check(state2["own_departure"] is None and state2["members"][0]["ready"], "other member sees ready status")
-            check("latitude" not in state2["members"][0], "private departure coordinates omitted")
+            check(state2["members"][0]["departure"] == location,
+                  "same-group member sees saved departure name and coordinates")
+            check(state2["members"][1]["departure"] is None,
+                  "unsubmitted departure is null")
             check((call("POST", f"{path}/recommend")).status_code == 409, "all members must enter")
             call("PUT", f"{path}/my-departure", user=2, json={**location, "longitude": 127.02})
             check((call("GET", path)).json()["can_recommend"], "all members ready")
+            check([m["user_id"] for m in call("GET", path).json()["members"]]
+                  == [m["user_id"] for m in call("GET", path, user=2).json()["members"]],
+                  "same member order for consistent marker numbers on both accounts")
             other_id = str(uuid4())
             call("POST", base, json={"request_id": other_id})
             check(not any(m["ready"] for m in (call("GET", f"{base}/{other_id}")).json()["members"]),
@@ -159,8 +165,12 @@ def main():
                 member.joined_at = datetime.now(timezone.utc) + timedelta(seconds=1)
                 db.commit()
             check((call("GET", path, user=2)).json()["own_departure"] is None, "rejoining does not reuse old departure")
+            check(call("GET", path).json()["members"][1]["departure"] is None,
+                  "rejoined user's stale departure is not shared")
             call("DELETE", f"{path}/my-departure")
             check((call("GET", path)).json()["own_departure"] is None, "deletion persists")
+            check(call("GET", path, user=3).json()["members"][0]["departure"] is None,
+                  "deleted departure disappears from other member's map data")
         engine.dispose()
     print(f"{checks} checks passed; shared DB and external APIs untouched.")
 

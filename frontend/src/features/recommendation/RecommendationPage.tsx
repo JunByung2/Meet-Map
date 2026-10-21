@@ -1,12 +1,24 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 import BaseKakaoMap, { type MapPlace } from '../map/BaseKakaoMap'
 import styles from '../map/map.module.css'
+import layout from './recommendation.module.css'
 import { usePlacePlan } from './usePlacePlan'
+
+// BaseKakaoMap의 번호별 파스텔 색상과 같은 팔레트.
+const MEMBER_COLORS = ['#A8DCD1', '#AFCBF3', '#F6D6A8', '#D5C2F1', '#F3BFD0']
+
+// 상태 조회 응답이 같으면 지도는 다시 그리지 않아 사용자의 확대/이동을 유지한다.
+const StableKakaoMap = memo(BaseKakaoMap, (previous, next) =>
+  previous.selectedPlaceId === next.selectedPlaceId &&
+  previous.height === next.height &&
+  previous.onPlaceClick === next.onPlaceClick &&
+  JSON.stringify(previous.places) === JSON.stringify(next.places),
+)
 
 interface SearchPlace {
   id: string
@@ -31,7 +43,7 @@ export default function RecommendationPage() {
       <section className={styles.page}>
         <h1>약속 장소 추천</h1>
         <p>
-          그룹 채팅에서 ‘약속 연결’을 눌러 새 추천을 시작하거나, 채팅에 공유된
+          그룹 채팅에서 ‘장소 선택’을 눌러 새 추천을 시작하거나, 채팅에 공유된
           추천 링크를 열어 주세요.
         </p>
         <Link href="/groups">내 그룹으로 돌아가기</Link>
@@ -66,7 +78,9 @@ function DepartureEditor({
   const [keyword, setKeyword] = useState('')
   const [results, setResults] = useState<SearchPlace[]>([])
   const [selectedId, setSelectedId] = useState('')
+  const handlePlaceClick = useCallback((place: MapPlace) => setSelectedId(place.id), [])
   const [searching, setSearching] = useState(false)
+  const [mapView, setMapView] = useState(0)
   const [message, setMessage] = useState('')
   const searchVersion = useRef(0)
   const me = plan?.me
@@ -76,8 +90,6 @@ function DepartureEditor({
     members: plan?.members ?? [],
   }
   const departure = plan?.own_departure ?? null
-  const myIndex = group.members.findIndex((member) => member.user_id === me?.id)
-  const myMarkerId = `departure-${me?.id}`
 
   useEffect(
     () => () => {
@@ -146,8 +158,8 @@ function DepartureEditor({
     if (!saved) return
     setResults([])
     setKeyword('')
-    setSelectedId(myMarkerId)
-    setMessage('내 출발지를 저장했어요. 다른 멤버에게도 입력 완료로 표시돼요.')
+    setSelectedId('')
+    setMessage('내 출발지를 저장했어요. 같은 그룹 멤버의 카드와 지도에도 표시돼요.')
   }
 
   const removeDeparture = async () => {
@@ -157,6 +169,32 @@ function DepartureEditor({
     setResults([])
     setSelectedId('')
     setMessage('')
+  }
+
+  const recommendations = connected && !saving ? (plan?.result?.recommendations ?? []) : []
+  const memberPlaces: MapPlace[] = group.members.flatMap((member, index) => {
+    const saved = member.departure ?? (member.user_id === me?.id ? departure : null)
+    return saved ? [{
+      id: `departure-${member.user_id}`,
+      name: `${member.nickname}: ${saved.name}`,
+      latitude: saved.latitude,
+      longitude: saved.longitude,
+      memberNumber: index + 1,
+    }] : []
+  })
+  const mapPlaces: MapPlace[] = [
+    ...memberPlaces,
+    ...recommendations.map((place, index) => ({ ...place, id: `recommend-${place.id}`, name: `${index + 1}위 · ${place.name}` })),
+    ...results.map((place) => ({ id: `search-${place.id}`, name: place.place_name,
+      latitude: Number(place.y), longitude: Number(place.x) })),
+  ]
+  const readyCount = group.members.filter(member => member.ready).length
+  const showAllDepartures = () => {
+    searchVersion.current += 1
+    setSearching(false)
+    setResults([])
+    setSelectedId('')
+    setMapView(value => value + 1)
   }
 
   if (!plan || !me)
@@ -175,45 +213,21 @@ function DepartureEditor({
       </section>
     )
 
-  const recommendations =
-    connected && !saving ? (plan.result?.recommendations ?? []) : []
-  const mapPlaces: MapPlace[] = [
-    ...recommendations.map((place, index) => ({
-      ...place,
-      id: `recommend-${place.id}`,
-      name: `${index + 1}위 · ${place.name}`,
-    })),
-    ...results.map((place) => ({
-      id: `search-${place.id}`,
-      name: place.place_name,
-      latitude: Number(place.y),
-      longitude: Number(place.x),
-    })),
-    ...(departure
-      ? [
-          {
-            ...departure,
-            id: myMarkerId,
-            name: `${me.nickname}: ${departure.name}`,
-            memberNumber: myIndex + 1,
-          },
-        ]
-      : []),
-  ]
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${layout.page}`}>
       <header style={{ marginBottom: 24 }}>
         <Link href={`/groups/${group.id}/chat`}>← 그룹 채팅으로 돌아가기</Link>
         <p className={styles.hint}>
           {group.name} · {me.nickname}님으로 로그인 중
         </p>
-        <h1 style={{ margin: '8px 0', fontSize: 28 }}>약속 장소 추천</h1>
+        <h1 style={{ margin: '8px 0', fontSize: 28 }}>우리 어디서 만날까요?</h1>
         <p className={styles.hint}>
           각자의 출발지를 입력하고 함께 만나기 좋은 장소를 찾아요.
         </p>
       </header>
 
+      <div className={layout.panel}>
       {error && (
         <p className={styles.message} role="alert">
           {error}
@@ -221,66 +235,50 @@ function DepartureEditor({
       )}
       <p className={styles.hint}>
         {connected
-          ? '3초마다 멤버 입력 상태를 확인해요.'
+          ? '3초마다 멤버 출발지와 추천 결과를 확인해요.'
           : '연결 확인 중 · 마지막으로 확인한 상태입니다.'}
       </p>
       <section className={styles.membersSection}>
         <div className={styles.heading}>
-          <h2>그룹 멤버 출발지</h2>
+          <h2>멤버별 출발지</h2>
           <span className={styles.badge}>
-            그룹 멤버 {group.members.length}명
+            {readyCount}/{group.members.length}명 완료
           </span>
         </div>
         <div className={styles.memberGrid}>
-          {group.members.map((member) => {
+          {group.members.map((member, index) => {
             const isMe = member.user_id === me.id
+            const saved = member.departure ?? (isMe ? departure : null)
+            const color = MEMBER_COLORS[index % MEMBER_COLORS.length]
             return (
-              <div
-                key={member.user_id}
-                className={`${styles.memberCard} ${isMe ? styles.memberActive : ''}`}
-              >
-                <p className={styles.memberName}>
-                  {member.nickname}
-                  {isMe ? ' (나)' : ''}
-                </p>
+              <div key={member.user_id}
+                className={`${styles.memberCard} ${layout.memberCard} ${isMe ? styles.memberActive : ''}`}
+                style={{ borderTop: `4px solid ${color}` }}>
+                <div className={layout.memberTitle}>
+                  <span className={layout.memberNumber} style={{ backgroundColor: color }}
+                    aria-label={`${index + 1}번 멤버`}>{index + 1}</span>
+                  <p className={styles.memberName}>{member.nickname}{isMe ? ' (나)' : ''}</p>
+                </div>
                 <p className={styles.memberDeparture}>
-                  {isMe
-                    ? (departure?.name ?? '내 출발지 미지정')
-                    : member.ready
-                      ? '출발지 입력 완료 ✓'
-                      : '출발지 입력 대기 중'}
+                  {saved?.name ?? (member.ready ? '출발지 정보를 불러오는 중' : '출발지 입력 대기 중')}
                 </p>
-                {isMe && departure && (
-                  <>
-                    <button
-                      type="button"
-                      className={styles.memberButton}
-                      onClick={() => setSelectedId(myMarkerId)}
-                    >
-                      지도에서 보기
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.removeButton}
-                      style={{ marginTop: 12 }}
-                      disabled={saving}
-                      onClick={removeDeparture}
-                    >
-                      출발지 삭제
-                    </button>
-                  </>
-                )}
+                <div className={layout.memberActions}>
+                  {saved && <button type="button" className={styles.memberButton}
+                    onClick={() => setSelectedId(`departure-${member.user_id}`)}>지도에서 보기</button>}
+                  {isMe && saved && <button type="button" className={styles.removeButton}
+                    disabled={saving} onClick={() => void removeDeparture()}>출발지 삭제</button>}
+                </div>
               </div>
             )
           })}
         </div>
         <p className={styles.hint}>
-          다른 멤버에게는 입력 완료 여부를 공유해요. 각자 본인의 출발지만 수정할
-          수 있어요.
+          입력한 출발지는 같은 그룹 멤버의 카드와 지도에 공유돼요.
+          카드의 색상·번호가 지도 마커와 같으며, 수정·삭제는 본인만 할 수 있어요.
         </p>
       </section>
 
-      <div className={styles.layout}>
+      <div className={`${styles.layout} ${layout.contentLayout}`}>
         <section className={styles.search}>
           <div>
             <h3>{me.nickname}님의 출발지 입력</h3>
@@ -355,16 +353,20 @@ function DepartureEditor({
           </section>
         </section>
         <section className={styles.mapSection}>
-          <div className={styles.mapHeader}>
-            <h3>내 출발지 지도</h3>
-            <p className={styles.hint}>검색 결과와 내 출발지를 확인하세요.</p>
+          <div className={`${styles.mapHeader} ${layout.mapHeading}`}>
+            <div><h3>멤버 출발지 지도</h3>
+              <p className={styles.hint}>색상과 번호로 각 멤버의 출발지를 확인하세요.</p></div>
+            <button type="button" className={layout.viewAll} disabled={memberPlaces.length === 0}
+              onClick={showAllDepartures}>전체 출발지 보기</button>
           </div>
-          <BaseKakaoMap
+          <StableKakaoMap
+            key={mapView}
             places={mapPlaces}
             selectedPlaceId={selectedId}
-            onPlaceClick={(place) => setSelectedId(place.id)}
-            height="540px"
+            onPlaceClick={handlePlaceClick}
+            height="600px"
           />
+          <p className={styles.hint}>멤버 출발지 {memberPlaces.length}곳이 지도에 표시돼요.</p>
         </section>
       </div>
 
@@ -440,6 +442,7 @@ function DepartureEditor({
           연결할 예정이에요.
         </p>
       </section>
+      </div>
     </div>
   )
 }

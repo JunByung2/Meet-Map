@@ -3,8 +3,10 @@
 import Link from "next/link";
 import type { GroupDetail, Me } from "@/hooks/useGroupContext";
 import { useGroupMessages } from "@/hooks/useGroupMessages";
+import { useLocationShare } from "@/hooks/useLocationShare";
 import MessageList from "./MessageList";
 import MessageComposer from "./MessageComposer";
+import MeetModePanel from "./MeetModePanel";
 import ChatSidebar from "./ChatSidebar";
 import styles from "./chat.module.css";
 
@@ -17,9 +19,18 @@ export default function ChatPanel({
 }) {
   const { messages, loading, sending, status, setStatus, send } =
     useGroupMessages(group.id, me.id);
+  const meet = useLocationShare(group.id);
 
   const names = new Map(group.members.map((m) => [m.user_id, m.nickname]));
   const nameOf = (userId: number) => names.get(userId) ?? "알 수 없음";
+
+  const onTool = (tool: string) => {
+    if (tool === "MeetMode") {
+      meet.openAsk();
+      return;
+    }
+    setStatus(`${tool} 기능은 다음 단계에서 연결할 예정이에요.`);
+  };
 
   return (
     <>
@@ -42,6 +53,8 @@ export default function ChatPanel({
             </Link>
           </div>
 
+          <MeetModePanel meet={meet} />
+
           <MessageList
             messages={messages}
             loading={loading}
@@ -53,18 +66,11 @@ export default function ChatPanel({
             sending={sending}
             status={status}
             onSend={send}
-            onTool={(tool) =>
-              setStatus(`${tool} 기능은 다음 단계에서 연결할 예정이에요.`)
-            }
+            onTool={onTool}
           />
         </div>
 
-        <ChatSidebar
-          members={group.members}
-          onTool={(tool) =>
-            setStatus(`${tool} 기능은 다음 단계에서 연결할 예정이에요.`)
-          }
-        />
+        <ChatSidebar members={group.members} onTool={onTool} />
       </div>
     </>
   );

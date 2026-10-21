@@ -3,7 +3,7 @@
 import { useState } from "react";
 import styles from "./chat.module.css";
 
-const TOOLS = ["사진", "장소 선택", "약속 연결", "첨부"];
+const TOOLS = ["MeetMode", "사진", "장소 선택", "약속 연결", "첨부"];
 
 export default function MessageComposer({
   sending,

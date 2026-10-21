@@ -75,11 +75,11 @@ export default function LoginPage() {
 
           <div className="stack" style={{ gap: 10 }}>
             <a className="btn kakao block" href="/api/auth/kakao/login">
-              <img className="btn-icon" src="/icons/kakao.svg" alt="" />
+              <img className="btn-icon" src="/icons/kakao.png" alt="" />
               카카오로 시작하기
             </a>
             <a className="btn google block" href="/api/auth/google/login">
-              <img className="btn-icon" src="/icons/google.svg" alt="" />
+              <img className="btn-icon" src="/icons/google.png" alt="" />
               Google로 시작하기
             </a>
           </div>
@@ -87,7 +87,7 @@ export default function LoginPage() {
           <hr className="divider" />
 
           <p className="meta" style={{ marginBottom: 12 }}>
-            테스트용 이메일 로그인
+            이메일 로그인
           </p>
           <form onSubmit={onSubmit}>
             <div className="field">

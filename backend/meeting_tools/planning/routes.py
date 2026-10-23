@@ -174,8 +174,12 @@ def recommend(group_id: int, plan_id: UUID, user: User = Depends(get_current_use
     db.rollback()  # 외부 API 대기 중 DB 연결을 잡아두지 않는다.
     try:
         result = recommend_places(locations)
-    except TransitError:
-        raise HTTPException(502, "이동시간을 조회하지 못했어요. 잠시 후 다시 시도해 주세요.") from None
+    except TransitError as error:
+        print("[추천 조회 실패]", str(error), flush=True)
+        raise HTTPException(
+        502,
+        "이동시간을 조회하지 못했어요. 잠시 후 다시 시도해 주세요.",
+    ) from None
     if not db.get(GroupMember, (group_id, user.id)):
         raise HTTPException(403, "접근 권한이 없습니다.")
     plan = get_plan(db, group_id, plan_id, lock=True)

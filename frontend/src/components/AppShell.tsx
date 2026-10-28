@@ -43,6 +43,8 @@ export default function AppShell({
   async function logout() {
     try {
       await api("/auth/logout", { method: "POST" });
+    } catch {
+      /* 이미 로그아웃됐거나 서버 오류여도 로그인 화면으로 보낸다 */
     } finally {
       try {
         // 공용 컴퓨터에 그룹 이름이 남지 않게 지운다

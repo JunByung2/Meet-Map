@@ -2,6 +2,7 @@
 
 import type { GroupMember } from "@/hooks/useGroupContext";
 import styles from "./chat.module.css";
+import Avatar from "@/components/Avatar";
 
 const AVATAR_TONES = ["", "peach", "lavender"];
 
@@ -20,10 +21,16 @@ export default function ChatSidebar({
           {members.map((m, i) => (
             <span
               key={m.user_id}
-              className={`avatar sm ${AVATAR_TONES[i % AVATAR_TONES.length]}`}
               title={m.nickname}
+              style={{ display: "inline-flex" }}
             >
-              {m.nickname.slice(0, 1)}
+              <Avatar
+                userId={m.user_id}
+                name={m.nickname}
+                image={m.profile_image}
+                size="sm"
+                tone={AVATAR_TONES[i % AVATAR_TONES.length]}
+              />
             </span>
           ))}
         </div>

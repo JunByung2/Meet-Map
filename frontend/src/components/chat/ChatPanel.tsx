@@ -1,47 +1,54 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import type { GroupDetail, Me } from '@/hooks/useGroupContext'
-import { useGroupMessages } from '@/hooks/useGroupMessages'
+import Link from "next/link";
+import type { GroupDetail, Me } from "@/hooks/useGroupContext";
+import { useGroupMessages } from "@/hooks/useGroupMessages";
 
-import { useStartPlacePlan } from '@/features/recommendation/useStartPlacePlan'
-import MessageList from './MessageList'
-import MessageComposer from './MessageComposer'
+import { useStartPlacePlan } from "@/features/recommendation/useStartPlacePlan";
+import MessageList from "./MessageList";
+import MessageComposer from "./MessageComposer";
 
-import ChatSidebar from './ChatSidebar'
-import styles from './chat.module.css'
-import { useLocationShare } from '@/hooks/useLocationShare'
-import MeetModePanel from './MeetModePanel'
+import ChatSidebar from "./ChatSidebar";
+import styles from "./chat.module.css";
+import { useLocationShare } from "@/hooks/useLocationShare";
+import MeetModePanel from "./MeetModePanel";
+
+import { pickName, useNameMode } from "@/lib/nameMode";
 
 export default function ChatPanel({
   group,
   me,
 }: {
-  group: GroupDetail
-  me: Me
+  group: GroupDetail;
+  me: Me;
 }) {
   const { messages, loading, sending, status, setStatus, send } =
-    useGroupMessages(group.id, me.id)
+    useGroupMessages(group.id, me.id);
 
-  const { start, starting } = useStartPlacePlan(group.id, setStatus)
-  const meet = useLocationShare(group.id)
+  const { start, starting } = useStartPlacePlan(group.id, setStatus);
+  const meet = useLocationShare(group.id);
+  const nameMode = useNameMode();
 
-  const names = new Map(group.members.map((m) => [m.user_id, m.nickname]))
-  const nameOf = (userId: number) => names.get(userId) ?? '알 수 없음'
+  const names = new Map(
+    group.members.map((m) => [m.user_id, pickName(m, nameMode)]),
+  );
+  const nameOf = (userId: number) => names.get(userId) ?? "알 수 없음";
+  const imageOf = (userId: number) =>
+    group.members.find((m) => m.user_id === userId)?.profile_image ?? null;
 
   const onTool = (tool: string) => {
-    if (tool === '장소 선택') {
-      void start()
-      return
+    if (tool === "장소 선택") {
+      void start();
+      return;
     }
 
-    if (tool === 'MeetMode') {
-      meet.openAsk()
-      return
+    if (tool === "MeetMode") {
+      meet.openAsk();
+      return;
     }
 
-    setStatus(`${tool} 기능은 다음 단계에서 연결할 예정이에요.`)
-  }
+    setStatus(`${tool} 기능은 다음 단계에서 연결할 예정이에요.`);
+  };
 
   return (
     <>
@@ -71,6 +78,7 @@ export default function ChatPanel({
             loading={loading}
             myUserId={me.id}
             nameOf={nameOf}
+            imageOf={imageOf}
           />
 
           <MessageComposer
@@ -85,5 +93,5 @@ export default function ChatPanel({
         <ChatSidebar members={group.members} onTool={onTool} />
       </div>
     </>
-  )
+  );
 }

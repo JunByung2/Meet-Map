@@ -8,6 +8,7 @@ export type ShareMode = 'once' | 'ten_min'
 export type SharedLocation = {
   user_id: number
   nickname: string | null
+  account_nickname?: string | null // 계정 닉네임; 그룹 별명과 구분
   lat: number // 서버가 500m 격자 중심으로 바꾼 대략적인 위치
   lng: number
   area: string | null // 서버가 알려주는 주변 지명 (예: 홍대입구역 근처)

@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import { useState, type CSSProperties } from 'react'
 import BaseKakaoMap, { type MapPlace } from '@/features/map/BaseKakaoMap'
@@ -7,8 +7,9 @@ import {
   useLocationShare,
   type ShareMode,
 } from '@/hooks/useLocationShare'
+import { pickName, useNameMode } from '@/lib/nameMode'
 
-type Meet = ReturnType<typeof useLocationShare>
+type Meet = ReturnType<typeof useLocationShare>;
 
 const ACCENT = '#3f7d6e'
 
@@ -81,8 +82,8 @@ function ModeBadge({ mode }: { mode: ShareMode }) {
 }
 
 function ProblemGuide({ meet }: { meet: Meet }) {
-  const { problem } = meet
-  if (!problem) return null
+  const { problem } = meet;
+  if (!problem) return null;
 
   const retry = (
     <button
@@ -91,13 +92,13 @@ function ProblemGuide({ meet }: { meet: Meet }) {
       disabled={meet.busy}
       onClick={() => void meet.start()}
     >
-      {problem === 'denied' ? '허용했어요. 다시 시도' : '다시 시도'}
+      {problem === "denied" ? "허용했어요. 다시 시도" : "다시 시도"}
     </button>
-  )
+  );
 
   return (
     <section className="card" role="alert">
-      {problem === 'denied' && (
+      {problem === "denied" && (
         <>
           <h2 className="card-title">위치 권한이 꺼져 있어요</h2>
           <p className="muted">
@@ -106,7 +107,7 @@ function ProblemGuide({ meet }: { meet: Meet }) {
           </p>
           <ul
             className="muted"
-            style={{ margin: '8px 0 12px', paddingLeft: 18 }}
+            style={{ margin: "8px 0 12px", paddingLeft: 18 }}
           >
             <li>PC 크롬·엣지: 주소창 왼쪽 자물쇠 → 위치 → 허용</li>
             <li>안드로이드 크롬: 주소창 자물쇠 → 권한 → 위치 허용</li>
@@ -118,7 +119,7 @@ function ProblemGuide({ meet }: { meet: Meet }) {
           <p className="muted">기기마다 메뉴 이름이 조금 다를 수 있어요.</p>
         </>
       )}
-      {problem === 'unavailable' && (
+      {problem === "unavailable" && (
         <>
           <h2 className="card-title">위치를 확인할 수 없어요</h2>
           <p className="muted">
@@ -126,7 +127,7 @@ function ProblemGuide({ meet }: { meet: Meet }) {
           </p>
         </>
       )}
-      {problem === 'timeout' && (
+      {problem === "timeout" && (
         <>
           <h2 className="card-title">위치 확인이 오래 걸려요</h2>
           <p className="muted">
@@ -134,7 +135,7 @@ function ProblemGuide({ meet }: { meet: Meet }) {
           </p>
         </>
       )}
-      {problem === 'unsupported' && (
+      {problem === "unsupported" && (
         <>
           <h2 className="card-title">
             이 브라우저는 위치 기능을 지원하지 않아요
@@ -142,8 +143,8 @@ function ProblemGuide({ meet }: { meet: Meet }) {
           <p className="muted">다른 브라우저로 열어 주세요.</p>
         </>
       )}
-      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        {problem !== 'unsupported' && retry}
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        {problem !== "unsupported" && retry}
         <button
           type="button"
           className="btn secondary sm"
@@ -153,7 +154,7 @@ function ProblemGuide({ meet }: { meet: Meet }) {
         </button>
       </div>
     </section>
-  )
+  );
 }
 
 export default function MeetModePanel({ meet }: { meet: Meet }) {
@@ -161,6 +162,7 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
     meet
   const [showMap, setShowMap] = useState(false)
   const [selectedId, setSelectedId] = useState('')
+  const nameMode = useNameMode()
 
   const left = mine
     ? Math.max(
@@ -173,20 +175,20 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
   // 지도에 찍는 점: 서버가 돌려준 대략적인 위치(500m 격자 중심)만 사용한다
   const mapPlaces: MapPlace[] = shares.map((s) => ({
     id: `loc-${s.user_id}`,
-    name: `${s.nickname ?? '알 수 없음'}${s.mine ? ' (나)' : ''} · ${
+    name: `${pickName(s, nameMode) || '알 수 없음'}${s.mine ? ' (나)' : ''} · ${
       s.mode === 'once' ? '1회 공유' : `${SHARE_MINUTES}분 공유`
     }`,
     latitude: s.lat,
     longitude: s.lng,
-  }))
+  }));
 
   const openMap = (userId?: number) => {
-    setSelectedId(userId !== undefined ? `loc-${userId}` : '')
-    setShowMap(true)
-  }
+    setSelectedId(userId !== undefined ? `loc-${userId}` : "");
+    setShowMap(true);
+  };
 
   return (
-    <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
+    <div style={{ display: "grid", gap: 12, marginBottom: 16 }}>
       {message && (
         <p className="error" role="alert">
           {message}
@@ -259,7 +261,7 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
 
           <ul
             className="muted"
-            style={{ margin: '8px 0 12px', paddingLeft: 18 }}
+            style={{ margin: "8px 0 12px", paddingLeft: 18 }}
           >
             <li>내가 직접 누를 때만 공유돼요. 자동으로 공유되지 않아요.</li>
             <li>이 그룹 친구들에게만, 대략적인 위치(약 500m 범위)로 보여요.</li>
@@ -270,7 +272,7 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
             </li>
             <li>동의하면 브라우저가 위치 권한을 한 번 물어봐요.</li>
           </ul>
-          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
             <button
               type="button"
               className="btn sm"
@@ -358,7 +360,7 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
           )}
 
           {others.map((s) => {
-            const name = s.nickname ?? '알 수 없음'
+            const name = pickName(s, nameMode) || '알 수 없음'
             const once = s.mode === 'once'
             const ago = Math.max(
               0,
@@ -412,9 +414,9 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
         <section className="card">
           <div
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
               marginBottom: 8,
             }}
           >
@@ -442,5 +444,5 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
         </section>
       )}
     </div>
-  )
+  );
 }

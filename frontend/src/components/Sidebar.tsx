@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { api } from "@/lib/api";
+import { pickName, readNameMode } from "@/lib/nameMode";
+import Avatar from "./Avatar";
 
 export type ShellGroup = {
   id: number;
@@ -12,14 +14,21 @@ export type ShellGroup = {
   memberNicknames?: string[];
 };
 
-export type ActiveMenu = "home" | "chat" | "photos" | "map";
+export type ActiveMenu = "home" | "chat" | "photos" | "map" | "settings";
 
 type GroupDetail = {
   id: number;
   name: string;
   icon?: string | null;
-  members?: { nickname: string }[];
+  members?: {
+    user_id?: number;
+    nickname: string;
+    account_nickname?: string | null;
+    profile_image?: string | null;
+  }[];
 };
+
+type Person = { userId: number; name: string; image: string | null };
 
 type LastGroup = { id: number; name: string; icon: string | null };
 
@@ -53,6 +62,8 @@ const ICONS = {
   photo:
     "M4 5h16v14H4zM8 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM4 17l5-5 4 4 3-3 4 4",
   archive: "M3 5h18v4H3zM5 9v10h14V9M10 13h4",
+  settings:
+    "M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4",
 };
 
 type NavItem = {
@@ -69,6 +80,12 @@ const NAV: NavItem[] = [
   { label: "지도", icon: ICONS.map, key: "map", path: "map" },
   { label: "사진", icon: ICONS.photo, key: "photos", path: "photos" },
   { label: "지난 기록", icon: ICONS.archive },
+  {
+    label: "그룹 설정",
+    icon: ICONS.settings,
+    key: "settings",
+    path: "settings",
+  },
 ];
 
 function hrefFor(
@@ -91,30 +108,53 @@ export default function Sidebar({
   const pathname = usePathname();
   const [fetched, setFetched] = useState<ShellGroup | null>(null);
   const [lastGroup, setLastGroup] = useState<LastGroup | null>(null);
+  const [peopleState, setPeopleState] = useState<{
+    groupId: number;
+    list: Person[];
+  } | null>(null);
 
   // 주소에서 그룹 번호를 읽는다: /groups/4, /groups/4/chat ...
   const pathMatch = /^\/groups\/(\d+)(?:\/|$)/.exec(pathname);
   const pathId = pathMatch ? Number(pathMatch[1]) : null;
 
-  // 페이지가 group 을 안 넘겨줬으면 직접 불러온다
+  // 멤버 사진을 보여 주려면 멤버 정보가 필요해서, 그룹 화면에서는 항상 직접 불러온다.
+  // (페이지가 group 을 넘겨줬으면 이름·아이콘은 그쪽 값을 그대로 쓴다)
+  const hasGroup = group !== undefined;
   useEffect(() => {
-    if (group || !pathId) return;
+    if (!pathId) return;
     let cancelled = false;
     api<GroupDetail>(`/groups/${pathId}`)
       .then((g) => {
         if (cancelled) return;
-        setFetched({
-          id: g.id,
-          name: g.name,
-          icon: g.icon ?? null,
-          memberNicknames: g.members?.map((m) => m.nickname),
+        const mode = readNameMode();
+        setPeopleState({
+          groupId: g.id,
+          list: (g.members ?? []).flatMap((m) =>
+            typeof m.user_id === "number"
+              ? [
+                  {
+                    userId: m.user_id,
+                    name: pickName(m, mode),
+                    image: m.profile_image ?? null,
+                  },
+                ]
+              : [],
+          ),
         });
+        if (!hasGroup) {
+          setFetched({
+            id: g.id,
+            name: g.name,
+            icon: g.icon ?? null,
+            memberNicknames: g.members?.map((m) => pickName(m, mode)),
+          });
+        }
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [group, pathId]);
+  }, [hasGroup, pathId]);
 
   // 마지막으로 연 그룹 읽기
   useEffect(() => {
@@ -157,16 +197,21 @@ export default function Sidebar({
     pathname === "/map" || /^\/groups\/[^/]+\/map(?:\/|$)/.test(pathname);
   const isPhotosPage = /^\/groups\/[^/]+\/photos(?:\/|$)/.test(pathname);
   const isChatPage = /^\/groups\/[^/]+\/chat(?:\/|$)/.test(pathname);
+  const isSettingsPage = /^\/groups\/[^/]+\/settings(?:\/|$)/.test(pathname);
   const derived: ActiveMenu = isMapPage
     ? "map"
     : isPhotosPage
       ? "photos"
       : isChatPage
         ? "chat"
-        : "home";
+        : isSettingsPage
+          ? "settings"
+          : "home";
   const current: ActiveMenu = active ?? derived;
 
   const nicknames = info?.memberNicknames;
+  const people =
+    peopleState && peopleState.groupId === pathId ? peopleState.list : null;
 
   return (
     <aside className="sidebar">
@@ -216,14 +261,19 @@ export default function Sidebar({
           <hr className="divider" style={{ margin: 0 }} />
           <div className="side-label">함께 기록하는 친구들</div>
           <div>
-            {nicknames.map((n, i) => (
-              <div className="friend-row" key={`${n}-${i}`}>
-                <span
-                  className={`avatar sm ${AVATAR_TONES[i % AVATAR_TONES.length]}`}
-                >
-                  {n.slice(0, 1)}
-                </span>
-                <span>{n}</span>
+            {(people && people.length > 0
+              ? people
+              : nicknames.map((n) => ({ userId: -1, name: n, image: null }))
+            ).map((p, i) => (
+              <div className="friend-row" key={`${p.userId}-${i}`}>
+                <Avatar
+                  userId={p.userId}
+                  name={p.name}
+                  image={p.image}
+                  size="sm"
+                  tone={AVATAR_TONES[i % AVATAR_TONES.length]}
+                />
+                <span>{p.name}</span>
               </div>
             ))}
           </div>

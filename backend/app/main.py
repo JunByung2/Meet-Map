@@ -9,7 +9,9 @@ from app.config import ALLOW_DEV_AUTH
 from app.db import Base, engine
 from app.deps.auth import get_current_user
 from app.routers import (
+    account,
     auth,
+    avatar,
     group_members,
     groups,
     invites,
@@ -33,6 +35,8 @@ logger = logging.getLogger("meetmap")
 app = FastAPI(title="MeetMap API")
 
 app.include_router(auth.router)
+app.include_router(account.router)
+app.include_router(avatar.router)
 app.include_router(oauth.router)
 app.include_router(groups.router)
 app.include_router(group_members.router)

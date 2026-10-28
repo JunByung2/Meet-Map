@@ -13,7 +13,7 @@ from app.deps.auth import get_current_user, require_group_member
 from app.models import Group, GroupMember, User
 from app.routers.messages import Message
 from meeting_tools.planning.models import Departure, PlacePlan
-from meeting_tools.recommendation.recommend_service import recommend_places
+from meeting_tools.recommendation.recommend_service import RECOMMENDATION_POLICY, RecommendationError, recommend_places
 from meeting_tools.transit.kakao_route import TransitError
 
 router = APIRouter(prefix="/groups/{group_id}/place-plans", tags=["place-plans"],
@@ -59,7 +59,7 @@ def members_and_departures(db, plan):
         and stored[m.user_id].updated_at.replace(tzinfo=timezone.utc)
         >= m.joined_at.replace(tzinfo=timezone.utc)}
     # 변경 후 같은 좌표로 돌아와도 예전 계산이 저장되지 않도록 revision 포함.
-    snapshot = hashlib.sha256(json.dumps([plan.revision,
+    snapshot = hashlib.sha256(json.dumps([RECOMMENDATION_POLICY, plan.revision,
         [[m.user_id, str(m.joined_at), [departures[m.user_id].latitude, departures[m.user_id].longitude]
           if m.user_id in departures else None] for m in members]], sort_keys=True).encode()).hexdigest()
     return members, departures, snapshot
@@ -174,12 +174,12 @@ def recommend(group_id: int, plan_id: UUID, user: User = Depends(get_current_use
     db.rollback()  # 외부 API 대기 중 DB 연결을 잡아두지 않는다.
     try:
         result = recommend_places(locations)
-    except TransitError as error:
-        print("[추천 조회 실패]", str(error), flush=True)
-        raise HTTPException(
-        502,
-        "이동시간을 조회하지 못했어요. 잠시 후 다시 시도해 주세요.",
-    ) from None
+    except RecommendationError as error:
+        print("[추천 조회 실패]", error.code, str(error), flush=True)
+        raise HTTPException(error.status_code, str(error)) from None
+    except TransitError:
+        # 알려지지 않은 하위 API 오류의 원문은 사용자에게 노출하지 않는다.
+        raise HTTPException(502, "교통 경로 조회에 실패했어요. 잠시 후 다시 시도해 주세요.") from None
     if not db.get(GroupMember, (group_id, user.id)):
         raise HTTPException(403, "접근 권한이 없습니다.")
     plan = get_plan(db, group_id, plan_id, lock=True)

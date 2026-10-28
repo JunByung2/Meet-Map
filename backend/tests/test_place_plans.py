@@ -140,6 +140,10 @@ def main():
                 check((call("GET", path, user=2)).json()["result"] is not None, "shared result survives reload")
                 call("POST", f"{path}/recommend", user=2)
                 check(fetch.call_count == 1, "same inputs reuse saved result")
+                with patch.object(routes, "RECOMMENDATION_POLICY", "different-policy"):
+                    check(call("GET", path, user=2).json()["result"] is None,
+                          "old recommendation policy result is hidden")
+
             call("PUT", f"{path}/my-departure", user=2, json={**location, "longitude": 127.03})
             check((call("GET", path)).json()["result"] is None, "changing departure invalidates result")
 

@@ -1,6 +1,9 @@
 """
-POST   /groups/{group_id}/location/share : 내 위치 공유 시작 (동의한 뒤 호출, 10분)
-PUT    /groups/{group_id}/location       : 공유 중인 내 위치 갱신 (만료 시간은 늘어나지 않는다)
+POST   /groups/{group_id}/location/share : 내 위치 공유 시작 (동의한 뒤 호출)
+                                            mode=once    : 위치를 한 번만 보내고 갱신 없이 10분간 표시
+                                            mode=ten_min : 10분 동안 공유, 공유 중 위치 갱신 가능
+                                            공유가 시작되면 그룹 채팅에 알림 문장을 남긴다. (위치 정보는 넣지 않는다)
+PUT    /groups/{group_id}/location       : 공유 중인 내 위치 갱신 (ten_min 만, 만료 시간은 늘어나지 않는다)
 DELETE /groups/{group_id}/location       : 공유 중단 (좌표를 바로 지우고 stopped_at 을 기록)
 GET    /groups/{group_id}/location       : 지금 공유 중인 그룹 친구들의 대략적인 위치
 
@@ -12,6 +15,8 @@ GET    /groups/{group_id}/location       : 지금 공유 중인 그룹 친구들
 - 공유 중이 아닌 사람(중단·만료·공유한 적 없음)의 좌표는 응답에 포함하지 않는다.
 - 중단하면 좌표를 즉시 지우고, 만료·중단된 행은 정리 작업(main.py)이 삭제한다.
 - 그룹을 나간 사람의 위치는 목록에서 제외한다.
+- 주변 지명(area)도 정확한 좌표가 아니라 500m 격자 중심으로만 조회한다.
+- 채팅 알림 문장에는 좌표·지명을 넣지 않는다. (채팅 기록은 남기 때문에 위치 기록이 되면 안 된다)
 """
 import math
 from datetime import datetime, timedelta, timezone
@@ -25,11 +30,13 @@ from sqlalchemy.orm import Session as DbSession
 
 from app.db import Base, get_db
 from app.deps.auth import get_current_user, require_group_member
+from app.geo import area_name
 from app.models import GroupMember, User
+from app.routers.messages import Message
 
 router = APIRouter(prefix="/groups/{group_id}/location", tags=["location"])
 
-SHARE_MINUTES = 10          # ten_min 모드 유지 시간
+SHARE_MINUTES = 10          # 공유 유지 시간 (once, ten_min 둘 다)
 MIN_UPDATE_SECONDS = 10     # 너무 잦은 갱신 요청은 막는다
 LAT_STEP = 0.0045           # 위도 약 500m
 LNG_STEP = 0.0057           # 경도 약 500m (서울 위도 기준)
@@ -42,6 +49,13 @@ def snap_to_grid(lat: float, lng: float) -> tuple[float, float]:
     return round(cell_lat, 6), round(cell_lng, 6)
 
 
+def share_notice(mode: str) -> str:
+    """공유를 시작했을 때 채팅에 남기는 알림 문장. 위치 정보는 넣지 않는다."""
+    if mode == "once":
+        return "📍 위치를 1회 공유했어요"
+    return f"📍 {SHARE_MINUTES}분 동안 위치 공유를 시작했어요"
+
+
 class LocationShare(Base):
     __tablename__ = "location_shares"
 
@@ -51,7 +65,7 @@ class LocationShare(Base):
     user_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
-    mode: Mapped[str] = mapped_column(String(10), nullable=False)  # 지금은 ten_min 만
+    mode: Mapped[str] = mapped_column(String(10), nullable=False)  # once / ten_min
     cell_lat: Mapped[float | None] = mapped_column(Float(53))      # 격자 중심 (중단되면 비움)
     cell_lng: Mapped[float | None] = mapped_column(Float(53))
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -63,7 +77,7 @@ class LocationShare(Base):
 class ShareIn(BaseModel):
     lat: float = Field(ge=-90, le=90)
     lng: float = Field(ge=-180, le=180)
-    mode: Literal["ten_min"] = "ten_min"
+    mode: Literal["once", "ten_min"] = "ten_min"
 
 
 class PositionIn(BaseModel):
@@ -76,6 +90,8 @@ class LocationOut(BaseModel):
     nickname: str | None
     lat: float          # 격자 중심 (대략적인 위치)
     lng: float
+    area: str | None = None  # 주변 지명 (예: 홍대입구역 근처)
+    mode: str                # once / ten_min
     updated_at: datetime
     expires_at: datetime
     mine: bool
@@ -100,6 +116,10 @@ def _out(share: LocationShare, nickname: str | None, me_id: int) -> LocationOut:
         nickname=nickname,
         lat=share.cell_lat,
         lng=share.cell_lng,
+        area=area_name(share.cell_lat, share.cell_lng)
+        if share.cell_lat is not None and share.cell_lng is not None
+        else None,
+        mode=share.mode,
         updated_at=share.updated_at,
         expires_at=share.expires_at,
         mine=share.user_id == me_id,
@@ -158,6 +178,8 @@ def start_sharing(
     share.updated_at = now
     share.expires_at = now + timedelta(minutes=SHARE_MINUTES)
     share.stopped_at = None
+    # 공유 시작 알림을 채팅에 남긴다. (작성자는 로그인한 사용자, 위치 정보는 넣지 않는다)
+    db.add(Message(group_id=group_id, user_id=user.id, text=share_notice(body.mode)))
     db.commit()
     db.refresh(share)
     return _out(share, user.nickname, user.id)
@@ -175,6 +197,8 @@ def update_position(
     share = db.get(LocationShare, (group_id, user.id))
     if share is None or share.stopped_at is not None or share.expires_at <= now:
         raise HTTPException(status.HTTP_409_CONFLICT, "공유 중이 아니에요. 먼저 공유를 시작해 주세요.")
+    if share.mode == "once":
+        raise HTTPException(status.HTTP_409_CONFLICT, "1회 공유는 위치를 갱신하지 않아요.")
     if (now - share.updated_at).total_seconds() < MIN_UPDATE_SECONDS:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "위치를 너무 자주 보내고 있어요.")
     share.cell_lat, share.cell_lng = snap_to_grid(body.lat, body.lng)

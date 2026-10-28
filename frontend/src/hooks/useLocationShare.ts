@@ -3,11 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { LocationErrorKind } from '@/features/location/types'
 
+export type ShareMode = 'once' | 'ten_min'
+
 export type SharedLocation = {
   user_id: number
   nickname: string | null
   lat: number // 서버가 500m 격자 중심으로 바꾼 대략적인 위치
   lng: number
+  area: string | null // 서버가 알려주는 주변 지명 (예: 홍대입구역 근처)
+  mode: ShareMode // once: 1회 공유(갱신 없음) / ten_min: 10분 공유(20초마다 갱신)
   updated_at: string
   expires_at: string
   mine: boolean
@@ -102,6 +106,7 @@ export function useLocationShare(groupId: number) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [problem, setProblem] = useState<LocationErrorKind | null>(null)
+  const [mode, setMode] = useState<ShareMode>('ten_min') // 동의 화면에서 고른 공유 방식
   const [now, setNow] = useState(() => Date.now())
   const activeGroup = useRef(groupId)
 
@@ -137,6 +142,8 @@ export function useLocationShare(groupId: number) {
 
   const mine = shares.find((s) => s.mine) ?? null
   const sharing = mine !== null
+  // 위치를 계속 갱신해야 하는 공유(10분 공유)인지. 1회 공유는 갱신하지 않는다.
+  const live = mine?.mode === 'ten_min'
 
   // 공유를 끝낸다. reason 이 있으면 안내 화면을 같이 띄운다.
   const stop = useCallback(
@@ -156,10 +163,10 @@ export function useLocationShare(groupId: number) {
     [groupId, refresh],
   )
 
-  // 공유 중일 때만 위치를 지켜보다가 20초마다 서버로 보낸다
+  // 10분 공유 중일 때만 위치를 지켜보다가 20초마다 서버로 보낸다
   useEffect(() => {
     if (
-      !sharing ||
+      !live ||
       typeof navigator === 'undefined' ||
       !('geolocation' in navigator)
     )
@@ -203,7 +210,7 @@ export function useLocationShare(groupId: number) {
       navigator.geolocation.clearWatch(watchId)
       window.clearInterval(timer)
     }
-  }, [sharing, groupId, refresh, stop])
+  }, [live, groupId, refresh, stop])
 
   const openAsk = useCallback(() => {
     setMessage('')
@@ -230,7 +237,7 @@ export function useLocationShare(groupId: number) {
       const pos = await getPosition()
       await request(`/groups/${groupId}/location/share`, {
         method: 'POST',
-        body: JSON.stringify({ ...pos, mode: 'ten_min' }),
+        body: JSON.stringify({ ...pos, mode }),
       })
       setAsking(false)
       await refresh()
@@ -246,7 +253,7 @@ export function useLocationShare(groupId: number) {
     } finally {
       setBusy(false)
     }
-  }, [busy, groupId, refresh])
+  }, [busy, groupId, mode, refresh])
 
   return {
     shares,
@@ -258,6 +265,8 @@ export function useLocationShare(groupId: number) {
     message,
     problem,
     now,
+    mode,
+    setMode,
     openAsk,
     cancelAsk,
     clearProblem,

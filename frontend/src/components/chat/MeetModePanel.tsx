@@ -1,10 +1,84 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import BaseKakaoMap, { type MapPlace } from '@/features/map/BaseKakaoMap'
-import { SHARE_MINUTES, useLocationShare } from '@/hooks/useLocationShare'
+import {
+  SHARE_MINUTES,
+  useLocationShare,
+  type ShareMode,
+} from '@/hooks/useLocationShare'
 
 type Meet = ReturnType<typeof useLocationShare>
+
+const ACCENT = '#3f7d6e'
+
+// 옆으로 넘기는 카드 줄
+const rail: CSSProperties = {
+  display: 'flex',
+  gap: 12,
+  overflowX: 'auto',
+  scrollSnapType: 'x mandatory',
+  padding: '4px 2px 10px',
+  margin: '0 -2px',
+  WebkitOverflowScrolling: 'touch',
+}
+
+// 카드 한 장의 공통 모양 (다음 카드가 살짝 보이도록 폭을 80%로)
+const slide: CSSProperties = {
+  flex: '0 0 80%',
+  maxWidth: 320,
+  minHeight: 200,
+  scrollSnapAlign: 'start',
+  borderRadius: 24,
+  padding: 20,
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'space-between',
+  gap: 16,
+  boxSizing: 'border-box',
+}
+
+const avatar: CSSProperties = {
+  width: 48,
+  height: 48,
+  borderRadius: '50%',
+  background: ACCENT,
+  color: '#fff',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: 20,
+  fontWeight: 700,
+  flexShrink: 0,
+}
+
+const track: CSSProperties = {
+  height: 8,
+  borderRadius: 999,
+  background: 'rgba(0,0,0,0.08)',
+  overflow: 'hidden',
+  margin: '10px 0 14px',
+}
+
+// 공유 방식 뱃지: 1회 공유(주황) / 10분 공유(초록)
+function ModeBadge({ mode }: { mode: ShareMode }) {
+  const once = mode === 'once'
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        padding: '4px 10px',
+        borderRadius: 999,
+        fontSize: 13,
+        fontWeight: 700,
+        color: once ? '#92610f' : ACCENT,
+        background: once ? 'rgba(183,121,31,0.14)' : 'rgba(63,125,110,0.14)',
+      }}
+    >
+      {once ? '📍 1회 공유' : `⏱ ${SHARE_MINUTES}분 공유`}
+    </span>
+  )
+}
 
 function ProblemGuide({ meet }: { meet: Meet }) {
   const { problem } = meet
@@ -83,7 +157,8 @@ function ProblemGuide({ meet }: { meet: Meet }) {
 }
 
 export default function MeetModePanel({ meet }: { meet: Meet }) {
-  const { mine, others, shares, asking, busy, message, now } = meet
+  const { mine, others, shares, asking, busy, message, now, mode, setMode } =
+    meet
   const [showMap, setShowMap] = useState(false)
   const [selectedId, setSelectedId] = useState('')
 
@@ -93,11 +168,14 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
         Math.ceil((new Date(mine.expires_at).getTime() - now) / 60000),
       )
     : 0
+  const percent = Math.min(100, Math.round((left / SHARE_MINUTES) * 100))
 
   // 지도에 찍는 점: 서버가 돌려준 대략적인 위치(500m 격자 중심)만 사용한다
   const mapPlaces: MapPlace[] = shares.map((s) => ({
     id: `loc-${s.user_id}`,
-    name: `${s.nickname ?? '알 수 없음'}${s.mine ? ' (나)' : ''}`,
+    name: `${s.nickname ?? '알 수 없음'}${s.mine ? ' (나)' : ''} · ${
+      s.mode === 'once' ? '1회 공유' : `${SHARE_MINUTES}분 공유`
+    }`,
     latitude: s.lat,
     longitude: s.lng,
   }))
@@ -119,10 +197,66 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
 
       {asking && !mine && !meet.problem && (
         <section className="card" role="dialog" aria-label="MeetMode 위치 공유">
-          <span className="chip">MeetMode · {SHARE_MINUTES}분 공유</span>
+          <span className="chip">MeetMode · 위치 공유</span>
           <h2 className="card-title" style={{ margin: '8px 0 6px' }}>
             내 위치를 친구들에게 공유할까요?
           </h2>
+
+          <div
+            role="radiogroup"
+            aria-label="공유 방식"
+            style={{ display: 'grid', gap: 8, margin: '12px 0' }}
+          >
+            {(
+              [
+                {
+                  value: 'once',
+                  title: '1회만 공유',
+                  desc: `지금 위치를 한 번만 보내요. 갱신 없이 ${SHARE_MINUTES}분 동안 보여요.`,
+                },
+                {
+                  value: 'ten_min',
+                  title: `${SHARE_MINUTES}분 동안 공유`,
+                  desc: '이동하는 동안 20초마다 위치를 갱신해요.',
+                },
+              ] as const
+            ).map((opt) => {
+              const active = mode === opt.value
+              return (
+                <label
+                  key={opt.value}
+                  style={{
+                    display: 'flex',
+                    gap: 10,
+                    alignItems: 'flex-start',
+                    padding: '12px 14px',
+                    borderRadius: 16,
+                    cursor: 'pointer',
+                    border: `1.5px solid ${active ? ACCENT : 'rgba(0,0,0,0.12)'}`,
+                    background: active
+                      ? 'rgba(63,125,110,0.08)'
+                      : 'transparent',
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="share-mode"
+                    value={opt.value}
+                    checked={active}
+                    onChange={() => setMode(opt.value)}
+                    style={{ marginTop: 4 }}
+                  />
+                  <span>
+                    <strong>{opt.title}</strong>
+                    <span className="muted" style={{ display: 'block' }}>
+                      {opt.desc}
+                    </span>
+                  </span>
+                </label>
+              )
+            })}
+          </div>
+
           <ul
             className="muted"
             style={{ margin: '8px 0 12px', paddingLeft: 18 }}
@@ -130,6 +264,7 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
             <li>내가 직접 누를 때만 공유돼요. 자동으로 공유되지 않아요.</li>
             <li>이 그룹 친구들에게만, 대략적인 위치(약 500m 범위)로 보여요.</li>
             <li>정확한 위치는 저장하지 않아요.</li>
+            <li>공유했다는 알림만 채팅에 남고, 위치 정보는 남지 않아요.</li>
             <li>
               {SHARE_MINUTES}분 뒤에 자동으로 멈추고, 중단하면 바로 사라져요.
             </li>
@@ -142,7 +277,11 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
               disabled={busy}
               onClick={() => void meet.start()}
             >
-              {busy ? '위치 확인 중…' : `${SHARE_MINUTES}분 동안 공유하기`}
+              {busy
+                ? '위치 확인 중…'
+                : mode === 'once'
+                  ? '1회 공유하기'
+                  : `${SHARE_MINUTES}분 동안 공유하기`}
             </button>
             <button
               type="button"
@@ -156,87 +295,117 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
         </section>
       )}
 
-      {mine && (
-        <section
-          className="card mint"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            flexWrap: 'wrap',
-          }}
-        >
-          <div>
-            <strong>📍 대략적인 내 위치를 공유하고 있어요</strong>
-            <p className="muted" style={{ margin: '4px 0 0' }}>
-              약 {left}분 뒤에 자동으로 멈춰요 · 20초마다 갱신해요
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              type="button"
-              className="btn secondary sm"
-              onClick={() => openMap(mine.user_id)}
-            >
-              지도 보기
-            </button>
-            <button
-              type="button"
-              className="btn secondary sm"
-              disabled={busy}
-              onClick={() => void meet.stop()}
-            >
-              공유 중단
-            </button>
-          </div>
-        </section>
-      )}
+      {(mine || others.length > 0) && (
+        <div style={rail} aria-label="위치 공유 현황">
+          {mine && (
+            <section className="card mint" style={slide}>
+              <div>
+                <ModeBadge mode={mine.mode} />
+                <h2
+                  className="card-title"
+                  style={{ margin: '12px 0 4px', fontSize: 20 }}
+                >
+                  대략적인 내 위치를
+                  <br />
+                  공유하고 있어요
+                </h2>
+                <p className="muted" style={{ margin: 0 }}>
+                  {mine.area ? mine.area + ' · ' : ''}
+                  {mine.mode === 'once'
+                    ? '1회 공유 · 위치를 갱신하지 않아요'
+                    : '20초마다 갱신해요'}
+                </p>
+              </div>
+              <div>
+                <div
+                  style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}
+                >
+                  <strong style={{ fontSize: 40, lineHeight: 1 }}>
+                    {left}
+                  </strong>
+                  <span className="muted">분 뒤 자동으로 멈춰요</span>
+                </div>
+                <div style={track}>
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${percent}%`,
+                      background: ACCENT,
+                      borderRadius: 999,
+                      transition: 'width 0.6s',
+                    }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    className="btn secondary sm"
+                    onClick={() => openMap(mine.user_id)}
+                  >
+                    지도 보기
+                  </button>
+                  <button
+                    type="button"
+                    className="btn secondary sm"
+                    disabled={busy}
+                    onClick={() => void meet.stop()}
+                  >
+                    공유 중단
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
 
-      {others.length > 0 && (
-        <section className="card">
-          <h2 className="card-title" style={{ marginBottom: 8 }}>
-            지금 위치를 공유 중인 친구
-          </h2>
           {others.map((s) => {
             const name = s.nickname ?? '알 수 없음'
+            const once = s.mode === 'once'
             const ago = Math.max(
               0,
               Math.floor((now - new Date(s.updated_at).getTime()) / 60000),
             )
+            const remain = Math.max(
+              0,
+              Math.ceil((new Date(s.expires_at).getTime() - now) / 60000),
+            )
             return (
-              <div
-                key={s.user_id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: 12,
-                  padding: '6px 0',
-                }}
-              >
-                <span>
-                  {name}{' '}
-                  <span className="muted">
-                    · {ago === 0 ? '방금' : `${ago}분 전`}
-                  </span>
-                </span>
-                <button
-                  type="button"
-                  className="link-arrow"
-                  style={{
-                    border: 0,
-                    background: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => openMap(s.user_id)}
-                >
-                  지도에서 보기 →
-                </button>
-              </div>
+              <section key={s.user_id} className="card" style={slide}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={avatar}>{name.slice(0, 1)}</div>
+                  <div>
+                    <strong style={{ fontSize: 18 }}>{name}</strong>
+                    <p className="muted" style={{ margin: '2px 0 0' }}>
+                      {ago === 0 ? '방금 전' : `${ago}분 전`}{' '}
+                      {once ? '공유함' : '업데이트'}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <ModeBadge mode={s.mode} />
+                  <p className="muted" style={{ margin: '10px 0 4px' }}>
+                    {s.area ?? '대략 500m 범위로 보여요'}
+                  </p>
+                  <p
+                    className="muted"
+                    style={{ margin: '0 0 12px', fontSize: 13 }}
+                  >
+                    {once
+                      ? '공유한 시점의 위치예요 · '
+                      : '20초마다 갱신돼요 · '}
+                    {remain}분 뒤 사라져요
+                  </p>
+                  <button
+                    type="button"
+                    className="btn secondary sm"
+                    onClick={() => openMap(s.user_id)}
+                  >
+                    지도에서 보기 →
+                  </button>
+                </div>
+              </section>
             )
           })}
-        </section>
+        </div>
       )}
 
       {showMap && shares.length > 0 && (

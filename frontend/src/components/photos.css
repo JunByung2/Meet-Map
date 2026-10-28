@@ -81,3 +81,11 @@
 @media (max-width: 600px) {
   .ph-grid { grid-template-columns: 1fr; }
 }
+.ph-day { margin-bottom: 8px; }
+.ph-day-head { margin: 22px 0 12px; font-size: 15px; font-weight: 700; color: var(--teal-dark); display: flex; align-items: baseline; gap: 8px; }
+.ph-day-head span { font-size: 12px; font-weight: 400; color: var(--muted); }
+
+.ph-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.ph-tabs button { padding: 8px 14px; border: 1px solid var(--line); border-radius: 100px; background: var(--white); color: var(--ink); font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.ph-tabs button:hover { border-color: var(--teal); }
+.ph-tabs button.on { background: var(--mint); border-color: var(--teal); color: var(--teal-dark); }

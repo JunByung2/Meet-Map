@@ -12,6 +12,7 @@ from app.routers import (
     account,
     auth,
     avatar,
+    chat_files,
     group_members,
     groups,
     invites,
@@ -19,6 +20,8 @@ from app.routers import (
     messages,
     oauth,
     photos,
+    meetings,
+    records,
 )
 
 # 장소 추천 / 이동 도우미
@@ -43,7 +46,10 @@ app.include_router(group_members.router)
 app.include_router(invites.router)
 app.include_router(invites.join_router)
 app.include_router(photos.router)
+app.include_router(records.router)
+app.include_router(meetings.router)
 app.include_router(messages.router)
+app.include_router(chat_files.router)
 app.include_router(location.router)
 app.include_router(memory_router)
 
@@ -61,6 +67,7 @@ app.include_router(seoul_bus_router, dependencies=_login_required)
 
 # 기존 표에 필요한 컬럼 추가 (PostgreSQL 전용)
 _EXTRA_COLUMNS = [
+    "ALTER TABLE chat_attachments ADD COLUMN IF NOT EXISTS data BYTEA",
     # 사진 장소
     "ALTER TABLE group_photos ADD COLUMN IF NOT EXISTS place_id VARCHAR(40)",
     "ALTER TABLE group_photos ADD COLUMN IF NOT EXISTS place_name VARCHAR(100)",
@@ -68,12 +75,39 @@ _EXTRA_COLUMNS = [
     "ALTER TABLE group_photos ADD COLUMN IF NOT EXISTS place_lat DOUBLE PRECISION",
     "ALTER TABLE group_photos ADD COLUMN IF NOT EXISTS place_lng DOUBLE PRECISION",
 
+    # 사진이 속한 약속 기록
+    "ALTER TABLE group_photos ADD COLUMN IF NOT EXISTS record_id BIGINT REFERENCES meeting_records(id) ON DELETE SET NULL",
+
     # 약속의 그룹과 생성자
     "ALTER TABLE IF EXISTS meetings ADD COLUMN IF NOT EXISTS group_id BIGINT REFERENCES groups(id) ON DELETE CASCADE",
     "ALTER TABLE IF EXISTS meetings ADD COLUMN IF NOT EXISTS created_by BIGINT REFERENCES users(id) ON DELETE SET NULL",
 
+    # 약속·투표 후보에 카카오 장소 정보
+    "ALTER TABLE IF EXISTS meetings ADD COLUMN IF NOT EXISTS place_id VARCHAR(40)",
+    "ALTER TABLE IF EXISTS meetings ADD COLUMN IF NOT EXISTS place_address VARCHAR(200)",
+    "ALTER TABLE IF EXISTS meetings ADD COLUMN IF NOT EXISTS place_lat DOUBLE PRECISION",
+    "ALTER TABLE IF EXISTS meetings ADD COLUMN IF NOT EXISTS place_lng DOUBLE PRECISION",
+    "ALTER TABLE IF EXISTS meeting_candidates ADD COLUMN IF NOT EXISTS place_id VARCHAR(40)",
+    "ALTER TABLE IF EXISTS meeting_candidates ADD COLUMN IF NOT EXISTS place_address VARCHAR(200)",
+    "ALTER TABLE IF EXISTS meeting_candidates ADD COLUMN IF NOT EXISTS place_lat DOUBLE PRECISION",
+    "ALTER TABLE IF EXISTS meeting_candidates ADD COLUMN IF NOT EXISTS place_lng DOUBLE PRECISION",
+
+    # 지난 기록 삭제 표시 / 약속을 확정한 사람
+    "ALTER TABLE IF EXISTS meeting_records ADD COLUMN IF NOT EXISTS deleted BOOLEAN NOT NULL DEFAULT FALSE",
+
+    # 채팅방 투표: 후보 묶음 번호 + 확정 상태
+    "ALTER TABLE IF EXISTS meeting_candidates ADD COLUMN IF NOT EXISTS poll_id VARCHAR(40)",
+    "ALTER TABLE IF EXISTS meeting_candidates ADD COLUMN IF NOT EXISTS closed BOOLEAN NOT NULL DEFAULT FALSE",
+    "ALTER TABLE IF EXISTS meeting_candidates ADD COLUMN IF NOT EXISTS chosen BOOLEAN NOT NULL DEFAULT FALSE",
+
     # 위치 공유: 브라우저 직접 접근에 RLS 적용
     "ALTER TABLE IF EXISTS location_shares ENABLE ROW LEVEL SECURITY",
+]
+
+
+# 약속 하나에 기록 하나. 예전 데이터에 중복이 있으면 실패할 수 있어서 위 명령들과 따로 실행한다.
+_EXTRA_INDEXES = [
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_meeting_records_group_meeting ON meeting_records (group_id, meeting_id)",
 ]
 
 
@@ -87,8 +121,15 @@ def _prepare_tables() -> None:
                 for sql in _EXTRA_COLUMNS:
                     conn.execute(text(sql))
 
+            for sql in _EXTRA_INDEXES:
+                try:
+                    with engine.begin() as conn:
+                        conn.execute(text(sql))
+                except Exception as e:  # noqa: BLE001
+                    logger.error("인덱스 생성 건너뜀: %s", e)
+
         logger.warning(
-            "DB 테이블 확인 완료 (사진 장소 + 약속 group_id + 위치 공유)"
+            "DB 테이블 확인 완료 (사진 장소 + 약속 기록 + 약속 group_id + 위치 공유)"
         )
 
     except Exception as e:  # noqa: BLE001

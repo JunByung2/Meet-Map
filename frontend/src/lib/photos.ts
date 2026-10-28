@@ -20,6 +20,7 @@ export type Photo = {
   created_at: string;
   signed_url: string | null;
   can_edit: boolean;
+  from_chat?: boolean; // 채팅으로 보낸 사진 (아니면 사진 페이지에서 직접 올린 사진)
 };
 
 /** 사진을 찍은 장소 (카카오 장소 검색 결과) */
@@ -100,4 +101,30 @@ export function formatDateTime(iso: string) {
   const d = new Date(iso);
   const h = d.getHours();
   return `${formatDate(iso)} ${h < 12 ? "오전" : "오후"} ${h % 12 === 0 ? 12 : h % 12}:${pad(d.getMinutes())}`;
+}
+
+/** 한국 시간 기준 날짜 (YYYY-MM-DD) */
+export function kstDay(iso: string) {
+  return new Date(iso).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+}
+
+/** 2026-10-28 → 2026년 10월 28일 수요일 */
+export function formatDayHeading(day: string) {
+  const [y, m, d] = day.split("-").map(Number);
+  const week = ["일", "월", "화", "수", "목", "금", "토"][new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+  return `${y}년 ${m}월 ${d}일 ${week}요일`;
+}
+
+/** 사진 묶음을 날짜(최신 날짜 먼저)별로 나눈다 */
+export function groupByDay(groups: PhotoGroup[]): { day: string; groups: PhotoGroup[] }[] {
+  const map = new Map<string, PhotoGroup[]>();
+  for (const g of groups) {
+    const day = kstDay(g.created_at);
+    const list = map.get(day);
+    if (list) list.push(g);
+    else map.set(day, [g]);
+  }
+  return Array.from(map.entries())
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .map(([day, list]) => ({ day, groups: list }));
 }

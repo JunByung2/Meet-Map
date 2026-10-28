@@ -30,8 +30,8 @@ export function usePlaceSearch() {
     };
   }, []);
 
-  async function run() {
-    const q = keyword.trim();
+  async function run(override?: string) {
+    const q = (override ?? keyword).trim();
     if (!q) {
       setMessage("검색할 장소를 입력해 주세요.");
       return;

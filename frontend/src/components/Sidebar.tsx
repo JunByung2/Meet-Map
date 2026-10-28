@@ -12,7 +12,7 @@ export type ShellGroup = {
   memberNicknames?: string[];
 };
 
-export type ActiveMenu = "home" | "chat" | "photos" | "map";
+export type ActiveMenu = "home" | "chat" | "meetings" | "photos" | "map" | "records";
 
 type GroupDetail = {
   id: number;
@@ -65,10 +65,10 @@ type NavItem = {
 const NAV: NavItem[] = [
   { label: "그룹 홈", icon: ICONS.home, key: "home" },
   { label: "채팅", icon: ICONS.chat, key: "chat", path: "chat" },
-  { label: "약속", icon: ICONS.calendar },
+  { label: "약속", icon: ICONS.calendar, key: "meetings", path: "meetings" },
   { label: "지도", icon: ICONS.map, key: "map", path: "map" },
   { label: "사진", icon: ICONS.photo, key: "photos", path: "photos" },
-  { label: "지난 기록", icon: ICONS.archive },
+  { label: "지난 기록", icon: ICONS.archive, key: "records", path: "records" },
 ];
 
 function hrefFor(
@@ -151,19 +151,27 @@ export default function Sidebar({
   }, [infoId, infoName, infoIcon]);
 
   const homeId = info?.id ?? pathId;
-  const navId = homeId ?? lastGroup?.id ?? null;
+  // 그룹을 고르기 전(내 그룹 목록 화면)에는 메뉴를 막는다. 그룹을 열어야 채팅·약속·사진 등을 쓸 수 있다.
+  const isGroupListPage = pathname === "/groups";
+  const navId = isGroupListPage ? null : (homeId ?? lastGroup?.id ?? null);
 
   const isMapPage =
     pathname === "/map" || /^\/groups\/[^/]+\/map(?:\/|$)/.test(pathname);
   const isPhotosPage = /^\/groups\/[^/]+\/photos(?:\/|$)/.test(pathname);
+  const isRecordsPage = /^\/groups\/[^/]+\/records(?:\/|$)/.test(pathname);
+  const isMeetingsPage = /^\/groups\/[^/]+\/meetings(?:\/|$)/.test(pathname);
   const isChatPage = /^\/groups\/[^/]+\/chat(?:\/|$)/.test(pathname);
   const derived: ActiveMenu = isMapPage
     ? "map"
     : isPhotosPage
       ? "photos"
-      : isChatPage
-        ? "chat"
-        : "home";
+      : isRecordsPage
+        ? "records"
+        : isMeetingsPage
+          ? "meetings"
+          : isChatPage
+            ? "chat"
+            : "home";
   const current: ActiveMenu = active ?? derived;
 
   const nicknames = info?.memberNicknames;

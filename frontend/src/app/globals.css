@@ -509,3 +509,6 @@ p {
   font-size: 12px;
   color: var(--muted);
 }
+
+/* 한글 입력 칸: 지원하는 브라우저에서는 한글 입력 상태로 시작하도록 힌트를 준다 (브라우저/OS 에 따라 무시될 수 있음) */
+.ime-ko { ime-mode: active; }

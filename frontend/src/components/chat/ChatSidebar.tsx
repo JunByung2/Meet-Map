@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { GroupMember } from "@/hooks/useGroupContext";
 import styles from "./chat.module.css";
 
@@ -7,10 +8,10 @@ const AVATAR_TONES = ["", "peach", "lavender"];
 
 export default function ChatSidebar({
   members,
-  onTool,
+  groupId,
 }: {
   members: GroupMember[];
-  onTool: (tool: string) => void;
+  groupId: number;
 }) {
   return (
     <aside className={styles.side}>
@@ -39,33 +40,21 @@ export default function ChatSidebar({
           함께한 순간
         </h3>
         <p className="muted" style={{ marginBottom: 12 }}>
-          사진과 장소를 연결하면 이곳에서 추억을 모아볼 수 있어요.
+          약속한 날 올린 사진과 정한 장소가 ‘지난 기록’에 날짜별로 모여요.
         </p>
-        <button
-          type="button"
-          className="btn secondary sm"
-          onClick={() => onTool("추억 보기")}
-        >
+        <Link href={`/groups/${groupId}/records`} className="btn secondary sm">
           추억 보기
-        </button>
+        </Link>
       </section>
 
       <section className="card">
         <h2 className={styles.sideTitle}>대화 속 모아보기</h2>
-        <button
-          type="button"
-          className={styles.linkBtn}
-          onClick={() => onTool("사진 모아보기")}
-        >
+        <Link href={`/groups/${groupId}/photos`} className={styles.linkBtn}>
           사진 모아보기 →
-        </button>
-        <button
-          type="button"
-          className={styles.linkBtn}
-          onClick={() => onTool("약속 모아보기")}
-        >
+        </Link>
+        <Link href={`/groups/${groupId}/meetings`} className={styles.linkBtn}>
           공유한 약속 →
-        </button>
+        </Link>
       </section>
     </aside>
   );

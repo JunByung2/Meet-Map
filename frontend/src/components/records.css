@@ -1,0 +1,32 @@
+/* 약속 기록 화면 (목록 / 작성 / 상세) */
+.rc-list { display: flex; flex-direction: column; gap: 14px; }
+.rc-card { display: flex; flex-direction: row; align-items: stretch; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--white); color: var(--ink); }
+.rc-card:hover { text-decoration: none; border-color: var(--teal); }
+.rc-cover { flex: none; width: 160px; background: var(--mist); display: grid; place-items: center; color: var(--muted); font-size: 13px; overflow: hidden; }
+.rc-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rc-body { flex: 1; min-width: 0; padding: 14px 18px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+.rc-date { font-size: 12px; font-weight: 700; color: var(--teal); }
+.rc-title { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rc-line { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rc-note { font-size: 13px; color: var(--ink); margin-top: 4px; }
+.rc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.rc-chip { padding: 2px 10px; border-radius: var(--radius-pill); background: var(--mint); color: var(--teal); font-size: 12px; font-weight: 700; }
+.rc-chip.on { background: var(--teal); color: #fff; }
+button.rc-chip { border: 0; cursor: pointer; font-family: inherit; }
+.rc-choices { display: flex; flex-direction: column; gap: 8px; }
+.rc-choice { text-align: left; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-ctl); background: var(--white); font: inherit; color: var(--ink); cursor: pointer; }
+.rc-choice.on { border-color: var(--teal); background: var(--mint); }
+.rc-choice small { display: block; color: var(--muted); }
+.rc-empty-photo { padding: 28px 16px; text-align: center; border: 2px dashed var(--line); border-radius: var(--radius-card); background: var(--mist); color: var(--muted); }
+.rc-empty-photo strong { display: block; color: var(--ink); margin-bottom: 4px; }
+.rc-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.rc-photos a { display: block; aspect-ratio: 4 / 3; border-radius: var(--radius-ctl); overflow: hidden; background: var(--peach); }
+.rc-photos img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@media (max-width: 600px) { .rc-cover { width: 96px; } }
+
+/* 그날의 대화 (카톡처럼 날짜 띠 + 말풍선) */
+.rc-band { width: fit-content; margin: 0 auto 14px; padding: 4px 14px; border-radius: var(--radius-pill); background: rgba(33, 60, 64, 0.35); color: #fff; font-size: 12px; }
+
+.rc-wrap { position: relative; }
+.rc-del { position: absolute; top: 10px; right: 12px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 100px; background: var(--white); color: var(--muted); font-family: inherit; font-size: 12px; cursor: pointer; }
+.rc-del:hover { color: #c0392b; border-color: #c0392b; }

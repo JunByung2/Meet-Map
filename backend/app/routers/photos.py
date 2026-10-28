@@ -23,7 +23,8 @@ from app import storage
 from app.config import PHOTO_MAX_BYTES, PHOTO_MAX_FILES
 from app.db import get_db
 from app.deps.auth import get_current_user, require_group_member
-from app.models import GroupMember, Photo, User
+from app.models import ChatAttachment, GroupMember, Photo, User
+from app.records_sync import auto_link_photos
 
 router = APIRouter(prefix="/groups/{group_id}/photos", tags=["photos"])
 
@@ -53,6 +54,7 @@ class PhotoOut(BaseModel):
     created_at: datetime
     signed_url: str | None  # 30분짜리 임시 주소 (비공개 버킷이라 이 주소로만 보인다)
     can_edit: bool          # 내가 수정/삭제할 수 있는 사진인지
+    from_chat: bool = False  # 채팅으로 보낸 사진인지 (아니면 사진 페이지에서 직접 올린 사진)
 
 
 class PhotoDetailOut(BaseModel):
@@ -122,6 +124,17 @@ def _to_out(db: DbSession, photos: list[Photo], user: User, member: GroupMember)
     nicknames = (
         dict(db.execute(select(User.id, User.nickname).where(User.id.in_(user_ids))).all()) if user_ids else {}
     )
+    chat_paths = (
+        set(
+            db.execute(
+                select(ChatAttachment.storage_path).where(
+                    ChatAttachment.kind == "image", ChatAttachment.storage_path.in_([p.storage_path for p in photos])
+                )
+            ).scalars()
+        )
+        if photos
+        else set()
+    )
     return [
         PhotoOut(
             id=p.id,
@@ -143,6 +156,7 @@ def _to_out(db: DbSession, photos: list[Photo], user: User, member: GroupMember)
             created_at=p.created_at,
             signed_url=urls.get(p.storage_path),
             can_edit=_can_edit(p, user, member),
+            from_chat=p.storage_path in chat_paths or p.title == "채팅 사진",
         )
         for p in photos
     ]
@@ -276,6 +290,7 @@ def upload_photos(
             )
         db.add_all(rows)
         db.commit()
+        auto_link_photos(db, group_id, rows)  # 오늘 확정된 약속이 하나뿐이면 그 약속 기록에 자동으로 붙인다
     except Exception:
         db.rollback()
         try:

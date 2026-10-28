@@ -5,7 +5,7 @@ import Link from "next/link";
 import PhotoShell from "@/components/PhotoShell";
 import PhotoCollage from "@/components/PhotoCollage";
 import { api } from "@/lib/api";
-import { formatDate, groupLabel, groupPhotos, type Photo, type PhotoGroup } from "@/lib/photos";
+import { formatDate, formatDayHeading, groupByDay, groupLabel, groupPhotos, type Photo, type PhotoGroup } from "@/lib/photos";
 
 export default function GroupPhotosPage() {
   return (
@@ -18,6 +18,7 @@ export default function GroupPhotosPage() {
 function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unknown) => string }) {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"all" | "chat" | "record">("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -39,7 +40,12 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
     load();
   }, [load]);
 
-  const groups = useMemo(() => groupPhotos(photos), [photos]);
+  const chatCount = photos.filter((p) => p.from_chat).length;
+  const shown = useMemo(
+    () => (tab === "all" ? photos : photos.filter((p) => (tab === "chat" ? !!p.from_chat : !p.from_chat))),
+    [photos, tab],
+  );
+  const groups = useMemo(() => groupPhotos(shown), [shown]);
   const visible = useMemo(() => {
     const q = search.trim().toLocaleLowerCase();
     if (!q) return groups;
@@ -47,6 +53,7 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
       [g.title, g.memo, ...g.photos.map((p) => p.caption)].some((t) => (t || "").toLocaleLowerCase().includes(q)),
     );
   }, [groups, search]);
+  const days = useMemo(() => groupByDay(visible), [visible]);
   const visibleCount = visible.reduce((sum, g) => sum + g.photos.length, 0);
 
   async function removeGroup(g: PhotoGroup) {
@@ -80,7 +87,19 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
       </div>
 
       <div className="ph-toolbar">
-        <span className="chip">전체 사진 {photos.length}</span>
+        <div className="ph-tabs" role="tablist" aria-label="사진 분류">
+          {(
+            [
+              ["all", "전체", photos.length],
+              ["chat", "채팅 사진", chatCount],
+              ["record", "기록 사진", photos.length - chatCount],
+            ] as const
+          ).map(([key, label, n]) => (
+            <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "on" : ""} onClick={() => setTab(key)}>
+              {label} {n}
+            </button>
+          ))}
+        </div>
         <input
           className="ph-search"
           value={search}
@@ -105,26 +124,18 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
       ) : visible.length ? (
         <>
           <div className="ph-section">
-            <h2>그날의 사진을 모아 보기</h2>
-          </div>
-          <div className="ph-strip">
-            {visible.slice(0, 5).map((g) => (
-              <Link href={`${base}/${g.photos[0].id}`} className="ph-strip-item" key={`recent-${g.key}`}>
-                <PhotoCollage group={g} wide alt={groupLabel(g)} />
-                <strong>{groupLabel(g)}</strong>
-                <span>{formatDate(g.created_at)}</span>
-              </Link>
-            ))}
-          </div>
-
-          <div className="ph-section">
             <h2>
               전체 사진 {visibleCount}장 · {visible.length}묶음
             </h2>
-            <span className="meta">최근 등록순</span>
+            <span className="meta">날짜별로 묶어서 보여줘요</span>
           </div>
+          {days.map((d) => (
+          <section key={d.day} className="ph-day">
+          <h3 className="ph-day-head">
+            {formatDayHeading(d.day)} <span>{d.groups.reduce((s, g) => s + g.photos.length, 0)}장</span>
+          </h3>
           <div className="ph-grid">
-            {visible.map((g) => {
+            {d.groups.map((g) => {
               const href = `${base}/${g.photos[0].id}`;
               return (
                 <article className="ph-card" key={g.key}>
@@ -156,10 +167,12 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
               );
             })}
           </div>
+          </section>
+          ))}
         </>
       ) : (
         <div className="card ph-empty">
-          <h3>{search ? "검색 결과가 없어요" : "아직 모아 둔 사진이 없어요"}</h3>
+          <h3>{search ? "검색 결과가 없어요" : tab === "chat" ? "채팅으로 보낸 사진이 없어요" : tab === "record" ? "직접 올린 사진이 없어요" : "아직 모아 둔 사진이 없어요"}</h3>
           <p>{search ? "다른 말로 검색해 보세요." : "첫 사진을 올려서 소중한 순간을 기록해 보세요."}</p>
           {!search && (
             <Link className="btn" href={`${base}/upload`}>

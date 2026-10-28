@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
-    BigInteger, CheckConstraint, DateTime, Float, ForeignKey, Integer, String,
+    BigInteger, CheckConstraint, Date, DateTime, Float, ForeignKey, Integer, String,
     UniqueConstraint, func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -38,6 +38,7 @@ class Group(Base):
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     icon: Mapped[str | None] = mapped_column(String(20))
     description: Mapped[str | None] = mapped_column(String(500))
+    started_on: Mapped[date | None] = mapped_column(Date)  # 그룹 첫 만남일 (선택)
     # 생성자 기록용. 방장 판단은 group_member.role 로 한다. 회원 삭제 시 NULL 로 남김.
     created_by: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("users.id", ondelete="SET NULL")
@@ -56,6 +57,7 @@ class GroupMember(Base):
         BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True
     )
     role: Mapped[str] = mapped_column(String(10), nullable=False, default="member")  # owner(방장) / member(멤버)
+    nickname: Mapped[str | None] = mapped_column(String(30))  # 이 그룹에서만 쓰는 별명 (없으면 회원 닉네임)
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (

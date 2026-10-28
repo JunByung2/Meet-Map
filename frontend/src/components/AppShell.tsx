@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import Avatar from "./Avatar";
 import Sidebar, {
   LAST_GROUP_KEY,
   type ActiveMenu,
@@ -13,7 +14,7 @@ import Sidebar, {
 // 다른 파일들이 AppShell 에서 가져다 쓰던 타입은 그대로 쓸 수 있게 다시 내보낸다
 export type { ShellGroup };
 
-type Me = { nickname?: string };
+type Me = { id?: number; nickname?: string; profile_image?: string | null };
 
 export default function AppShell({
   group,
@@ -26,10 +27,16 @@ export default function AppShell({
 }) {
   const router = useRouter();
   const [nickname, setNickname] = useState("");
+  const [meId, setMeId] = useState<number | null>(null);
+  const [photo, setPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     api<Me>("/auth/me")
-      .then((me) => setNickname(me?.nickname ?? ""))
+      .then((me) => {
+        setNickname(me?.nickname ?? "");
+        setMeId(me?.id ?? null);
+        setPhoto(me?.profile_image ?? null);
+      })
       .catch(() => {});
   }, []);
 
@@ -73,9 +80,16 @@ export default function AppShell({
         <div className="header-right">
           <span>우리만 볼 수 있는 기록</span>
           <div className="header-user">
-            <span className="avatar">{initial}</span>
+            {meId !== null ? (
+              <Avatar userId={meId} name={nickname} image={photo} />
+            ) : (
+              <span className="avatar">{initial}</span>
+            )}
             <span>{nickname || "나"}</span>
           </div>
+          <Link href="/settings" className="btn secondary sm">
+            설정
+          </Link>
           <button className="btn secondary sm" onClick={logout}>
             로그아웃
           </button>

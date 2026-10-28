@@ -74,6 +74,7 @@ class PositionIn(BaseModel):
 class LocationOut(BaseModel):
     user_id: int
     nickname: str | None
+    account_nickname: str | None = None  # 원래 닉네임 (nickname 은 별명이 있으면 별명)
     lat: float          # 격자 중심 (대략적인 위치)
     lng: float
     updated_at: datetime
@@ -94,10 +95,13 @@ def _purge(db: DbSession) -> None:
     )
 
 
-def _out(share: LocationShare, nickname: str | None, me_id: int) -> LocationOut:
+def _out(
+    share: LocationShare, account_nickname: str | None, alias: str | None, me_id: int
+) -> LocationOut:
     return LocationOut(
         user_id=share.user_id,
-        nickname=nickname,
+        nickname=alias or account_nickname,
+        account_nickname=account_nickname,
         lat=share.cell_lat,
         lng=share.cell_lng,
         updated_at=share.updated_at,
@@ -116,7 +120,7 @@ def list_locations(
     _purge(db)
     db.commit()
     rows = db.execute(
-        select(LocationShare, User.nickname)
+    select(LocationShare, User.nickname, GroupMember.nickname)
         .join(User, User.id == LocationShare.user_id)
         # 지금도 이 그룹의 멤버인 사람의 위치만
         .join(
@@ -133,7 +137,7 @@ def list_locations(
         )
         .order_by(LocationShare.updated_at.desc())
     ).all()
-    return [_out(s, nick, user.id) for s, nick in rows]
+    return [_out(s, nick, alias, user.id) for s, nick, alias in rows]
 
 
 @router.post("/share", response_model=LocationOut, status_code=status.HTTP_201_CREATED)
@@ -160,7 +164,7 @@ def start_sharing(
     share.stopped_at = None
     db.commit()
     db.refresh(share)
-    return _out(share, user.nickname, user.id)
+    return _out(share, user.nickname, member.nickname, user.id)
 
 
 @router.put("", response_model=LocationOut)
@@ -181,7 +185,7 @@ def update_position(
     share.updated_at = now
     db.commit()
     db.refresh(share)
-    return _out(share, user.nickname, user.id)
+    return _out(share, user.nickname, member.nickname, user.id)
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)

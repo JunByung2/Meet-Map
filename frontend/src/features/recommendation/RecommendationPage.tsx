@@ -16,6 +16,7 @@ const MEMBER_COLORS = ['#A8DCD1', '#AFCBF3', '#F6D6A8', '#D5C2F1', '#F3BFD0']
 const StableKakaoMap = memo(BaseKakaoMap, (previous, next) =>
   previous.selectedPlaceId === next.selectedPlaceId &&
   previous.height === next.height &&
+  previous.connectDepartures === next.connectDepartures &&
   previous.onPlaceClick === next.onPlaceClick &&
   JSON.stringify(previous.places) === JSON.stringify(next.places),
 )
@@ -78,6 +79,11 @@ function DepartureEditor({
   const [keyword, setKeyword] = useState('')
   const [results, setResults] = useState<SearchPlace[]>([])
   const [selectedId, setSelectedId] = useState('')
+  const mapSectionRef = useRef<HTMLElement>(null)
+  const selectRecommendation = (id: string) => {
+    setSelectedId(`recommend-${id}`)
+    mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
   const handlePlaceClick = useCallback((place: MapPlace) => setSelectedId(place.id), [])
   const [searching, setSearching] = useState(false)
   const [mapView, setMapView] = useState(0)
@@ -352,7 +358,7 @@ function DepartureEditor({
             </div>
           </section>
         </section>
-        <section className={styles.mapSection}>
+        <section ref={mapSectionRef} className={styles.mapSection}>
           <div className={`${styles.mapHeader} ${layout.mapHeading}`}>
             <div><h3>멤버 출발지 지도</h3>
               <p className={styles.hint}>색상과 번호로 각 멤버의 출발지를 확인하세요.</p></div>
@@ -365,8 +371,12 @@ function DepartureEditor({
             selectedPlaceId={selectedId}
             onPlaceClick={handlePlaceClick}
             height="600px"
+            connectDepartures
           />
-          <p className={styles.hint}>멤버 출발지 {memberPlaces.length}곳이 지도에 표시돼요.</p>
+          <p className={styles.hint}>멤버 출발지 {memberPlaces.length}곳이 지도에 표시돼요.
+            {selectedId.startsWith('recommend-') && recommendations.some(place => `recommend-${place.id}` === selectedId)
+              ? ' 멤버별 색상 점선은 선택한 추천 역과의 위치 연결선이며 실제 이동 경로가 아닙니다.'
+              : ' 추천 역을 누르면 각 멤버 출발지와 연결해서 볼 수 있어요.'}</p>
         </section>
       </div>
 
@@ -412,7 +422,11 @@ function DepartureEditor({
           {recommendations.map((place, index) => (
             <article key={place.id} className={styles.memberCard}>
               <h3>
-                {index + 1}위 · {place.name}
+                <button type="button" className={styles.memberButton}
+                  aria-pressed={selectedId === `recommend-${place.id}`}
+                  onClick={() => selectRecommendation(place.id)}>
+                  {index + 1}위 · {place.name}
+                </button>
               </h3>
               <p className={styles.hint}>{place.address}</p>
               <p>
@@ -430,7 +444,7 @@ function DepartureEditor({
               <button
                 type="button"
                 className={styles.memberButton}
-                onClick={() => setSelectedId(`recommend-${place.id}`)}
+                onClick={() => selectRecommendation(place.id)}
               >
                 지도에서 보기
               </button>

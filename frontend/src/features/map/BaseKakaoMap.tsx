@@ -26,6 +26,7 @@ interface BaseKakaoMapProps {
   selectedPlaceId?: string
   onPlaceClick?: (place: MapPlace) => void
   height?: string
+  connectDepartures?: boolean
 }
 
 // 카카오 SDK 객체를 사용하기 위한 타입
@@ -65,6 +66,7 @@ export default function BaseKakaoMap({
   selectedPlaceId,
   onPlaceClick,
   height = '480px',
+  connectDepartures = false,
 }: BaseKakaoMapProps) {
   // 지도가 표시될 HTML 요소
   const mapContainer = useRef<HTMLDivElement>(null)
@@ -74,6 +76,7 @@ export default function BaseKakaoMap({
 
   // 지도에 표시한 마커 목록
   const markers = useRef<any[]>([])
+  const connections = useRef<any[]>([])
 
   // 선택한 장소의 이름 말풍선
   const selectedOverlay = useRef<any>(null)
@@ -272,6 +275,9 @@ export default function BaseKakaoMap({
     const kakao = window.kakao
     const map = mapInstance.current
 
+    connections.current.forEach(line => line.setMap(null))
+    connections.current = []
+
     // 기존 마커 제거
     markers.current.forEach((marker) => {
       marker.setMap(null)
@@ -293,6 +299,26 @@ export default function BaseKakaoMap({
 
     // 선택한 장소 찾기
     const selectedPlace = places.find((place) => place.id === selectedPlaceId)
+
+    const connectedDepartures = connectDepartures && selectedPlace?.id.startsWith('recommend-')
+      ? places.filter(place => place.memberNumber !== undefined)
+      : []
+
+    // 위치 관계를 나타내는 점선이며 실제 대중교통 노선이 아니다.
+    if (selectedPlace) {
+      connectedDepartures.forEach(place => {
+        const start = new kakao.maps.LatLng(place.latitude, place.longitude)
+        const end = new kakao.maps.LatLng(selectedPlace.latitude, selectedPlace.longitude)
+        bounds.extend(start)
+        bounds.extend(end)
+        const line = new kakao.maps.Polyline({
+          map, path: [start, end], strokeWeight: 5,
+          strokeColor: MEMBER_COLORS[place.memberNumber!] ?? DEFAULT_MARKER_COLOR,
+          strokeOpacity: 0.95, strokeStyle: 'dash', zIndex: 0,
+        })
+        connections.current.push(line)
+      })
+    }
 
     // 장소마다 마커 생성
     places.forEach((place) => {
@@ -356,7 +382,9 @@ export default function BaseKakaoMap({
       })
 
       markers.current.push(marker)
-      bounds.extend(position)
+      if (!connectedDepartures.length || place.id === selectedPlaceId || place.memberNumber !== undefined) {
+        bounds.extend(position)
+      }
     })
 
     // =====================================
@@ -371,8 +399,12 @@ export default function BaseKakaoMap({
       )
 
       // 선택한 장소로 지도 이동
-      map.setCenter(position)
-      map.setLevel(3)
+      if (connectedDepartures.length) {
+        map.setBounds(bounds, 60, 60, 60, 60)
+      } else {
+        map.setCenter(position)
+        map.setLevel(3)
+      }
 
       // 장소 이름을 표시할 HTML 요소
       const label = document.createElement('div')
@@ -411,6 +443,8 @@ export default function BaseKakaoMap({
 
     // 장소 목록이 바뀔 때 기존 마커 정리
     return () => {
+      connections.current.forEach(line => line.setMap(null))
+      connections.current = []
       markers.current.forEach((marker) => {
         marker.setMap(null)
       })
@@ -422,7 +456,7 @@ export default function BaseKakaoMap({
         selectedOverlay.current = null
       }
     }
-  }, [places, selectedPlaceId, mapReady])
+  }, [places, selectedPlaceId, mapReady, connectDepartures])
 
   // =========================================
   // 8. 공통 지도 화면

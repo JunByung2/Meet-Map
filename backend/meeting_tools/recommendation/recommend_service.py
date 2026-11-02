@@ -1,5 +1,6 @@
 """가장 오래 걸리는 멤버의 이동시간이 짧은 지하철역을 우선 추천한다."""
 import logging
+from collections import Counter
 import math
 import os
 import re
@@ -191,6 +192,7 @@ def recommend_places(departures: list) -> dict:
     center = {"x": sum(p["x"] for p in departures)/len(departures), "y": sum(p["y"] for p in departures)/len(departures)}
     candidates = search_candidates(center, departures)
     results, excluded = [], 0
+    failures = Counter()
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = [executor.submit(evaluate_candidate, item, departures) for item in candidates]
         for future in futures:
@@ -199,8 +201,16 @@ def recommend_places(departures: list) -> dict:
                 value["center_distance_meters"] = round(distance_km(center,
                     {"x": value["longitude"], "y": value["latitude"]}) * 1000, 1)
                 results.append(value)
-            except TransitError:
+            except TransitError as error:
                 excluded += 1
+                code = getattr(error, "code", "TRANSIT_ERROR")
+                failures[code] += 1
+                if code in ("NOT_CONFIGURED", "AUTH_FAILED", "RATE_LIMITED", "ENDPOINT_NOT_FOUND"):
+                    for pending in futures:
+                        pending.cancel()
+                    raise RecommendationError(str(error), code=f"TRANSIT_{code}") from None
+    if failures:
+        logger.warning("[추천 경로 요약] excluded=%s failures=%s", excluded, dict(failures))
     if not results:
         raise RecommendationError("후보 장소는 찾았지만 전원의 대중교통 이동시간을 확인하지 못했어요. 경로 제공 여부를 확인하거나 잠시 후 다시 시도해 주세요.", code="NO_REACHABLE_CANDIDATES")
     # 가장 오래 이동하는 멤버의 부담을 우선 줄인다. 초 단위 원본으로 비교한다.

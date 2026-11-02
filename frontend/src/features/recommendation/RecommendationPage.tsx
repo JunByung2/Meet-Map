@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-import BaseKakaoMap, { type MapPlace } from '../map/BaseKakaoMap'
+import BaseKakaoMap, { CONNECTION_COLORS, type MapPlace } from '../map/BaseKakaoMap'
 import styles from '../map/map.module.css'
 import layout from './recommendation.module.css'
 import { usePlacePlan } from './usePlacePlan'
@@ -177,7 +177,8 @@ function DepartureEditor({
     setMessage('')
   }
 
-  const recommendations = connected && !saving ? (plan?.result?.recommendations ?? []) : []
+  const recommendations = !saving ? (plan?.result?.recommendations ?? []) : []
+  const selectedRecommendation = recommendations.find(place => `recommend-${place.id}` === selectedId)
   const memberPlaces: MapPlace[] = group.members.flatMap((member, index) => {
     const saved = member.departure ?? (member.user_id === me?.id ? departure : null)
     return saved ? [{
@@ -375,8 +376,27 @@ function DepartureEditor({
           />
           <p className={styles.hint}>멤버 출발지 {memberPlaces.length}곳이 지도에 표시돼요.
             {selectedId.startsWith('recommend-') && recommendations.some(place => `recommend-${place.id}` === selectedId)
-              ? ' 멤버별 색상 점선은 선택한 추천 역과의 위치 연결선이며 실제 이동 경로가 아닙니다.'
+              ? ' 멤버별 색상·번호의 선은 선택한 추천 역과의 위치 연결선이며 실제 이동 경로가 아닙니다.'
               : ' 추천 역을 누르면 각 멤버 출발지와 연결해서 볼 수 있어요.'}</p>
+          {selectedRecommendation && (
+            <div aria-label="선택한 추천 역까지의 멤버별 연결" style={{ marginTop: 12 }}>
+              <strong>{selectedRecommendation.name}까지 연결</strong>
+              <ul style={{ margin: '8px 0', paddingLeft: 0, listStyle: 'none', display: 'grid', gap: 6 }}>
+                {group.members.map((member, index) => {
+                  const position = plan?.result?.member_ids.indexOf(member.user_id) ?? -1
+                  const minutes = position >= 0 ? selectedRecommendation.member_minutes[position] : undefined
+                  return memberPlaces.some(place => place.id === `departure-${member.user_id}`) ? (
+                    <li key={member.user_id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span aria-hidden="true" style={{ width: 24, borderTop: `4px solid ${CONNECTION_COLORS[index + 1]}`, flexShrink: 0 }} />
+                      <span>{index + 1}번 {member.nickname} → {selectedRecommendation.name}
+                        {typeof minutes === 'number' ? ` · 예상 ${minutes}분` : ''}</span>
+                    </li>
+                  ) : null
+                })}
+              </ul>
+              <p className={styles.hint}>선이 겹치는 곳은 선 위의 멤버 번호로 확인하세요.</p>
+            </div>
+          )}
         </section>
       </div>
 

@@ -52,6 +52,10 @@ const MEMBER_COLORS: Record<number, string> = {
 }
 
 // 일반 검색 결과 마커 색상
+export const CONNECTION_COLORS: Record<number, string> = {
+  1: '#167A68', 2: '#346DB0', 3: '#AA650A', 4: '#8051AD', 5: '#BC4776',
+}
+
 const DEFAULT_MARKER_COLOR = '#8B9695'
 
 // 선택된 일반 장소 마커 색상
@@ -306,17 +310,33 @@ export default function BaseKakaoMap({
 
     // 위치 관계를 나타내는 점선이며 실제 대중교통 노선이 아니다.
     if (selectedPlace) {
-      connectedDepartures.forEach(place => {
+      connectedDepartures.forEach((place, index) => {
         const start = new kakao.maps.LatLng(place.latitude, place.longitude)
         const end = new kakao.maps.LatLng(selectedPlace.latitude, selectedPlace.longitude)
         bounds.extend(start)
         bounds.extend(end)
+        const color = CONNECTION_COLORS[place.memberNumber!] ?? SELECTED_MARKER_COLOR
+        const outline = new kakao.maps.Polyline({
+          map, path: [start, end], strokeWeight: 9,
+          strokeColor: '#FFFFFF', strokeOpacity: 0.95, strokeStyle: 'solid', zIndex: 1,
+        })
         const line = new kakao.maps.Polyline({
           map, path: [start, end], strokeWeight: 5,
-          strokeColor: MEMBER_COLORS[place.memberNumber!] ?? DEFAULT_MARKER_COLOR,
-          strokeOpacity: 0.95, strokeStyle: 'dash', zIndex: 0,
+          strokeColor: color, strokeOpacity: 1, strokeStyle: 'solid', zIndex: 2,
         })
-        connections.current.push(line)
+        const badge = document.createElement('div')
+        badge.textContent = `${place.memberNumber}번`
+        badge.style.cssText = `background:white;color:${color};border:2px solid ${color};border-radius:16px;padding:3px 8px;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 1px 4px #0003;pointer-events:none`
+        const ratio = 0.35 + index * 0.08
+        const badgeOverlay = new kakao.maps.CustomOverlay({
+          map,
+          position: new kakao.maps.LatLng(
+            place.latitude + (selectedPlace.latitude - place.latitude) * ratio,
+            place.longitude + (selectedPlace.longitude - place.longitude) * ratio,
+          ),
+          content: badge, xAnchor: 0.5, yAnchor: 0.5, zIndex: 5,
+        })
+        connections.current.push(outline, line, badgeOverlay)
       })
     }
 

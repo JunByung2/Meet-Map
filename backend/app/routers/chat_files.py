@@ -149,6 +149,9 @@ def upload_chat_file(
         path = f"db:{uuid.uuid4()}"
 
     if kind == "image":
+        # 저장소에 올리는 동안(느리면 수십 초) DB 연결을 붙잡고 있으면 연결이 바닥나서 다른 요청이 실패한다.
+        # 조회가 끝났으니 연결을 먼저 돌려주고, 저장할 때 다시 받는다.
+        db.commit()
         _storage_call(storage.upload, path, data, content_type)
     try:
         row = ChatAttachment(

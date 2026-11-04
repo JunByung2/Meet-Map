@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ClipboardEvent } from 'react'
 import styles from './chat.module.css'
 import tray from './bundle.module.css'
 
@@ -33,14 +33,20 @@ export default function MessageComposer({
   /** 사진/첨부 파일을 골랐을 때 */
   onFile?: (kind: 'image' | 'file', file: File) => Promise<unknown> | void
   /** 사진을 여러 장 골랐을 때 (있으면 onFile 대신 쓴다) */
-  onFiles?: (kind: 'image' | 'file', files: File[], opts?: { bundle?: boolean }) => Promise<unknown> | void
+  onFiles?: (
+    kind: 'image' | 'file',
+    files: File[],
+    opts?: { bundle?: boolean },
+  ) => Promise<unknown> | void
 }) {
   const [text, setText] = useState('')
   const imageRef = useRef<HTMLInputElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // 보내기 전 사진 미리보기 (2장 이상 골랐을 때)
-  const [pending, setPending] = useState<{ id: string; file: File; url: string }[]>([])
+  const [pending, setPending] = useState<
+    { id: string; file: File; url: string }[]
+  >([])
   const [bundle, setBundle] = useState(true)
   const [note, setNote] = useState('')
   const pendingRef = useRef(pending)
@@ -54,7 +60,10 @@ export default function MessageComposer({
   }, [])
 
   // 화면을 떠날 때 미리보기용 임시 주소를 정리한다
-  useEffect(() => () => pendingRef.current.forEach((p) => URL.revokeObjectURL(p.url)), [])
+  useEffect(
+    () => () => pendingRef.current.forEach((p) => URL.revokeObjectURL(p.url)),
+    [],
+  )
 
   function toggleBundle() {
     setBundle((cur) => {
@@ -107,22 +116,58 @@ export default function MessageComposer({
       return
     }
     const room = MAX_PHOTOS - pending.length
-    if (files.length > room) setNote(`한 번에 최대 ${MAX_PHOTOS}장까지 보낼 수 있어요.`)
+    if (files.length > room)
+      setNote(`한 번에 최대 ${MAX_PHOTOS}장까지 보낼 수 있어요.`)
     else setNote('')
     setPending((cur) => [
       ...cur,
-      ...files.slice(0, Math.max(room, 0)).map((file) => ({ id: crypto.randomUUID(), file, url: URL.createObjectURL(file) })),
+      ...files
+        .slice(0, Math.max(room, 0))
+        .map((file) => ({
+          id: crypto.randomUUID(),
+          file,
+          url: URL.createObjectURL(file),
+        })),
     ])
   }
 
+  // 클립보드에 사진이 있으면 (복사한 사진, 스크린샷) 미리보기 칸에 담는다
+  function onPaste(e: ClipboardEvent<HTMLElement>) {
+    const files = Array.from(e.clipboardData.files).filter((f) =>
+      f.type.startsWith('image/'),
+    )
+    if (files.length === 0) return // 글자만 붙여넣는 경우는 그대로 둔다
+    e.preventDefault()
+    const room = MAX_PHOTOS - pending.length
+    if (files.length > room)
+      setNote(`한 번에 최대 ${MAX_PHOTOS}장까지 보낼 수 있어요.`)
+    else setNote('')
+    setPending((cur) => [
+      ...cur,
+      ...files
+        .slice(0, Math.max(room, 0))
+        .map((file) => ({
+          id: crypto.randomUUID(),
+          file,
+          url: URL.createObjectURL(file),
+        })),
+    ])
+  }
+
+  // 전송 버튼과 Enter 키는 하나로 동작한다: 미리보기에 사진이 있으면 사진을 먼저 보내고, 글자가 있으면 이어서 보낸다
   async function submit() {
-    if (!text.trim()) return
-    const ok = await onSend(text)
-    if (ok) setText('')
+    const hasPhotos = pending.length > 0
+    const hasText = text.trim().length > 0
+    if (!hasPhotos && !hasText) return
+    if (hasPhotos) sendPending()
+    if (hasText) {
+      const ok = await onSend(text)
+      if (ok) setText('')
+    }
   }
 
   return (
-    <section className={styles.composer}>
+    <section className={styles.composer} onPaste={onPaste}>
       <div className={styles.tools}>
         {TOOLS.map((tool) => (
           <button
@@ -141,8 +186,21 @@ export default function MessageComposer({
         ))}
       </div>
 
-      <input ref={imageRef} type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,.heic" hidden onChange={(e) => pick('image', e.target)} />
-      <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.txt,.csv,.md,.zip" hidden onChange={(e) => pick('file', e.target)} />
+      <input
+        ref={imageRef}
+        type="file"
+        multiple
+        accept="image/png,image/jpeg,image/webp,image/gif,.heic"
+        hidden
+        onChange={(e) => pick('image', e.target)}
+      />
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.txt,.csv,.md,.zip"
+        hidden
+        onChange={(e) => pick('file', e.target)}
+      />
 
       {pending.length > 0 && (
         <div className={tray.tray} aria-label="보낼 사진 미리보기">
@@ -151,27 +209,45 @@ export default function MessageComposer({
               <div key={p.id} className={tray.thumb}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={p.url} alt={p.file.name} />
-                <button type="button" className={tray.thumbX} aria-label="이 사진 빼기" onClick={() => removePending(p.id)}>
+                <button
+                  type="button"
+                  className={tray.thumbX}
+                  aria-label="이 사진 빼기"
+                  onClick={() => removePending(p.id)}
+                >
                   ✕
                 </button>
               </div>
             ))}
           </div>
           <div className={tray.trayRow}>
-            <span className={tray.count}>사진 {pending.length}장</span>
+            <span className={tray.count}>
+              사진 {pending.length}장
+              {pending.length > 16 && bundle ? ' (16장씩 묶여요)' : ''}
+            </span>
             {pending.length > 1 && (
-              <button type="button" className={tray.toggle} role="checkbox" aria-checked={bundle} onClick={toggleBundle}>
-                <span className={`${tray.circle}${bundle ? ` ${tray.circleOn}` : ''}`} aria-hidden="true">
+              <button
+                type="button"
+                className={tray.toggle}
+                role="checkbox"
+                aria-checked={bundle}
+                onClick={toggleBundle}
+              >
+                <span
+                  className={`${tray.circle}${bundle ? ` ${tray.circleOn}` : ''}`}
+                  aria-hidden="true"
+                >
                   {bundle ? '✓' : ''}
                 </span>
                 묶어서 보내기
               </button>
             )}
-            <button type="button" className="btn secondary sm" onClick={clearPending}>
+            <button
+              type="button"
+              className="btn secondary sm"
+              onClick={clearPending}
+            >
               취소
-            </button>
-            <button type="button" className="btn sm" disabled={sending} onClick={sendPending}>
-              {pending.length > 1 && bundle ? `${pending.length}장 묶어서 보내기${pending.length > 16 ? ' (16장씩)' : ''}` : `${pending.length}장 보내기`}
             </button>
           </div>
           {note && <p className={styles.hint}>{note}</p>}
@@ -184,7 +260,11 @@ export default function MessageComposer({
           lang="ko"
           type="text"
           value={text}
-          placeholder="친구들에게 메시지 보내기"
+          placeholder={
+            pending.length > 0
+              ? '사진과 함께 보낼 메시지 (없어도 돼요)'
+              : '친구들에게 메시지 보내기'
+          }
           autoComplete="off"
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
@@ -204,7 +284,10 @@ export default function MessageComposer({
         </button>
       </div>
 
-      <p className={styles.hint}>Enter 키를 눌러 메시지를 보낼 수 있어요.</p>
+      <p className={styles.hint}>
+        Enter 키를 눌러 메시지{pending.length > 0 ? '와 사진을' : '를'} 보낼 수
+        있어요.
+      </p>
       <div className={styles.status} role="status">
         {status}
       </div>

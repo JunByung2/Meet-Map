@@ -182,12 +182,12 @@ def main():
             # 9) 사진 자동 연결: 오늘 확정된 약속이 하나일 때만
             db.add(Meeting(id=10, group_id=11, title="오늘 약속", location="성수", meeting_time=today_noon, status="confirmed"))
             db.commit()
-            up = photo_api.upload_photos(11, [png("t.png")], [], "", "", None, None, None, None, None, m, u, db)
+            up = photo_api.upload_photos(11, [png("t.png")], [], "", "", None, None, None, None, None, None, 0, m, u, db)
             today_rec = db.query(records.MeetingRecord).filter_by(group_id=11, meeting_id=10).one()
             check(db.query(Photo).filter_by(record_id=today_rec.id).count() == 1, "오늘 올린 사진이 오늘 약속 기록에 자동으로 붙는다")
             db.add(Meeting(id=11, group_id=11, title="오늘 약속2", location="건대", meeting_time=today_noon, status="confirmed"))
             db.commit()
-            photo_api.upload_photos(11, [png("t2.png")], [], "", "", None, None, None, None, None, m, u, db)
+            photo_api.upload_photos(11, [png("t2.png")], [], "", "", None, None, None, None, None, None, 0, m, u, db)
             check(db.query(Photo).filter_by(record_id=today_rec.id).count() == 1, "오늘 약속이 둘이면 자동 연결하지 않는다")
 
             # 10) 투표 후보에 카카오 장소 저장 + 확정하면 약속으로 복사

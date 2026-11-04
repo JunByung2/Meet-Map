@@ -23,6 +23,7 @@ from app import storage
 from app.config import PHOTO_MAX_BYTES, PHOTO_MAX_FILES
 from app.db import get_db
 from app.deps.auth import get_current_user, require_group_member
+from app.linked_delete import delete_photo_batches
 from app.models import ChatAttachment, GroupMember, Photo, User
 from app.records_sync import auto_link_photos
 
@@ -236,10 +237,16 @@ def upload_photos(
     place_address: str | None = Form(default=None),
     place_lat: float | None = Form(default=None),
     place_lng: float | None = Form(default=None),
+    # 사진을 여러 번에 나눠 올릴 때: 같은 batch_id 로 보내면 같은 묶음에 이어 붙는다.
+    # start_index 는 이번에 보내는 첫 사진이 묶음의 몇 번째인지(0부터). 이미 올라간 번호는 건너뛰어서 재시도해도 중복되지 않는다.
+    batch_id: str | None = Form(default=None),
+    start_index: int = Form(default=0, ge=0),
     member: GroupMember = Depends(require_group_member),
     user: User = Depends(get_current_user),
     db: DbSession = Depends(get_db),
 ):
+    """사진 올리기. batch_id 를 주지 않으면 지금까지처럼 한 번에 전부 올리고(하나라도 실패하면 전부 취소),
+    주면 나눠 올리는 요청 하나로 본다(이번 요청 안에서만 전부 성공/전부 취소)."""
     _require_storage()
     title, memo = title.strip(), memo.strip()
     place = _parse_place(place_id, place_name, place_address, place_lat, place_lng)
@@ -252,9 +259,31 @@ def upload_photos(
     if any(len(c) > 200 for c in captions):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "사진 설명은 200자까지 쓸 수 있어요.")
 
+    # 나눠 올리는 요청이면 같은 묶음에 이어 붙인다
+    existing: dict[int, Photo] = {}
+    if batch_id is None:
+        batch_id = str(uuid.uuid4())
+        start_index = 0
+    else:
+        try:
+            batch_id = str(uuid.UUID(batch_id))
+        except ValueError:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "묶음 번호가 올바르지 않아요.") from None
+        if start_index + len(files) > PHOTO_MAX_FILES:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"한 번에 최대 {PHOTO_MAX_FILES}장까지 올릴 수 있어요.")
+        rows_in_batch = db.scalars(select(Photo).where(Photo.batch_id == batch_id)).all()
+        if any(r.group_id != group_id or r.user_id != user.id for r in rows_in_batch):
+            # 남의 묶음(또는 다른 그룹의 묶음)에는 사진을 더할 수 없다
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "이 묶음에는 사진을 더할 수 없어요.")
+        existing = {r.sort_order: r for r in rows_in_batch}
+
+    # 이번 요청의 사진마다 묶음 안의 자리(번호)를 정한다. 이미 올라간 자리는 다시 올리지 않는다.
+    slots = [(start_index + i, f, i) for i, f in enumerate(files)]
+    todo = [(order, f, i) for order, f, i in slots if order not in existing]
+
     # 1) 저장소에 올리기 전에 전부 검사한다 (하나라도 문제면 아무것도 올리지 않음)
     prepared: list[tuple[str, bytes, str]] = []  # (확장자, 내용, content-type)
-    for f in files:
+    for _, f, _i in todo:
         ext = _extension(f.filename)
         if ext not in ALLOWED_EXTENSIONS:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "JPG, PNG, WEBP, HEIC 사진만 올릴 수 있어요.")
@@ -265,12 +294,12 @@ def upload_photos(
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "사진 파일이 아니거나 손상된 파일이에요.")
         prepared.append((ext, data, CONTENT_TYPES[ext]))
 
-    # 2) 한 장씩 올리고, 중간에 실패하면 이번에 올린 것을 전부 지운다 (반쪽짜리 묶음 방지)
-    batch_id = str(uuid.uuid4())
-    uploaded: list[str] = []
+    # 2) 한 장씩 올리고, 중간에 실패하면 이번 요청에서 올린 것을 전부 지운다 (반쪽짜리 묶음 방지)
+        uploaded: list[str] = []
     rows: list[Photo] = []
+    db.commit()  # 저장소에 올리는 동안 DB 연결을 붙잡지 않도록 먼저 돌려준다 (저장할 때 다시 받는다)
     try:
-        for index, (ext, data, content_type) in enumerate(prepared):
+        for (order, _f, index), (ext, data, content_type) in zip(todo, prepared):
             path = f"groups/{group_id}/photos/{uuid.uuid4()}/original.{ext}"
             _storage_call(storage.upload, path, data, content_type)
             uploaded.append(path)
@@ -284,7 +313,7 @@ def upload_photos(
                     title=title or None,
                     memo=memo or None,
                     batch_id=batch_id,
-                    sort_order=index,
+                    sort_order=order,
                     **_place_columns(place),
                 )
             )
@@ -300,7 +329,10 @@ def upload_photos(
         raise
     for r in rows:
         db.refresh(r)
-    return _to_out(db, rows, user, member)
+    # 응답은 이번 요청의 사진 순서대로 (이미 올라가 있던 자리는 그 사진을 그대로 돌려준다)
+    created = {r.sort_order: r for r in rows}
+    ordered = [created.get(order) or existing[order] for order, _f, _i in slots]
+    return _to_out(db, ordered, user, member)
 
 
 @router.get("/{photo_id}", response_model=PhotoDetailOut)
@@ -385,6 +417,25 @@ def update_caption(
     return _to_out(db, [photo], user, member)[0]
 
 
+class BulkBatchDeleteIn(BaseModel):
+    batch_ids: list[str] = Field(min_length=1, max_length=50)
+
+
+@router.post("/bulk-delete")
+def bulk_delete_batches(
+    group_id: int,
+    body: BulkBatchDeleteIn,
+    member: GroupMember = Depends(require_group_member),
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+):
+    """사진 묶음을 여러 개 한 번에 삭제: 올린 사람이나 방장만.
+    권한이 없는 묶음은 건너뛰고 번호를 돌려준다. 채팅으로 보낸 사진은 채팅방의 사진 메시지도 함께 지워진다."""
+    _require_storage()
+    deleted, skipped = delete_photo_batches(db, group_id, body.batch_ids, user, member, strict=False)
+    return {"deleted": deleted, "skipped": skipped}
+
+
 @router.delete("/batch/{batch_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_batch(
     group_id: int,
@@ -393,12 +444,6 @@ def delete_batch(
     user: User = Depends(get_current_user),
     db: DbSession = Depends(get_db),
 ):
+    """사진 묶음 삭제. 채팅으로 보낸 사진이면 채팅방의 사진 메시지도 함께 지워진다."""
     _require_storage()
-    batch = _get_batch(db, group_id, batch_id)
-    if not all(_can_edit(p, user, member) for p in batch):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "올린 사람이나 방장만 삭제할 수 있어요.")
-    # 파일을 먼저 지우고(실패하면 기록은 그대로 둔다), 성공하면 기록을 지운다
-    _storage_call(storage.remove, [p.storage_path for p in batch])
-    for p in batch:
-        db.delete(p)
-    db.commit()
+    delete_photo_batches(db, group_id, [batch_id], user, member, strict=True)

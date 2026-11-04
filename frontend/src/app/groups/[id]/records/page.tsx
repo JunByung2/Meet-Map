@@ -18,7 +18,6 @@ export default function RecordsPage() {
 function RecordList({ groupId, onApiError }: { groupId: string; onApiError: (e: unknown) => string }) {
   const [records, setRecords] = useState<MeetingRecord[] | null>(null);
   const [error, setError] = useState("");
-
   useEffect(() => {
     api<MeetingRecord[]>(`/groups/${groupId}/records`)
       .then(setRecords)
@@ -30,7 +29,7 @@ function RecordList({ groupId, onApiError }: { groupId: string; onApiError: (e: 
   }, [groupId]);
 
   async function removeRecord(r: MeetingRecord) {
-    if (!window.confirm(`'${r.title}' 기록을 삭제할까요?\n약속과 사진은 그대로 남고, 이 기록만 지워져요.`)) return;
+    if (!window.confirm(`'${r.title}' 기록을 삭제할까요?\n모든 팀원에게서 지워져요. 약속과 사진은 그대로 남아요.`)) return;
     setError("");
     try {
       await api(`/groups/${groupId}/records/${r.id}`, { method: "DELETE" });
@@ -51,7 +50,20 @@ function RecordList({ groupId, onApiError }: { groupId: string; onApiError: (e: 
       </div>
 
       {error && <div className="error">{error}</div>}
-      {records === null && <div className="card muted">불러오는 중...</div>}
+      {records === null && (
+        <div className="rc-list" aria-busy="true" aria-label="불러오는 중">
+          {[0, 1, 2].map((i) => (
+            <div className="rc-card sk-card" key={i}>
+              <div className="rc-cover sk" />
+              <div className="rc-body">
+                <span className="sk sk-line" style={{ width: 80 }} />
+                <span className="sk sk-line" style={{ width: "55%", height: 16, marginTop: 6 }} />
+                <span className="sk sk-line" style={{ width: "40%", marginTop: 6 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {records && records.length === 0 && !error && (
         <div className="card ph-empty">
@@ -71,7 +83,7 @@ function RecordList({ groupId, onApiError }: { groupId: string; onApiError: (e: 
               <div className="rc-cover">
                 {r.cover_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={r.cover_url} alt={`${r.title} 대표 사진`} />
+                  <img src={r.cover_url} alt={`${r.title} 대표 사진`} loading="lazy" decoding="async" />
                 ) : (
                   <span>사진 없는 기록</span>
                 )}

@@ -18,7 +18,7 @@ export default function PhotoCollage({
         <div className="ph-cell" key={p.id}>
           {p.signed_url && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={p.signed_url} alt={i === 0 ? alt : ""} />
+            <img src={p.signed_url} alt={i === 0 ? alt : ""} loading="lazy" decoding="async" />
           )}
           {i === 3 && total > 4 && <span className="ph-more">+{total - 4}</span>}
         </div>

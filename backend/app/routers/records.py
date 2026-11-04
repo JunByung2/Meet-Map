@@ -106,6 +106,23 @@ def _chat_photos_by_day(db: DbSession, group_id: int) -> dict[date, list[Photo]]
     return out
 
 
+def _chat_photo_paths_by_day(db: DbSession, group_id: int) -> dict[date, list[str]]:
+    """_chat_photos_by_day 와 같은 결과지만 목록에 필요한 사진 경로만 읽는다. (사진 행 전체를 읽지 않아 가볍다)"""
+    chat_paths = select(ChatAttachment.storage_path).where(ChatAttachment.group_id == group_id, ChatAttachment.kind == "image")
+    rows = db.execute(
+        select(Photo.storage_path, Photo.created_at)
+        .where(Photo.group_id == group_id, or_(Photo.storage_path.in_(chat_paths), Photo.title == "채팅 사진"))
+        .order_by(Photo.created_at, Photo.sort_order, Photo.id)
+        .limit(3000)
+    ).all()
+    out: dict[date, list[str]] = {}
+    for path, created_at in rows:
+        day = to_kst_date(created_at)
+        if day is not None:
+            out.setdefault(day, []).append(path)
+    return out
+
+
 def _to_record_out(
     db: DbSession, records: list[MeetingRecord], user: User, member: GroupMember, with_cover: bool = True
 ) -> list[RecordOut]:
@@ -119,9 +136,9 @@ def _to_record_out(
     )
 
     # 사진 수 + 대표 사진 (그날 채팅으로 보낸 사진 중 가장 먼저 보낸 것)
-    by_day = _chat_photos_by_day(db, records[0].group_id)
+    by_day = _chat_photo_paths_by_day(db, records[0].group_id)
     counts = {r.id: len(by_day.get(r.meet_date, [])) for r in records}
-    cover_path: dict[int, str] = {r.id: by_day[r.meet_date][0].storage_path for r in records if by_day.get(r.meet_date)}
+    cover_path: dict[int, str] = {r.id: by_day[r.meet_date][0] for r in records if by_day.get(r.meet_date)}
     urls: dict[str, str] = {}
     if with_cover and cover_path and storage.is_configured():
         try:

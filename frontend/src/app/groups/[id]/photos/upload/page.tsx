@@ -5,10 +5,38 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PlacePicker from "@/components/PlacePicker";
 import PhotoShell from "@/components/PhotoShell";
-import { api } from "@/lib/api";
+import { ApiError } from "@/lib/api";
 import { hasAllowedExtension, MAX_BYTES, MAX_FILES, type PlaceValue } from "@/lib/photos";
 
-type Item = { id: string; file: File; caption: string; preview: string };
+type Status = "wait" | "up" | "done" | "fail";
+type Item = { id: string; file: File; caption: string; preview: string; status: Status };
+
+// 사진을 이 장수씩 끊어서 올려요. 한 번에 너무 크게 보내다 끊기는 걸 막고, 진행률을 보여주기 위해서예요.
+const CHUNK = 3;
+
+// 진행률을 알 수 있도록 fetch 대신 XMLHttpRequest 로 보낸다 (같은 주소·같은 로그인 쿠키)
+function sendChunk(url: string, form: FormData, onProgress: (loaded: number, total: number) => void): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.withCredentials = true;
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(e.loaded, e.total);
+    };
+    xhr.onerror = () => reject(new ApiError(0, "네트워크 연결이 끊겼어요. 다시 시도해 주세요."));
+    xhr.ontimeout = () => reject(new ApiError(0, "응답이 너무 오래 걸려요. 다시 시도해 주세요."));
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) return resolve();
+      let message = "요청에 실패했습니다.";
+      try {
+        const detail = JSON.parse(xhr.responseText)?.detail;
+        if (typeof detail === "string") message = detail;
+      } catch {}
+      reject(new ApiError(xhr.status, message));
+    };
+    xhr.send(form);
+  });
+}
 
 export default function UploadPage() {
   return (
@@ -27,9 +55,14 @@ function Upload({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
   const [place, setPlace] = useState<PlaceValue | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [progress, setProgress] = useState(0); // 0~100
+  const batchRef = useRef<string | null>(null); // 같은 저장 안에서는 같은 묶음 번호를 써야 이어 올릴 수 있어요
+  const started = items.some((i) => i.status !== "wait"); // 한 장이라도 올라가기 시작하면 목록을 바꿀 수 없어요
+  const doneCount = items.filter((i) => i.status === "done").length;
+  const failCount = items.filter((i) => i.status === "fail").length;
 
   function onFiles(list: FileList | null) {
-    if (!list) return;
+    if (!list || busy || started) return;
     setError("");
     const incoming = Array.from(list);
     if (items.length + incoming.length > MAX_FILES) {
@@ -46,7 +79,7 @@ function Upload({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
     }
     setItems((cur) => [
       ...cur,
-      ...incoming.map((file) => ({ id: crypto.randomUUID(), file, caption: "", preview: URL.createObjectURL(file) })),
+      ...incoming.map((file) => ({ id: crypto.randomUUID(), file, caption: "", preview: URL.createObjectURL(file), status: "wait" as Status })),
     ]);
     if (inputRef.current) inputRef.current.value = "";
   }
@@ -59,37 +92,67 @@ function Upload({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
     });
   }
 
+  function setStatus(from: number, to: number, status: Status) {
+    setItems((cur) => cur.map((x, idx) => (idx >= from && idx < to ? { ...x, status } : x)));
+  }
+
   async function save() {
     setError("");
     if (!items.length) {
       setError("업로드할 사진을 선택해 주세요.");
       return;
     }
+    if (!batchRef.current) batchRef.current = crypto.randomUUID();
+    const batch = batchRef.current;
+    const snapshot = items; // 이 시점의 목록 (올리는 동안은 바뀌지 않아요)
+    const totalBytes = snapshot.reduce((n, i) => n + i.file.size, 0) || 1;
+    let doneBytes = snapshot.filter((i) => i.status === "done").reduce((n, i) => n + i.file.size, 0);
+    setProgress(Math.round((doneBytes / totalBytes) * 100));
     setBusy(true);
-    try {
-      // 서버가 한 번에 검사하고 올려요. 중간에 실패하면 서버가 이번에 올린 사진을 모두 취소해요.
-      const form = new FormData();
-      items.forEach((i) => {
-        form.append("files", i.file);
-        form.append("captions", i.caption.trim());
-      });
-      form.append("title", title.trim());
-      form.append("memo", memo.trim());
-      if (place) {
-        // 장소를 골랐다면 사진과 함께 저장 → 추억지도에 마커로 표시돼요
-        if (place.id) form.append("place_id", place.id);
-        form.append("place_name", place.name);
-        if (place.address) form.append("place_address", place.address);
-        form.append("place_lat", String(place.lat));
-        form.append("place_lng", String(place.lng));
+    let firstError = "";
+    for (let from = 0; from < snapshot.length; from += CHUNK) {
+      const to = Math.min(from + CHUNK, snapshot.length);
+      const part = snapshot.slice(from, to);
+      if (part.every((i) => i.status === "done")) continue; // 이미 올라간 조각은 건너뛰어요
+      const partBytes = part.reduce((n, i) => n + i.file.size, 0);
+      setStatus(from, to, "up");
+      try {
+        const form = new FormData();
+        part.forEach((i) => {
+          form.append("files", i.file);
+          form.append("captions", i.caption.trim());
+        });
+        form.append("title", title.trim());
+        form.append("memo", memo.trim());
+        form.append("batch_id", batch);
+        form.append("start_index", String(from));
+        if (place) {
+          // 장소를 골랐다면 사진과 함께 저장 → 추억지도에 마커로 표시돼요
+          if (place.id) form.append("place_id", place.id);
+          form.append("place_name", place.name);
+          if (place.address) form.append("place_address", place.address);
+          form.append("place_lat", String(place.lat));
+          form.append("place_lng", String(place.lng));
+        }
+        await sendChunk(`/api/groups/${groupId}/photos`, form, (loaded, total) => {
+          setProgress(Math.min(99, Math.round(((doneBytes + partBytes * (loaded / total)) / totalBytes) * 100)));
+        });
+        doneBytes += partBytes;
+        setStatus(from, to, "done");
+        setProgress(Math.round((doneBytes / totalBytes) * 100));
+      } catch (e) {
+        setStatus(from, to, "fail");
+        if (!firstError) firstError = onApiError(e);
+        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) break; // 로그인/권한 문제는 계속해도 소용없어요
       }
-      await api(`/groups/${groupId}/photos`, { method: "POST", body: form });
-      items.forEach((i) => URL.revokeObjectURL(i.preview));
-      router.push(`/groups/${groupId}/photos`);
-    } catch (e) {
-      setError(onApiError(e));
-      setBusy(false);
     }
+    setBusy(false);
+    if (firstError) {
+      setError(firstError);
+      return;
+    }
+    snapshot.forEach((i) => URL.revokeObjectURL(i.preview));
+    router.push(`/groups/${groupId}/photos`);
   }
 
   const back = `/groups/${groupId}/photos`;
@@ -146,9 +209,16 @@ function Upload({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={item.preview} alt={`선택한 사진 ${i + 1}`} />
                       <span className="ph-badge">{i === 0 ? "대표 사진" : `${i + 1}번째`}</span>
-                      <button className="ph-remove" type="button" onClick={() => removeItem(item.id)} aria-label={`${item.file.name} 선택 취소`}>
-                        ×
-                      </button>
+                      {item.status !== "wait" && (
+                        <span className={`ph-state ${item.status}`}>
+                          {item.status === "up" ? "올리는 중…" : item.status === "done" ? "✓ 완료" : "실패"}
+                        </span>
+                      )}
+                      {!busy && !started && (
+                        <button className="ph-remove" type="button" onClick={() => removeItem(item.id)} aria-label={`${item.file.name} 선택 취소`}>
+                          ×
+                        </button>
+                      )}
                     </div>
                     <label htmlFor={`cap-${item.id}`}>사진 설명 (선택)</label>
                     <input
@@ -157,6 +227,7 @@ function Upload({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
                       style={{ height: 40 }}
                       value={item.caption}
                       maxLength={200}
+                      disabled={busy || item.status === "done"}
                       placeholder="한마디"
                       onChange={(e) => setItems((cur) => cur.map((x) => (x.id === item.id ? { ...x, caption: e.target.value } : x)))}
                     />
@@ -203,7 +274,7 @@ function Upload({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
             <h2 className="card-title" style={{ marginBottom: 14 }}>
               어디에서 찍었나요?
             </h2>
-            <PlacePicker value={place} onChange={setPlace} disabled={busy} />
+            <PlacePicker value={place} onChange={setPlace} disabled={busy || started} />
           </section>
           <section className="card mint">
             <h2 className="card-title" style={{ marginBottom: 6 }}>
@@ -220,15 +291,36 @@ function Upload({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
         </div>
       )}
 
+      {started && (
+        <div className="ph-progress" role="status" aria-live="polite">
+          <div className="ph-progress-bar">
+            <span style={{ width: `${progress}%` }} />
+          </div>
+          <p>
+            {busy
+              ? `${doneCount}/${items.length}장 올렸어요 · ${progress}%`
+              : failCount > 0
+                ? `${doneCount}/${items.length}장 올렸고, ${failCount}장이 실패했어요. 다시 시도하면 실패한 사진만 이어서 올려요.`
+                : `${items.length}장을 모두 올렸어요`}
+          </p>
+        </div>
+      )}
+
       <div className="ph-actions">
         <span className="meta" style={{ alignSelf: "center" }}>
           {items.length}/{MAX_FILES}장 선택
         </span>
-        <Link className="btn secondary" href={back}>
-          취소
-        </Link>
+        {failCount > 0 && !busy ? (
+          <Link className="btn secondary" href={back}>
+            올라간 사진만 두고 나가기
+          </Link>
+        ) : (
+          <Link className="btn secondary" href={back} aria-disabled={busy} onClick={(e) => busy && e.preventDefault()}>
+            취소
+          </Link>
+        )}
         <button className="btn" onClick={save} disabled={busy || items.length === 0}>
-          {busy ? "저장 중…" : "사진 저장하기"}
+          {busy ? "올리는 중…" : failCount > 0 ? `실패한 ${failCount}장 다시 올리기` : "사진 저장하기"}
         </button>
       </div>
     </>

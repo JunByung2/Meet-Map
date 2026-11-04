@@ -24,7 +24,6 @@
 from datetime import datetime, timezone
 
 from fastapi import Depends, Header, HTTPException, Request, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
 
 from app.config import ALLOW_DEV_AUTH, SESSION_COOKIE_NAME
@@ -44,20 +43,16 @@ def get_current_user(
     # 1) 세션 쿠키 확인 (쿠키에는 원본 토큰, DB에는 그 해시가 저장돼 있다)
     token = request.cookies.get(SESSION_COOKIE_NAME)
     if token:
-        # 세션과 회원을 한 번의 조회로 가져온다 (DB 왕복을 줄인다)
-        row = db.execute(
-            select(Session, User)
-            .join(User, User.id == Session.user_id)
-            .where(Session.id == hash_token(token))
-        ).first()
-        if row is not None:
-            session, user = row
+        session = db.get(Session, hash_token(token))
+        if session is not None:
             if session.expires_at <= datetime.now(timezone.utc):
                 # 만료된 세션은 지운다
                 db.delete(session)
                 db.commit()
-            elif user.status == "active":
-                return user
+            else:
+                user = db.get(User, session.user_id)
+                if user is not None and user.status == "active":
+                    return user
 
     # 2) 개발용 임시 인증 (개발 환경에서만)
     if ALLOW_DEV_AUTH and x_user_id is not None:

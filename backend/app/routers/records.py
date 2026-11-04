@@ -17,7 +17,7 @@ from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, exists, func, or_, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session as DbSession
 
 from app import storage
@@ -25,7 +25,7 @@ from app.config import PHOTO_MAX_BYTES, PHOTO_MAX_FILES
 from app.db import get_db
 from app.deps.auth import get_current_user, require_group_member
 from app.models import ChatAttachment, GroupMember, MeetingRecord, Photo, User
-from app.records_sync import KST, load_confirmed_meetings, sync_group_records, to_kst_date
+from app.records_sync import load_confirmed_meetings, sync_group_records, to_kst_date
 from app.routers.photos import (
     ALLOWED_EXTENSIONS,
     CONTENT_TYPES,
@@ -222,18 +222,10 @@ def list_records(
     user: User = Depends(get_current_user),
     db: DbSession = Depends(get_db),
 ):
-    sync_group_records(db, group_id)  # 날짜가 지난 확정된 약속 중 기록이 없는 것을 자동으로 만든다
-    # 아직 날짜가 지나지 않은(오늘·앞으로의) 약속의 자동 기록은 숨긴다. 단, 사진이 붙은 기록은 계속 보인다.
-    today = datetime.now(KST).date()
-    not_yet = and_(
-        MeetingRecord.meeting_id.is_not(None),
-        MeetingRecord.created_by.is_(None),
-        MeetingRecord.meet_date >= today,
-        ~exists().where(Photo.record_id == MeetingRecord.id),
-    )
+    sync_group_records(db, group_id)  # 확정된 약속 중 기록이 없는 것을 자동으로 만든다
     rows = db.execute(
         select(MeetingRecord)
-        .where(MeetingRecord.group_id == group_id, MeetingRecord.deleted.is_(False), ~not_yet)
+        .where(MeetingRecord.group_id == group_id, MeetingRecord.deleted.is_(False))
         .order_by(MeetingRecord.meet_date.desc(), MeetingRecord.id.desc())
         .limit(500)
     ).scalars().all()

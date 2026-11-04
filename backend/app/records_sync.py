@@ -134,16 +134,12 @@ def ensure_record(db: DbSession, group_id: int, meeting: MeetingInfo) -> Meeting
 
 
 def sync_group_records(db: DbSession, group_id: int) -> None:
-    """날짜가 지난 확정된 약속 중 기록이 아직 없는 것을 모두 만든다."""
+    """확정된 약속 중 기록이 아직 없는 것을 모두 만든다."""
     meetings = load_confirmed_meetings(db, group_id)
     if not meetings:
         return
     done = set(db.execute(select(MeetingRecord.meeting_id).where(MeetingRecord.group_id == group_id, MeetingRecord.meeting_id.is_not(None))).scalars())
-    today = datetime.now(KST).date()
     for meeting in meetings:
-        # 약속 날짜가 오늘을 지난 약속만 지난 기록으로 넘어온다 (오늘·앞으로의 약속은 약속 페이지에 남는다)
-        if meeting.meet_date is not None and meeting.meet_date >= today:
-            continue
         if meeting.id not in done:
             ensure_record(db, group_id, meeting)
 

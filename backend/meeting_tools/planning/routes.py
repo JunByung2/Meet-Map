@@ -2,9 +2,8 @@
 import hashlib
 import json
 from datetime import datetime, timezone
-from typing import Literal
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -14,7 +13,6 @@ from app.deps.auth import get_current_user, require_group_member
 from app.models import Group, GroupMember, User
 from app.routers.messages import Message
 from meeting_tools.planning.models import Departure, PlacePlan
-from meeting_tools.recommendation.nearby_service import search_nearby_places
 from meeting_tools.recommendation.recommend_service import RECOMMENDATION_POLICY, RecommendationError, recommend_places
 from meeting_tools.transit.kakao_route import TransitError
 
@@ -192,37 +190,3 @@ def recommend(group_id: int, plan_id: UUID, user: User = Depends(get_current_use
     plan.result_snapshot = snapshot
     db.commit()
     return state(db, plan, user)
-
-PlaceCategory = Literal["restaurant", "cafe", "play", "bar"]
-PlaceOption = Literal["all", "korean", "japanese", "western", "chinese", "snack", "meat",
-                      "independent", "dessert", "theme",
-                      "boardgame", "escape", "karaoke", "bowling", "billiards", "arcade"]
-
-@router.get("/{plan_id}/places")
-def nearby_places(group_id: int, plan_id: UUID,
-                  station_id: str = Query(min_length=1, max_length=100),
-                  category: PlaceCategory = "restaurant",
-                  option: PlaceOption | None = Query(default=None, alias="filter"),
-                  page: int = Query(default=1, ge=1, le=3),
-                  db: Session = Depends(get_db)):
-    """추천된 역 주변의 식당·카페·놀 곳·술집. 좌표는 저장된 추천 결과의 역에서만 가져온다."""
-    plan = get_plan(db, group_id, plan_id)
-    _, _, snapshot = members_and_departures(db, plan)
-    result = plan.result if plan.result_snapshot == snapshot else None
-    if not result:
-        raise HTTPException(409, "먼저 장소 추천을 받아 주세요.")
-    station = next((item for item in result.get("recommendations", []) if item.get("id") == station_id), None)
-    if station is None:
-        # 요청이 보낸 좌표나 임의 장소로는 검색하지 않는다. 추천된 역만 허용한다.
-        raise HTTPException(404, "추천된 역을 찾을 수 없어요.")
-    name, longitude, latitude = station["name"], station["longitude"], station["latitude"]
-    db.rollback()  # 외부 API 대기 중 DB 연결을 잡아두지 않는다.
-    try:
-        data = search_nearby_places(longitude, latitude, category, option, page)
-    except ValueError:
-        # 예: 카페에 '한식' 필터를 붙인 경우. 외부 검색은 하지 않는다.
-        raise HTTPException(422, "이 종류에서는 사용할 수 없는 필터예요.") from None
-    except RecommendationError as error:
-        print("[주변 장소 조회 실패]", error.code, str(error), flush=True)
-        raise HTTPException(error.status_code, str(error)) from None
-    return {"station": {"id": station_id, "name": name}, **data}

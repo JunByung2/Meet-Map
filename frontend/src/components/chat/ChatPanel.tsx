@@ -4,58 +4,37 @@ import Link from "next/link";
 import type { GroupDetail, Me } from "@/hooks/useGroupContext";
 import { useGroupMessages } from "@/hooks/useGroupMessages";
 
-import { useEffect, useState } from "react";
-import { pickName, useNameMode } from "@/lib/nameMode";
-import { api, ApiError } from "@/lib/api";
-import { useStartPlacePlan } from "@/features/recommendation/useStartPlacePlan";
-import MessageList from "./MessageList";
-import { formatDateBand } from "@/lib/records";
-import MessageComposer from "./MessageComposer";
+import { useState } from 'react'
+import { pickName, useNameMode } from '@/lib/nameMode'
+import { api, ApiError } from '@/lib/api'
+import { useStartPlacePlan } from '@/features/recommendation/useStartPlacePlan'
+import MessageList from './MessageList'
+import { formatDateBand } from '@/lib/records'
+import MessageComposer from './MessageComposer'
 
-import ChatSidebar from "./ChatSidebar";
-import styles from "./chat.module.css";
-import { useLocationShare } from "@/hooks/useLocationShare";
-import MeetModePanel from "./MeetModePanel";
-import VoteCreateModal from "./VoteCreateModal";
-import { takeVotePicks } from "@/lib/votePicks";
-import type { PlaceValue } from "@/lib/photos";
+import ChatSidebar from './ChatSidebar'
+import styles from './chat.module.css'
+import { useLocationShare } from '@/hooks/useLocationShare'
+import MeetModePanel from './MeetModePanel'
+import VoteCreateModal from './VoteCreateModal'
 
 export default function ChatPanel({
   group,
   me,
   focusDate,
 }: {
-  group: GroupDetail;
-  me: Me;
+  group: GroupDetail
+  me: Me
   /** 지난 기록에서 넘어왔을 때: 이 날짜(YYYY-MM-DD)의 대화로 이동 */
-  focusDate?: string;
+  focusDate?: string
 }) {
-  const {
-    messages,
-    loading,
-    sending,
-    status,
-    setStatus,
-    send,
-    deleteMessage,
-    loadOlder,
-    hasMore,
-    loadingOlder,
-  } = useGroupMessages(group.id, me.id, focusDate);
+  const { messages, loading, sending, status, setStatus, send, deleteMessage, loadOlder, hasMore, loadingOlder } =
+    useGroupMessages(group.id, me.id, focusDate)
 
-  const { start, starting } = useStartPlacePlan(group.id, setStatus);
-  const meet = useLocationShare(group.id);
-  const [voteOpen, setVoteOpen] = useState(false);
-  // 약속장소 추천 화면에서 "채팅에서 투표 만들기"로 넘어오면 담은 장소로 투표 창을 연다
-  const [votePlaces, setVotePlaces] = useState<PlaceValue[]>([]);
-  useEffect(() => {
-    const places = takeVotePicks(group.id);
-    if (places.length > 0) {
-      setVotePlaces(places);
-      setVoteOpen(true);
-    }
-  }, [group.id]);
-  const nameMode = useNameMode();
+  const { start, starting } = useStartPlacePlan(group.id, setStatus)
+  const meet = useLocationShare(group.id)
+  const [voteOpen, setVoteOpen] = useState(false)
+  const nameMode = useNameMode()
 
   const names = new Map(
     group.members.map((m) => [m.user_id, pickName(m, nameMode)]),
@@ -64,41 +43,28 @@ export default function ChatPanel({
   const imageOf = (userId: number) =>
     group.members.find((m) => m.user_id === userId)?.profile_image ?? null;
 
-  const MAX_BYTES = { image: 20 * 1024 * 1024, file: 10 * 1024 * 1024 };
-  const isOwner = group.my_role === "owner";
+  const MAX_BYTES = { image: 20 * 1024 * 1024, file: 10 * 1024 * 1024 }
+  const isOwner = group.my_role === 'owner'
 
   // 사진/문서를 올린 뒤, 채팅에 첨부 메시지(마지막 줄 = attach:번호)를 보낸다
-  async function uploadAndSend(kind: "image" | "file", file: File) {
+  async function uploadAndSend(kind: 'image' | 'file', file: File) {
     if (file.size > MAX_BYTES[kind]) {
-      setStatus(
-        `${MAX_BYTES[kind] / 1024 / 1024}MB 이하 ${kind === "image" ? "사진" : "파일"}만 보낼 수 있어요.`,
-      );
-      return;
+      setStatus(`${MAX_BYTES[kind] / 1024 / 1024}MB 이하 ${kind === 'image' ? '사진' : '파일'}만 보낼 수 있어요.`)
+      return
     }
-    setStatus(
-      kind === "image" ? "사진을 올리는 중이에요…" : "파일을 올리는 중이에요…",
-    );
+    setStatus(kind === 'image' ? '사진을 올리는 중이에요…' : '파일을 올리는 중이에요…')
     try {
-      const form = new FormData();
-      form.append("file", file);
-      form.append("kind", kind);
-      const att = await api<{ id: number; filename: string }>(
-        `/groups/${group.id}/chat-files`,
-        {
-          method: "POST",
-          body: form,
-        },
-      );
-      await send(
-        kind === "image"
-          ? `📷 사진\nattach:${att.id}`
-          : `📎 ${att.filename}\nattach:${att.id}`,
-      );
-      setStatus("");
+      const form = new FormData()
+      form.append('file', file)
+      form.append('kind', kind)
+      const att = await api<{ id: number; filename: string }>(`/groups/${group.id}/chat-files`, {
+        method: 'POST',
+        body: form,
+      })
+      await send(kind === 'image' ? `📷 사진\nattach:${att.id}` : `📎 ${att.filename}\nattach:${att.id}`)
+      setStatus('')
     } catch (err) {
-      setStatus(
-        err instanceof ApiError ? err.message : "파일을 보내지 못했어요.",
-      );
+      setStatus(err instanceof ApiError ? err.message : '파일을 보내지 못했어요.')
     }
   }
 
@@ -108,14 +74,14 @@ export default function ChatPanel({
       return;
     }
 
-    if (tool === "투표") {
-      setVoteOpen(true);
-      return;
+    if (tool === '투표') {
+      setVoteOpen(true)
+      return
     }
 
-    if (tool === "MeetMode") {
-      meet.openAsk();
-      return;
+    if (tool === 'MeetMode') {
+      meet.openAsk()
+      return
     }
 
     setStatus(`${tool} 기능은 다음 단계에서 연결할 예정이에요.`);
@@ -184,14 +150,10 @@ export default function ChatPanel({
       {voteOpen && (
         <VoteCreateModal
           groupId={group.id}
-          initialPlaces={votePlaces}
-          onClose={() => {
-            setVoteOpen(false);
-            setVotePlaces([]);
-          }}
+          onClose={() => setVoteOpen(false)}
           // 후보가 저장되면 채팅에 투표 카드를 올린다 (마지막 줄 = 투표 번호). 멤버는 카드에서 바로 투표한다.
           onCreated={async (title, pollId) => {
-            await send(`🗳 ${title}\nvote:${pollId}`);
+            await send(`🗳 ${title}\nvote:${pollId}`)
           }}
         />
       )}

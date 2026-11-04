@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import styles from "./map.module.css";
-import { useEffect, useRef, useState } from "react";
+import styles from './map.module.css'
+import { useEffect, useRef, useState } from 'react'
 
 // =========================================
 // 1. 공통 장소 데이터 타입
@@ -9,32 +9,30 @@ import { useEffect, useRef, useState } from "react";
 
 // 종은, 성혜, 다현 모두 사용할 장소 정보
 export interface MapPlace {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
+  id: string
+  name: string
+  latitude: number
+  longitude: number
 
   // [추가 - 3주차]
   // 멤버 출발지일 때만 1~5의 번호를 전달
   // 검색 결과 등 일반 장소에서는 생략 가능
-  memberNumber?: number;
-  // 선택되지 않았을 때의 마커 색 (예: 주변 장소). 멤버 출발지는 항상 멤버 색을 쓴다.
-  color?: string;
+  memberNumber?: number
 }
 
 // 공통 지도에 전달할 값
 interface BaseKakaoMapProps {
-  places?: MapPlace[];
-  selectedPlaceId?: string;
-  onPlaceClick?: (place: MapPlace) => void;
-  height?: string;
-  connectDepartures?: boolean;
+  places?: MapPlace[]
+  selectedPlaceId?: string
+  onPlaceClick?: (place: MapPlace) => void
+  height?: string
+  connectDepartures?: boolean
 }
 
 // 카카오 SDK 객체를 사용하기 위한 타입
 declare global {
   interface Window {
-    kakao: any;
+    kakao: any
   }
 }
 
@@ -46,26 +44,22 @@ declare global {
 // 각 멤버에게 고유한 파스텔 색상을 지정
 // 공통 지도에서도 재사용할 수 있도록 컴포넌트 밖에 선언
 const MEMBER_COLORS: Record<number, string> = {
-  1: "#A8DCD1", // 파스텔 민트
-  2: "#AFCBF3", // 파스텔 하늘색
-  3: "#F6D6A8", // 파스텔 살구색
-  4: "#D5C2F1", // 파스텔 라벤더
-  5: "#F3BFD0", // 파스텔 핑크
-};
+  1: '#A8DCD1', // 파스텔 민트
+  2: '#AFCBF3', // 파스텔 하늘색
+  3: '#F6D6A8', // 파스텔 살구색
+  4: '#D5C2F1', // 파스텔 라벤더
+  5: '#F3BFD0', // 파스텔 핑크
+}
 
 // 일반 검색 결과 마커 색상
 export const CONNECTION_COLORS: Record<number, string> = {
-  1: "#167A68",
-  2: "#346DB0",
-  3: "#AA650A",
-  4: "#8051AD",
-  5: "#BC4776",
-};
+  1: '#167A68', 2: '#346DB0', 3: '#AA650A', 4: '#8051AD', 5: '#BC4776',
+}
 
-const DEFAULT_MARKER_COLOR = "#8B9695";
+const DEFAULT_MARKER_COLOR = '#8B9695'
 
 // 선택된 일반 장소 마커 색상
-const SELECTED_MARKER_COLOR = "#247C73";
+const SELECTED_MARKER_COLOR = '#247C73'
 
 // =========================================
 // 3. 공통 카카오 지도 컴포넌트
@@ -75,35 +69,35 @@ export default function BaseKakaoMap({
   places = [],
   selectedPlaceId,
   onPlaceClick,
-  height = "480px",
+  height = '480px',
   connectDepartures = false,
 }: BaseKakaoMapProps) {
   // 지도가 표시될 HTML 요소
-  const mapContainer = useRef<HTMLDivElement>(null);
+  const mapContainer = useRef<HTMLDivElement>(null)
 
   // 생성된 지도 객체
-  const mapInstance = useRef<any>(null);
+  const mapInstance = useRef<any>(null)
 
   // 지도에 표시한 마커 목록
-  const markers = useRef<any[]>([]);
-  const connections = useRef<any[]>([]);
+  const markers = useRef<any[]>([])
+  const connections = useRef<any[]>([])
 
   // 선택한 장소의 이름 말풍선
-  const selectedOverlay = useRef<any>(null);
+  const selectedOverlay = useRef<any>(null)
 
   // 최신 클릭 함수를 저장
-  const onPlaceClickRef = useRef(onPlaceClick);
+  const onPlaceClickRef = useRef(onPlaceClick)
 
   // 지도 준비 여부
-  const [mapReady, setMapReady] = useState(false);
+  const [mapReady, setMapReady] = useState(false)
 
   // 오류 메시지
-  const [error, setError] = useState("");
+  const [error, setError] = useState('')
 
   // 부모 컴포넌트의 클릭 함수가 바뀌면 업데이트
   useEffect(() => {
-    onPlaceClickRef.current = onPlaceClick;
-  }, [onPlaceClick]);
+    onPlaceClickRef.current = onPlaceClick
+  }, [onPlaceClick])
 
   // =========================================
   // 4. 마커 이미지 생성
@@ -121,10 +115,10 @@ export default function BaseKakaoMap({
   // 가운데 흰색 원이 있는 일반 마커를 생성함.
 
   const makeMarkerImage = (color: string, memberNumber?: number) => {
-    const kakao = window.kakao;
+    const kakao = window.kakao
 
     // 멤버 번호가 있는지 확인
-    const hasMemberNumber = memberNumber !== undefined;
+    const hasMemberNumber = memberNumber !== undefined
 
     // [추가 - 3주차]
     // 멤버 마커라면 숫자를 표시하고,
@@ -149,7 +143,7 @@ export default function BaseKakaoMap({
           r="6"
           fill="white"
         />
-      `;
+      `
 
     // SVG로 지도 핀 생성
     const svg = `
@@ -171,17 +165,17 @@ export default function BaseKakaoMap({
         ${markerCenter}
 
       </svg>
-    `;
+    `
 
     // SVG를 이미지 주소로 변환
     const imageUrl =
-      "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+      'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)
 
     // 카카오 지도에서 사용할 마커 이미지 생성
     return new kakao.maps.MarkerImage(imageUrl, new kakao.maps.Size(36, 44), {
       offset: new kakao.maps.Point(18, 42),
-    });
-  };
+    })
+  }
 
   // =========================================
   // 5. 카카오 지도 SDK 로드
@@ -189,87 +183,87 @@ export default function BaseKakaoMap({
   // =========================================
 
   useEffect(() => {
-    const appKey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+    const appKey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY
 
     if (!appKey) {
-      setError("카카오 JavaScript 키가 설정되지 않았습니다.");
-      return;
+      setError('카카오 JavaScript 키가 설정되지 않았습니다.')
+      return
     }
 
-    let cancelled = false;
+    let cancelled = false
 
     // SDK 로드 후 지도 생성
     const initializeMap = () => {
-      if (!window.kakao?.maps) return;
+      if (!window.kakao?.maps) return
 
       window.kakao.maps.load(() => {
         if (cancelled || !mapContainer.current) {
-          return;
+          return
         }
 
-        const kakao = window.kakao;
+        const kakao = window.kakao
 
         // 기본 지도 중심: 서울시청
-        const center = new kakao.maps.LatLng(37.5665, 126.978);
+        const center = new kakao.maps.LatLng(37.5665, 126.978)
 
         // 지도 생성
         mapInstance.current = new kakao.maps.Map(mapContainer.current, {
           center,
           level: 7,
-        });
+        })
 
-        setMapReady(true);
-        setError("");
-      });
-    };
+        setMapReady(true)
+        setError('')
+      })
+    }
 
     // SDK가 이미 있다면 바로 초기화
     if (window.kakao?.maps) {
-      initializeMap();
+      initializeMap()
 
       return () => {
-        cancelled = true;
-      };
+        cancelled = true
+      }
     }
 
     // SDK script 태그 확인
-    const scriptId = "kakao-map-sdk";
+    const scriptId = 'kakao-map-sdk'
 
-    let script = document.getElementById(scriptId) as HTMLScriptElement | null;
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null
 
     if (!script) {
-      script = document.createElement("script");
-      script.id = scriptId;
+      script = document.createElement('script')
+      script.id = scriptId
 
       // services 라이브러리 포함
       script.src =
-        "https://dapi.kakao.com/v2/maps/sdk.js" +
-        `?appkey=${appKey}&autoload=false&libraries=services`;
+        'https://dapi.kakao.com/v2/maps/sdk.js' +
+        `?appkey=${appKey}&autoload=false&libraries=services`
 
-      script.async = true;
-      document.head.appendChild(script);
+      script.async = true
+      document.head.appendChild(script)
     }
 
     // 로드 성공
-    script.addEventListener("load", initializeMap);
+    script.addEventListener('load', initializeMap)
 
     // 로드 실패
     const handleError = () => {
       if (!cancelled) {
-        setError("카카오 지도를 불러오지 못했습니다.");
+        setError('카카오 지도를 불러오지 못했습니다.')
       }
-    };
+    }
 
-    script.addEventListener("error", handleError);
+    script.addEventListener('error', handleError)
 
     return () => {
-      cancelled = true;
+      cancelled = true
 
-      script?.removeEventListener("load", initializeMap);
+      script?.removeEventListener('load', initializeMap)
 
-      script?.removeEventListener("error", handleError);
-    };
-  }, []);
+      script?.removeEventListener('error', handleError)
+    }
+  }, [])
 
   // =========================================
   // 6. 장소 및 마커 표시
@@ -279,97 +273,78 @@ export default function BaseKakaoMap({
   useEffect(() => {
     // 지도 생성 전에는 실행하지 않음
     if (!mapReady || !mapInstance.current) {
-      return;
+      return
     }
 
-    const kakao = window.kakao;
-    const map = mapInstance.current;
+    const kakao = window.kakao
+    const map = mapInstance.current
 
-    connections.current.forEach((line) => line.setMap(null));
-    connections.current = [];
+    connections.current.forEach(line => line.setMap(null))
+    connections.current = []
 
     // 기존 마커 제거
     markers.current.forEach((marker) => {
-      marker.setMap(null);
-    });
+      marker.setMap(null)
+    })
 
-    markers.current = [];
+    markers.current = []
 
     // 기존 말풍선 제거
     if (selectedOverlay.current) {
-      selectedOverlay.current.setMap(null);
-      selectedOverlay.current = null;
+      selectedOverlay.current.setMap(null)
+      selectedOverlay.current = null
     }
 
     // 표시할 장소가 없다면 종료
-    if (places.length === 0) return;
+    if (places.length === 0) return
 
     // 모든 장소가 보이도록 범위 계산
-    const bounds = new kakao.maps.LatLngBounds();
+    const bounds = new kakao.maps.LatLngBounds()
 
     // 선택한 장소 찾기
-    const selectedPlace = places.find((place) => place.id === selectedPlaceId);
+    const selectedPlace = places.find((place) => place.id === selectedPlaceId)
 
-    const connectedDepartures =
-      connectDepartures && selectedPlace?.id.startsWith("recommend-")
-        ? places.filter((place) => place.memberNumber !== undefined)
-        : [];
+    const connectedDepartures = connectDepartures && selectedPlace?.id.startsWith('recommend-')
+      ? places.filter(place => place.memberNumber !== undefined)
+      : []
 
     // 위치 관계를 나타내는 점선이며 실제 대중교통 노선이 아니다.
     if (selectedPlace) {
       connectedDepartures.forEach((place, index) => {
-        const start = new kakao.maps.LatLng(place.latitude, place.longitude);
-        const end = new kakao.maps.LatLng(
-          selectedPlace.latitude,
-          selectedPlace.longitude,
-        );
-        bounds.extend(start);
-        bounds.extend(end);
-        const color =
-          CONNECTION_COLORS[place.memberNumber!] ?? SELECTED_MARKER_COLOR;
+        const start = new kakao.maps.LatLng(place.latitude, place.longitude)
+        const end = new kakao.maps.LatLng(selectedPlace.latitude, selectedPlace.longitude)
+        bounds.extend(start)
+        bounds.extend(end)
+        const color = CONNECTION_COLORS[place.memberNumber!] ?? SELECTED_MARKER_COLOR
         const outline = new kakao.maps.Polyline({
-          map,
-          path: [start, end],
-          strokeWeight: 9,
-          strokeColor: "#FFFFFF",
-          strokeOpacity: 0.95,
-          strokeStyle: "solid",
-          zIndex: 1,
-        });
+          map, path: [start, end], strokeWeight: 9,
+          strokeColor: '#FFFFFF', strokeOpacity: 0.95, strokeStyle: 'solid', zIndex: 1,
+        })
         const line = new kakao.maps.Polyline({
-          map,
-          path: [start, end],
-          strokeWeight: 5,
-          strokeColor: color,
-          strokeOpacity: 1,
-          strokeStyle: "solid",
-          zIndex: 2,
-        });
-        const badge = document.createElement("div");
-        badge.textContent = `${place.memberNumber}번`;
-        badge.style.cssText = `background:white;color:${color};border:2px solid ${color};border-radius:16px;padding:3px 8px;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 1px 4px #0003;pointer-events:none`;
-        const ratio = 0.35 + index * 0.08;
+          map, path: [start, end], strokeWeight: 5,
+          strokeColor: color, strokeOpacity: 1, strokeStyle: 'solid', zIndex: 2,
+        })
+        const badge = document.createElement('div')
+        badge.textContent = `${place.memberNumber}번`
+        badge.style.cssText = `background:white;color:${color};border:2px solid ${color};border-radius:16px;padding:3px 8px;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 1px 4px #0003;pointer-events:none`
+        const ratio = 0.35 + index * 0.08
         const badgeOverlay = new kakao.maps.CustomOverlay({
           map,
           position: new kakao.maps.LatLng(
             place.latitude + (selectedPlace.latitude - place.latitude) * ratio,
-            place.longitude +
-              (selectedPlace.longitude - place.longitude) * ratio,
+            place.longitude + (selectedPlace.longitude - place.longitude) * ratio,
           ),
-          content: badge,
-          xAnchor: 0.5,
-          yAnchor: 0.5,
-          zIndex: 5,
-        });
-        connections.current.push(outline, line, badgeOverlay);
-      });
+          content: badge, xAnchor: 0.5, yAnchor: 0.5, zIndex: 5,
+        })
+        connections.current.push(outline, line, badgeOverlay)
+      })
     }
 
     // 장소마다 마커 생성
     places.forEach((place) => {
-      const position = new kakao.maps.LatLng(place.latitude, place.longitude);
+      const position = new kakao.maps.LatLng(place.latitude, place.longitude)
 
-      const isSelected = place.id === selectedPlaceId;
+      const isSelected = place.id === selectedPlaceId
 
       // =====================================
       // [추가 - 3주차]
@@ -378,7 +353,7 @@ export default function BaseKakaoMap({
 
       const isMemberMarker =
         place.memberNumber !== undefined &&
-        MEMBER_COLORS[place.memberNumber] !== undefined;
+        MEMBER_COLORS[place.memberNumber] !== undefined
 
       // =====================================
       // [수정 - 3주차]
@@ -392,14 +367,12 @@ export default function BaseKakaoMap({
       // 멤버 마커는 선택하더라도
       // 고유한 파스텔 색상을 유지함.
 
-      let markerColor = DEFAULT_MARKER_COLOR;
+      let markerColor = DEFAULT_MARKER_COLOR
 
       if (isMemberMarker) {
-        markerColor = MEMBER_COLORS[place.memberNumber!];
+        markerColor = MEMBER_COLORS[place.memberNumber!]
       } else if (isSelected) {
-        markerColor = SELECTED_MARKER_COLOR;
-      } else if (place.color) {
-        markerColor = place.color;
+        markerColor = SELECTED_MARKER_COLOR
       }
 
       // =====================================
@@ -421,22 +394,18 @@ export default function BaseKakaoMap({
 
         // 선택한 마커를 앞쪽에 표시
         zIndex: isSelected ? 10 : 1,
-      });
+      })
 
       // 마커 클릭 시 부모 컴포넌트에 장소 전달
-      kakao.maps.event.addListener(marker, "click", () => {
-        onPlaceClickRef.current?.(place);
-      });
+      kakao.maps.event.addListener(marker, 'click', () => {
+        onPlaceClickRef.current?.(place)
+      })
 
-      markers.current.push(marker);
-      if (
-        !connectedDepartures.length ||
-        place.id === selectedPlaceId ||
-        place.memberNumber !== undefined
-      ) {
-        bounds.extend(position);
+      markers.current.push(marker)
+      if (!connectedDepartures.length || place.id === selectedPlaceId || place.memberNumber !== undefined) {
+        bounds.extend(position)
       }
-    });
+    })
 
     // =====================================
     // 7. 선택한 장소 강조 및 말풍선
@@ -447,31 +416,31 @@ export default function BaseKakaoMap({
       const position = new kakao.maps.LatLng(
         selectedPlace.latitude,
         selectedPlace.longitude,
-      );
+      )
 
       // 선택한 장소로 지도 이동
       if (connectedDepartures.length) {
-        map.setBounds(bounds, 60, 60, 60, 60);
+        map.setBounds(bounds, 60, 60, 60, 60)
       } else {
-        map.setCenter(position);
-        map.setLevel(3);
+        map.setCenter(position)
+        map.setLevel(3)
       }
 
       // 장소 이름을 표시할 HTML 요소
-      const label = document.createElement("div");
+      const label = document.createElement('div')
 
       // textContent로 안전하게 이름 삽입
-      label.textContent = selectedPlace.name;
+      label.textContent = selectedPlace.name
 
       // 말풍선 디자인
-      label.style.backgroundColor = "#213C40";
-      label.style.color = "#FFFFFF";
-      label.style.padding = "8px 14px";
-      label.style.borderRadius = "20px";
-      label.style.fontSize = "13px";
-      label.style.fontWeight = "600";
-      label.style.whiteSpace = "nowrap";
-      label.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
+      label.style.backgroundColor = '#213C40'
+      label.style.color = '#FFFFFF'
+      label.style.padding = '8px 14px'
+      label.style.borderRadius = '20px'
+      label.style.fontSize = '13px'
+      label.style.fontWeight = '600'
+      label.style.whiteSpace = 'nowrap'
+      label.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)'
 
       // 선택한 마커 위에 장소 이름 표시
       selectedOverlay.current = new kakao.maps.CustomOverlay({
@@ -481,33 +450,33 @@ export default function BaseKakaoMap({
         xAnchor: 0.5,
         yAnchor: 2.1,
         zIndex: 20,
-      });
+      })
     } else {
       // 선택된 장소가 없으면 전체 마커 표시
-      map.setBounds(bounds);
+      map.setBounds(bounds)
 
       // 검색 결과가 하나라면 적절히 확대
       if (places.length === 1) {
-        map.setLevel(4);
+        map.setLevel(4)
       }
     }
 
     // 장소 목록이 바뀔 때 기존 마커 정리
     return () => {
-      connections.current.forEach((line) => line.setMap(null));
-      connections.current = [];
+      connections.current.forEach(line => line.setMap(null))
+      connections.current = []
       markers.current.forEach((marker) => {
-        marker.setMap(null);
-      });
+        marker.setMap(null)
+      })
 
-      markers.current = [];
+      markers.current = []
 
       if (selectedOverlay.current) {
-        selectedOverlay.current.setMap(null);
-        selectedOverlay.current = null;
+        selectedOverlay.current.setMap(null)
+        selectedOverlay.current = null
       }
-    };
-  }, [places, selectedPlaceId, mapReady, connectDepartures]);
+    }
+  }, [places, selectedPlaceId, mapReady, connectDepartures])
 
   // =========================================
   // 8. 공통 지도 화면
@@ -524,5 +493,5 @@ export default function BaseKakaoMap({
 
       <div ref={mapContainer} style={{ height }} className={styles.mapCanvas} />
     </div>
-  );
+  )
 }

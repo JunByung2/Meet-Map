@@ -257,6 +257,7 @@ export function useLocationShare(groupId: number) {
   }, [busy, groupId, mode, refresh])
 
   return {
+    groupId,
     shares,
     mine,
     others: shares.filter((s) => !s.mine),

@@ -8,6 +8,7 @@ from app import models  # noqa: F401 (테이블 정의 등록)
 from app.config import ALLOW_DEV_AUTH
 from app.db import Base, engine
 from app.deps.auth import get_current_user
+from app.routers import arrivals
 from app.routers import (
     account,
     auth,
@@ -52,6 +53,7 @@ app.include_router(messages.router)
 app.include_router(chat_files.router)
 app.include_router(location.router)
 app.include_router(memory_router)
+app.include_router(arrivals.router)
 
 # 추천용 출발지 저장 / 조회
 # 라우터 내부에서 로그인 및 그룹 멤버 여부를 확인한다.

@@ -1,4 +1,3 @@
-
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -13,11 +12,15 @@ from app.deps.auth import (
     require_group_owner,
 )
 from app.models import (
+    GroupMember,
     Meeting,
     MeetingCandidate,
+    MeetingParticipant,
+    MeetingRecord,
     MeetingVote,
     User,
 )
+from app.records_sync import to_kst_date
 
 router = APIRouter(tags=["meetings"])
 
@@ -45,6 +48,19 @@ class CandidateCreate(BaseModel):
     poll_id: str | None = Field(default=None, max_length=40)  # 채팅방에서 한 번에 만든 투표 묶음 번호
 
 
+class MeetingUpdate(BaseModel):
+    """확정된 약속 수정. 보낸 항목만 바꾼다."""
+    meeting_time: datetime | None = None
+    # location 을 보내면 장소 전체(이름·카카오 장소 정보)를 이 값으로 바꾼다. 장소 정보가 없으면 비운다.
+    location: str | None = Field(default=None, min_length=1, max_length=200)
+    place_id: str | None = Field(default=None, max_length=40)
+    place_address: str | None = Field(default=None, max_length=200)
+    place_lat: float | None = Field(default=None, ge=-90, le=90)
+    place_lng: float | None = Field(default=None, ge=-180, le=180)
+    # 이 약속에 참여한 멤버 (보내면 이 목록으로 통째로 바꾼다. 빈 목록이면 모두 비운다)
+    participant_ids: list[int] | None = Field(default=None, max_length=50)
+
+
 # --------------------
 # 응답 데이터 변환
 # --------------------
@@ -58,11 +74,15 @@ def _aware(value: datetime) -> datetime:
     return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
 
 
-def find_time_conflict(db: DbSession, group_id: int, when: datetime) -> "Meeting | None":
-    """이 시각과 겹치는 확정된 약속이 있으면 그 약속을, 없으면 None"""
+def find_time_conflict(
+    db: DbSession, group_id: int, when: datetime, exclude_id: int | None = None
+) -> "Meeting | None":
+    """이 시각과 겹치는 확정된 약속이 있으면 그 약속을, 없으면 None (exclude_id: 수정 중인 약속은 빼고 본다)"""
     window = timedelta(minutes=MEETING_BLOCK_MINUTES)
     start = _aware(when)
     for m in db.scalars(select(Meeting).where(Meeting.group_id == group_id, Meeting.status == "confirmed")).all():
+        if m.id == exclude_id:
+            continue
         if abs(_aware(m.meeting_time) - start) < window:
             return m
     return None
@@ -76,7 +96,7 @@ def conflict_message(m: "Meeting") -> str:
     )
 
 
-def meeting_to_dict(meeting: Meeting) -> dict:
+def meeting_to_dict(meeting: Meeting, participant_ids: list[int] | None = None) -> dict:
     return {
         "id": meeting.id,
         "group_id": meeting.group_id,
@@ -89,11 +109,26 @@ def meeting_to_dict(meeting: Meeting) -> dict:
         "meeting_time": meeting.meeting_time.isoformat(),
         "status": meeting.status,
         "created_by": meeting.created_by,
+        "participant_ids": participant_ids or [],
         "created_at": (
             meeting.created_at.isoformat()
             if meeting.created_at else None
         ),
     }
+
+
+def participants_by_meeting(db: DbSession, meeting_ids: list[int]) -> dict[int, list[int]]:
+    """약속별 참여 멤버 번호 (한 번의 조회로 가져온다)"""
+    if not meeting_ids:
+        return {}
+    out: dict[int, list[int]] = {}
+    for meeting_id, user_id in db.execute(
+        select(MeetingParticipant.meeting_id, MeetingParticipant.user_id)
+        .where(MeetingParticipant.meeting_id.in_(meeting_ids))
+        .order_by(MeetingParticipant.user_id)
+    ).all():
+        out.setdefault(meeting_id, []).append(user_id)
+    return out
 
 
 def candidate_to_dict(
@@ -180,7 +215,8 @@ def list_meetings(
         .order_by(Meeting.meeting_time.asc())
     ).all()
 
-    return [meeting_to_dict(meeting) for meeting in meetings]
+    people = participants_by_meeting(db, [meeting.id for meeting in meetings])
+    return [meeting_to_dict(meeting, people.get(meeting.id)) for meeting in meetings]
 
 
 @router.post(
@@ -236,7 +272,90 @@ def get_meeting(
     if meeting is None:
         raise HTTPException(404, "약속을 찾을 수 없습니다.")
 
-    return meeting_to_dict(meeting)
+    return meeting_to_dict(meeting, participants_by_meeting(db, [meeting.id]).get(meeting.id))
+
+
+# --------------------
+# 확정된 약속 수정: 날짜·시간, 장소, 참여 멤버 (그룹 멤버라면 누구나. 삭제와 같은 기준)
+# --------------------
+
+@router.patch("/groups/{group_id}/meetings/{meeting_id}")
+def update_meeting(
+    group_id: int,
+    meeting_id: int,
+    body: MeetingUpdate,
+    member=Depends(require_group_member),
+    db: DbSession = Depends(get_db),
+):
+    # 경로의 그룹에 속한 약속만 찾는다. 다른 그룹의 약속 번호를 넣으면 404.
+    meeting = db.scalar(
+        select(Meeting).where(Meeting.id == meeting_id, Meeting.group_id == group_id)
+    )
+    if meeting is None:
+        raise HTTPException(404, "약속을 찾을 수 없습니다.")
+    if meeting.status != "confirmed":
+        raise HTTPException(400, "확정된 약속만 수정할 수 있습니다.")
+
+    sent = body.model_fields_set
+    old_date = to_kst_date(meeting.meeting_time)
+    old_place = (meeting.location, meeting.place_id, meeting.place_lat, meeting.place_lng)
+
+    # 날짜·시간: 바뀔 때만 다른 확정 약속과 겹치는지 본다 (자기 자신은 제외)
+    if "meeting_time" in sent:
+        if body.meeting_time is None:
+            raise HTTPException(400, "약속 날짜와 시간을 입력해 주세요.")
+        if _aware(body.meeting_time) != _aware(meeting.meeting_time):
+            clash = find_time_conflict(db, group_id, body.meeting_time, exclude_id=meeting.id)
+            if clash is not None:
+                raise HTTPException(409, conflict_message(clash))
+            meeting.meeting_time = body.meeting_time
+
+    # 장소: 이름을 보내면 장소 정보 전체를 새 값으로 바꾼다
+    if "location" in sent:
+        if body.location is None or not body.location.strip():
+            raise HTTPException(400, "약속 장소를 입력해 주세요.")
+        meeting.location = body.location.strip()
+        meeting.place_id = body.place_id
+        meeting.place_address = body.place_address
+        meeting.place_lat = body.place_lat
+        meeting.place_lng = body.place_lng
+
+    # 참여 멤버: 이 그룹의 현재 멤버만 고를 수 있다
+    if "participant_ids" in sent:
+        wanted = set(body.participant_ids or [])
+        if wanted:
+            valid = set(
+                db.scalars(
+                    select(GroupMember.user_id).where(
+                        GroupMember.group_id == group_id,
+                        GroupMember.user_id.in_(wanted),
+                    )
+                ).all()
+            )
+            if valid != wanted:
+                raise HTTPException(400, "이 그룹의 멤버만 참여 멤버로 고를 수 있어요.")
+        db.execute(delete(MeetingParticipant).where(MeetingParticipant.meeting_id == meeting.id))
+        db.add_all(MeetingParticipant(meeting_id=meeting.id, user_id=uid) for uid in sorted(wanted))
+
+    # 지난 기록은 약속에서 자동으로 만들어졌으므로, 바뀐 날짜·장소를 기록에도 맞춘다
+    record = db.scalar(
+        select(MeetingRecord).where(MeetingRecord.group_id == group_id, MeetingRecord.meeting_id == meeting.id)
+    )
+    if record is not None:
+        new_date = to_kst_date(meeting.meeting_time)
+        if new_date is not None and new_date != old_date:
+            record.meet_date = new_date
+        if (meeting.location, meeting.place_id, meeting.place_lat, meeting.place_lng) != old_place:
+            record.place_name = meeting.location[:100]
+            has_coords = meeting.place_lat is not None and meeting.place_lng is not None
+            record.place_id = meeting.place_id if has_coords else None
+            record.place_address = meeting.place_address if has_coords else None
+            record.place_lat = meeting.place_lat if has_coords else None
+            record.place_lng = meeting.place_lng if has_coords else None
+
+    db.commit()
+    db.refresh(meeting)
+    return meeting_to_dict(meeting, participants_by_meeting(db, [meeting.id]).get(meeting.id))
 
 
 # --------------------
@@ -636,6 +755,7 @@ def delete_meeting(
         )
 
     # 그룹 멤버(require_group_member 로 확인됨)라면 누구나 확정된 약속을 지울 수 있다.
+    db.execute(delete(MeetingParticipant).where(MeetingParticipant.meeting_id == meeting.id))
     db.delete(meeting)
     db.commit()
 

@@ -213,6 +213,16 @@ class Meeting(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
+class MeetingParticipant(Base):
+    """확정된 약속에 실제로 참여한 멤버 기록 (약속 수정 화면에서 고른다)"""
+    __tablename__ = "meeting_participants"
+
+    meeting_id: Mapped[int] = mapped_column(
+        BigId, ForeignKey("meetings.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        BigId, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
 
 class MeetingCandidate(Base):
     """약속 투표 후보"""

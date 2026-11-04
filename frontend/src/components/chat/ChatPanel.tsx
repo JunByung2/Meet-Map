@@ -375,7 +375,7 @@ export default function ChatPanel({
           )}
         </div>
 
-        <ChatSidebar members={group.members} groupId={group.id} />
+        <ChatSidebar members={group.members} groupId={group.id} shares={meet.shares} />
       </div>
 
       <PhotoViewerWindow />

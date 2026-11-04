@@ -22,6 +22,9 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,7 +61,7 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
 
   async function removeGroup(g: PhotoGroup) {
     const n = g.photos.length;
-    const q = n > 1 ? `함께 올린 사진 ${n}장을 모두 삭제할까요? 삭제한 사진은 복구할 수 없어요.` : "이 사진을 삭제할까요? 삭제한 사진은 복구할 수 없어요.";
+    const q = n > 1 ? `함께 올린 사진 ${n}장을 모두 삭제할까요?\n모든 팀원에게서 지워지고, 복구할 수 없어요.` : "이 사진을 삭제할까요?\n모든 팀원에게서 지워지고, 복구할 수 없어요.";
     if (!window.confirm(q)) return;
     setError("");
     setMessage("");
@@ -68,6 +71,58 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
       setMessage(n > 1 ? `사진 ${n}장을 삭제했어요.` : "사진을 삭제했어요.");
     } catch (e) {
       setError(onApiError(e));
+    }
+  }
+
+  // ---- 여러 묶음을 골라서 한 번에 삭제 ----
+  const MAX_SELECT = 50; // 서버가 한 번에 받는 최대 묶음 수
+  const deletable = visible.filter((g) => g.can_edit);
+
+  function toggle(key: string) {
+    setSelected((cur) => {
+      const next = new Set(cur);
+      if (next.has(key)) next.delete(key);
+      else if (next.size < MAX_SELECT) next.add(key);
+      else setError(`한 번에 최대 ${MAX_SELECT}묶음까지 선택할 수 있어요.`);
+      return next;
+    });
+  }
+
+  function leaveSelect() {
+    setSelectMode(false);
+    setSelected(new Set());
+  }
+
+  async function removeSelected() {
+    const picked = photos.length ? groupPhotos(photos).filter((g) => selected.has(g.key)) : [];
+    if (!picked.length) return;
+    const count = picked.reduce((sum, g) => sum + g.photos.length, 0);
+    const hasChat = picked.some((g) => g.photos.some((p) => p.from_chat));
+    const q =
+      `선택한 ${picked.length}묶음(사진 ${count}장)을 삭제할까요?\n모든 팀원에게서 지워지고, 복구할 수 없어요.` +
+      (hasChat ? "\n채팅으로 보낸 사진은 채팅방에서도 함께 지워져요." : "");
+    if (!window.confirm(q)) return;
+    setError("");
+    setMessage("");
+    setDeleting(true);
+    try {
+      const res = await api<{ deleted: string[]; skipped: string[] }>(`/groups/${groupId}/photos/bulk-delete`, {
+        method: "POST",
+        body: { batch_ids: picked.map((g) => g.key) },
+      });
+      const gone = new Set(res.deleted);
+      setPhotos((cur) => cur.filter((p) => !gone.has(p.batch_id)));
+      setSelected(new Set(res.skipped));
+      setMessage(
+        res.skipped.length
+          ? `${res.deleted.length}묶음을 삭제했어요. ${res.skipped.length}묶음은 올린 사람이나 방장만 지울 수 있어요.`
+          : `${res.deleted.length}묶음을 삭제했어요.`,
+      );
+      if (!res.skipped.length) leaveSelect();
+    } catch (e) {
+      setError(onApiError(e));
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -100,6 +155,16 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
             </button>
           ))}
         </div>
+        {photos.length > 0 &&
+          (selectMode ? (
+            <button type="button" className="btn secondary sm" onClick={leaveSelect}>
+              선택 끝내기
+            </button>
+          ) : (
+            <button type="button" className="btn secondary sm" onClick={() => setSelectMode(true)}>
+              ☑ 선택해서 삭제
+            </button>
+          ))}
         <input
           className="ph-search"
           value={search}
@@ -118,9 +183,24 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
         </div>
       )}
       {message && <p className="ph-ok">{message}</p>}
+      {selectMode && (
+        <p className="ph-select-hint">
+          지울 사진을 눌러서 고르세요. 내가 올리지 않은 사진은 방장만 고를 수 있어요. (한 번에 최대 {MAX_SELECT}묶음)
+        </p>
+      )}
 
       {loading ? (
-        <div className="card muted">사진을 불러오는 중이에요.</div>
+        <div className="ph-grid" aria-busy="true" aria-label="사진을 불러오는 중이에요">
+          {[0, 1, 2, 3].map((i) => (
+            <div className="ph-card" key={i}>
+              <div className="ph-collage sk" />
+              <div className="ph-card-body">
+                <span className="sk sk-line" style={{ width: "70%", height: 16 }} />
+                <span className="sk sk-line" style={{ width: "45%", marginTop: 10 }} />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : visible.length ? (
         <>
           <div className="ph-section">
@@ -134,11 +214,21 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
           <h3 className="ph-day-head">
             {formatDayHeading(d.day)} <span>{d.groups.reduce((s, g) => s + g.photos.length, 0)}장</span>
           </h3>
-          <div className="ph-grid">
+          <div className={`ph-grid${selectMode ? " ph-select-on" : ""}`}>
             {d.groups.map((g) => {
               const href = `${base}/${g.photos[0].id}`;
+              const picked = selected.has(g.key);
               return (
-                <article className="ph-card" key={g.key}>
+                <article
+                  className={`ph-card${picked ? " sel" : ""}${selectMode && !g.can_edit ? " dim" : ""}`}
+                  key={g.key}
+                  onClickCapture={(e) => {
+                    if (!selectMode) return;
+                    e.preventDefault(); // 선택하는 중에는 상세 화면으로 넘어가지 않는다
+                    if (g.can_edit) toggle(g.key);
+                  }}
+                >
+                  {selectMode && g.can_edit && <span className="ph-check" aria-hidden="true">{picked ? "✓" : ""}</span>}
                   <Link href={href}>
                     <PhotoCollage group={g} alt={groupLabel(g)} />
                   </Link>
@@ -156,7 +246,7 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
                       <Link href={href} className="link-arrow">
                         {g.photos.length > 1 ? "묶음 보기 →" : "사진 상세 보기 →"}
                       </Link>
-                      {g.can_edit && (
+                      {g.can_edit && !selectMode && (
                         <button type="button" className="ph-link-btn danger" onClick={() => removeGroup(g)}>
                           삭제
                         </button>
@@ -169,6 +259,30 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
           </div>
           </section>
           ))}
+          {selectMode && (
+            <div className="ph-select-bar" role="toolbar" aria-label="선택한 사진 삭제">
+              <span className="grow">{selected.size}묶음 선택됨</span>
+              <button
+                type="button"
+                className="btn secondary sm"
+                onClick={() =>
+                  setSelected(
+                    selected.size >= Math.min(deletable.length, MAX_SELECT)
+                      ? new Set()
+                      : new Set(deletable.slice(0, MAX_SELECT).map((g) => g.key)),
+                  )
+                }
+              >
+                {selected.size >= Math.min(deletable.length, MAX_SELECT) && deletable.length > 0 ? "선택 해제" : "전체 선택"}
+              </button>
+              <button type="button" className="btn secondary sm" onClick={leaveSelect}>
+                취소
+              </button>
+              <button type="button" className="btn sm" disabled={!selected.size || deleting} onClick={() => void removeSelected()}>
+                {deleting ? "삭제하는 중…" : `삭제 (${selected.size})`}
+              </button>
+            </div>
+          )}
         </>
       ) : (
         <div className="card ph-empty">

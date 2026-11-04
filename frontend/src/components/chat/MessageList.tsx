@@ -4,9 +4,10 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import Avatar from '@/components/Avatar'
 import type { ChatMessage } from '@/hooks/useGroupMessages'
 import styles from './chat.module.css'
+import sel from './chatSelect.module.css'
 import PlanMessage from '@/features/recommendation/PlanMessage'
 import VoteMessage, { pollRefOf } from './VoteMessage'
-import AttachMessage, { attachRefOf } from './AttachMessage'
+import AttachMessage, { attachRefOf, attachRefsOf } from './AttachMessage'
 import { formatDateBand } from '@/lib/records'
 
 function formatTime(dateString: string | null | undefined) {
@@ -41,6 +42,11 @@ export default function MessageList({
   onLoadOlder,
   hasMore = false,
   loadingOlder = false,
+  selectMode = false,
+  selectedIds,
+  onToggleSelect,
+  selectedPhotos,
+  onTogglePhoto,
 }: {
   messages: ChatMessage[]
   loading: boolean
@@ -58,6 +64,13 @@ export default function MessageList({
   onLoadOlder?: () => Promise<unknown> | void
   hasMore?: boolean
   loadingOlder?: boolean
+  /** 여러 개 골라서 지우는 중 (골라진 번호들과 눌렀을 때 호출) */
+  selectMode?: boolean
+  selectedIds?: Set<number>
+  onToggleSelect?: (id: number) => void
+  /** 묶음 사진에서 따로 고른 사진들 (말풍선 번호 → 첨부 번호들) 과 한 장 고르기 */
+  selectedPhotos?: Map<number, Set<number>>
+  onTogglePhoto?: (messageId: number, attId: number, allIds: number[]) => void
 }) {
   const [menu, setMenu] = useState<{ id: number; x: number; y: number } | null>(null)
   const [confirmId, setConfirmId] = useState<number | null>(null)
@@ -136,6 +149,10 @@ export default function MessageList({
         const isPoll = !!pollRefOf(m.text ?? '')
         const isAttach = attachRefOf(m.text ?? '') !== null
         const canDelete = !!onDelete && (isMine || canDeleteAll)
+        const picking = selectMode && !!onToggleSelect
+        const picked = picking && !!selectedIds?.has(m.id)
+        const isBundle = isAttach && attachRefsOf(m.text ?? '').length > 1
+        const partPicked = picking && !picked && (selectedPhotos?.get(m.id)?.size ?? 0) > 0
 
         return (
           <Fragment key={m.id}>
@@ -145,20 +162,42 @@ export default function MessageList({
             </div>
           )}
           <div
-            className={`${styles.row} ${isMine ? styles.mine : styles.other}`}
+            className={`${styles.row} ${isMine ? styles.mine : styles.other}${
+              picking ? ` ${canDelete ? sel.pickable : sel.locked}` : ''
+            }${picked || partPicked ? ` ${sel.picked}` : ''}`}
+            onClick={picking && canDelete ? () => onToggleSelect?.(m.id) : undefined}
             onContextMenu={(e) => {
-              if (!canDelete) return
+              if (picking || !canDelete) return
               e.preventDefault()
               setMenu({ id: m.id, x: e.clientX, y: e.clientY })
             }}
           >
+            {picking && (
+              <span className={`${sel.check}${picked ? ` ${sel.checkOn}` : partPicked ? ` ${sel.checkPart}` : ''}`} aria-hidden="true">
+                {picked ? '✓' : partPicked ? '–' : ''}
+              </span>
+            )}
             {!isMine && <Avatar userId={senderId} name={sender}
               image={imageOf?.(senderId) ?? null} size="sm" />}
-            <div className={`${styles.body}${isPoll ? ` ${styles.wideBody}` : ''}`}>
+            <div className={`${styles.body}${isPoll ? ` ${styles.wideBody}` : ''}${picking && !isBundle ? ` ${sel.noClick}` : ''}`}>
               {!isMine && <div className={styles.sender}>{sender}</div>}
               <div className={`${styles.bubble}${isPoll || isAttach ? ` ${styles.bubbleBare}` : ''}`}>
                 {isAttach ? (
-                  <AttachMessage text={m.text ?? ''} groupId={Number(m.group_id)} />
+                  <AttachMessage
+                    text={m.text ?? ''}
+                    groupId={Number(m.group_id)}
+                    viewerTitle={`${sender} ${day}`}
+                    pick={
+                      picking && isBundle
+                        ? {
+                            whole: picked,
+                            picked: selectedPhotos?.get(m.id) ?? new Set<number>(),
+                            canEdit: canDelete,
+                            onToggle: (attId, allIds) => onTogglePhoto?.(m.id, attId, allIds),
+                          }
+                        : undefined
+                    }
+                  />
                 ) : pollRefOf(m.text ?? '') ? (
                   <VoteMessage
                     text={m.text ?? ''}
@@ -172,7 +211,7 @@ export default function MessageList({
               </div>
               <div className={styles.time}>
                 {formatTime(m.created_at)}
-                {canDelete && (
+                {canDelete && !picking && (
                   <button type="button" className={styles.delBtn} onClick={() => setConfirmId(m.id)}>
                     삭제
                   </button>

@@ -18,11 +18,13 @@ from sqlalchemy.orm import Session as DbSession
 
 from app.db import Base, get_db
 from app.deps.auth import get_current_user, require_group_member
-from app.models import ChatAttachment, GroupMember, User
+from app.linked_delete import delete_messages, remove_message_photos
+from app.models import GroupMember, User
 
 router = APIRouter(prefix="/groups/{group_id}/messages", tags=["messages"])
 
 PAGE_LIMIT = 100
+IDS_LIMIT = 3000  # /ids 가 한 번에 돌려주는 최대 개수
 FROM_DATE_LIMIT = 500  # 지난 기록에서 특정 날짜로 이동할 때 한 번에 보내는 최대 개수
 KST = timezone(timedelta(hours=9))
 
@@ -51,6 +53,14 @@ class MessageOut(BaseModel):
 
 class MessageIn(BaseModel):
     text: str = Field(min_length=1, max_length=1000)
+
+
+class RemovePhotosIn(BaseModel):
+    attachment_ids: list[int] = Field(min_length=1, max_length=30)
+
+
+class BulkDeleteIn(BaseModel):
+    ids: list[int] = Field(min_length=1, max_length=100)
 
 
 def _to_out(
@@ -126,6 +136,49 @@ def send_message(
     return _to_out(msg, user.nickname, member.nickname, user.id)
 
 
+@router.get("/ids", response_model=list[int])
+def list_message_ids(
+    group_id: int,
+    min_id: int = Query(0, ge=0),
+    member: GroupMember = Depends(require_group_member),
+    db: DbSession = Depends(get_db),
+):
+    """지금 남아 있는 메시지 번호들 (min_id 이상). 다른 곳에서 지운 메시지를 열려 있는 채팅에서 치우는 데 쓴다."""
+    rows = db.scalars(
+        select(Message.id).where(Message.group_id == group_id, Message.id >= min_id).order_by(Message.id).limit(IDS_LIMIT)
+    ).all()
+    return list(rows)
+
+
+@router.post("/bulk-delete")
+def bulk_delete_messages(
+    group_id: int,
+    body: BulkDeleteIn,
+    member: GroupMember = Depends(require_group_member),
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+):
+    """여러 메시지를 한 번에 삭제: 내가 보낸 메시지, 방장은 모두.
+    권한이 없는 메시지는 건너뛰고 번호를 돌려준다. 사진 메시지는 사진 페이지의 사진도 함께 지워진다."""
+    deleted, skipped = delete_messages(db, group_id, body.ids, user, member, strict=False)
+    return {"deleted": deleted, "skipped": skipped}
+
+
+@router.post("/{message_id}/remove-photos")
+def remove_photos(
+    group_id: int,
+    message_id: int,
+    body: RemovePhotosIn,
+    member: GroupMember = Depends(require_group_member),
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+):
+    """묶어서 보낸 사진 말풍선에서 고른 사진만 지운다. 사진 페이지·저장소 파일도 함께 지워지고,
+    남는 사진이 없으면 말풍선도 지워진다."""
+    gone, remaining, text = remove_message_photos(db, group_id, message_id, body.attachment_ids, user, member)
+    return {"message_deleted": gone, "remaining": remaining, "text": text}
+
+
 @router.delete("/{message_id}", status_code=204)
 def delete_message(
     group_id: int,
@@ -134,32 +187,7 @@ def delete_message(
     user: User = Depends(get_current_user),
     db: DbSession = Depends(get_db),
 ):
-    """보낸 메시지 삭제: 보낸 사람 본인 또는 방장. (투표로 만들어진 약속·지난 기록은 지워지지 않는다)"""
-    from fastapi import HTTPException
-
-    msg = db.get(Message, message_id)
-    if msg is None or msg.group_id != group_id:
-        raise HTTPException(404, "메시지를 찾을 수 없습니다.")
-    if msg.user_id != user.id and member.role != "owner":
-        raise HTTPException(403, "내가 보낸 메시지만 삭제할 수 있어요.")
-
-    # 첨부(사진/파일)가 붙은 메시지면 첨부 기록도 정리한다. 파일은 지우고,
-    # 사진은 사진 모음에 그대로 남긴다(사진 페이지에서 따로 삭제).
-    last = (msg.text or "").split("\n")[-1]
-    if last.startswith("attach:") and last[7:].isdigit():
-        att = db.get(ChatAttachment, int(last[7:]))
-        if att is not None and att.group_id == group_id:
-            if att.kind == "file" and not att.storage_path.startswith("db:"):
-                try:
-                    from app import storage
-
-                    storage.remove([att.storage_path])
-                except Exception:  # noqa: BLE001  (저장소 오류가 나도 메시지 삭제는 진행)
-                    pass
-            if att.kind == "file":
-                db.delete(att)
-            # 사진 첨부 기록은 남겨 둔다: 사진 모음의 '채팅 사진' 분류와 지난 기록 연결이 유지된다.
-
-    db.delete(msg)
-    db.commit()
+    """보낸 메시지 삭제: 보낸 사람 본인 또는 방장. 사진 메시지는 사진 페이지의 사진도 함께 지워진다.
+    (투표로 만들어진 약속·지난 기록은 지워지지 않는다)"""
+    delete_messages(db, group_id, [message_id], user, member, strict=True)
     return None

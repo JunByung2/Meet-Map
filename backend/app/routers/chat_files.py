@@ -15,6 +15,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
 
 from app import storage
@@ -118,6 +119,7 @@ def upload_chat_file(
     member: GroupMember = Depends(require_group_member),
     user: User = Depends(get_current_user),
     db: DbSession = Depends(get_db),
+    light: bool = False,  # true 면 응답에 임시 주소를 만들지 않는다 (사진 여러 장 올릴 때 더 빠르다)
 ):
     if kind not in ("image", "file"):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "kind 는 image 또는 file 이어야 합니다.")
@@ -185,7 +187,43 @@ def upload_chat_file(
         raise
     if photo is not None:
         auto_link_photos(db, group_id, [photo])  # 오늘 확정된 약속이 하나뿐이면 그 기록에도 붙는다
-    return _out(row)
+    return _out(row, with_url=not light)
+
+
+@router.get("", response_model=list[AttachmentOut])
+def chat_files_info(
+    group_id: int,
+    ids: str,
+    member: GroupMember = Depends(require_group_member),
+    db: DbSession = Depends(get_db),
+):
+    """여러 첨부의 정보를 한 번에 (묶음 사진 말풍선용). ids=1,2,3  — 이 그룹의 것만, 없는 번호는 빠진다."""
+    try:
+        wanted = [int(x) for x in ids.split(",") if x.strip()]
+    except ValueError:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "ids 형식이 올바르지 않아요.") from None
+    if not wanted or len(wanted) > 100:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "ids 는 1~100개까지 보낼 수 있어요.")
+    rows = db.scalars(
+        select(ChatAttachment).where(ChatAttachment.group_id == group_id, ChatAttachment.id.in_(wanted))
+    ).all()
+    urls: dict[str, str] = {}
+    paths = [r.storage_path for r in rows if r.kind == "image"]
+    if paths and storage.is_configured():
+        try:
+            urls = storage.signed_urls(paths)  # 한 번의 호출로 전부
+        except storage.StorageError:
+            urls = {}
+    by_id = {r.id: r for r in rows}
+    out = []
+    for i in dict.fromkeys(wanted):
+        r = by_id.get(i)
+        if r is None:
+            continue
+        o = _out(r, with_url=False)
+        o.signed_url = urls.get(r.storage_path) if r.kind == "image" else None
+        out.append(o)
+    return out
 
 
 @router.get("/{attachment_id}", response_model=AttachmentOut)

@@ -56,7 +56,7 @@ function Detail({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
   }
 
   async function remove() {
-    if (!window.confirm("이 기록을 삭제할까요?\n확정된 약속과 사진은 그대로 남고, 이 기록만 지워져요.")) return;
+    if (!window.confirm("이 기록을 삭제할까요?\n모든 팀원에게서 지워져요. 확정된 약속과 사진은 그대로 남아요.")) return;
     setBusy(true);
     try {
       await api(`/groups/${groupId}/records/${recordId}`, { method: "DELETE" });
@@ -132,7 +132,7 @@ function Detail({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
                 <Link key={p.id} href={`/groups/${groupId}/photos/${p.id}`}>
                   {p.signed_url && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.signed_url} alt={p.title ?? "기록 사진"} />
+                    <img src={p.signed_url} alt={p.title ?? "기록 사진"} loading="lazy" decoding="async" />
                   )}
                 </Link>
               ))}

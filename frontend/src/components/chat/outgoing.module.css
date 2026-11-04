@@ -1,0 +1,33 @@
+.wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; margin: 10px 0; max-height: 45vh; overflow-y: auto; }
+.bubble { width: min(320px, 100%); padding: 8px; border-radius: 16px; background: var(--mint, #e8f6f3); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
+.grid { display: grid; gap: 4px; }
+.c1 { grid-template-columns: 1fr; }
+.c2 { grid-template-columns: repeat(2, 1fr); }
+.c3 { grid-template-columns: repeat(3, 1fr); }
+.cell { position: relative; padding: 0; border: 0; border-radius: 10px; overflow: hidden; aspect-ratio: 1; background: #ddd; cursor: default; }
+.c1 .cell { aspect-ratio: 4 / 3; }
+.cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.over { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: rgba(0, 0, 0, 0.38); color: #fff; font-weight: 700; }
+.over b { font-size: 22px; line-height: 1; }
+.over small { font-size: 12px; }
+.fail { cursor: pointer; }
+.fail .over { background: rgba(192, 57, 43, 0.75); }
+.ok { position: absolute; right: 6px; bottom: 6px; width: 20px; height: 20px; border-radius: 50%; background: #1e8e5a; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.bar { height: 4px; margin-top: 8px; border-radius: 999px; background: rgba(0, 0, 0, 0.1); overflow: hidden; }
+.bar span { display: block; height: 100%; background: var(--teal, #1b8f86); transition: width 0.15s ease; }
+.foot { margin-top: 6px; font-size: 12px; display: flex; flex-direction: column; gap: 6px; }
+.warn { color: #c0392b; font-weight: 700; }
+.btns { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.stage { position: relative; }
+.loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border-radius: 10px; background: rgba(0, 0, 0, 0.42); color: #fff; }
+.loading strong { font-size: 18px; }
+.spin { width: 30px; height: 30px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.4); border-top-color: #fff; animation: outspin 0.8s linear infinite; }
+@keyframes outspin { to { transform: rotate(360deg); } }
+.more { margin: 6px 0 0; font-size: 12px; text-align: right; opacity: 0.7; }
+.c4 { grid-template-columns: repeat(4, 1fr); }
+.bubble:has(.c4) { width: min(340px, 100%); }
+.mosaic { display: flex; flex-direction: column; gap: 4px; max-width: 100%; }
+.mrow { display: flex; gap: 4px; }
+.mrow > * { flex: 1 1 0; min-width: 0; }
+.bubble:has(.mosaic) { width: auto; max-width: 100%; }

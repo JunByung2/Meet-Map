@@ -7,6 +7,8 @@
 약속(meetings) 표는 팀원(민영) 담당이라 모델을 가져다 쓰지 않고, 표와 컬럼이 실제로 있는지 확인한 뒤 읽기만 한다.
 (표나 컬럼이 없거나 모양이 달라도 기록·사진 기능은 멈추지 않는다.)
 """
+import threading
+import time
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 
@@ -60,14 +62,44 @@ def kst_day_bounds(day: date) -> tuple[datetime, datetime]:
     return start.astimezone(timezone.utc), (start + timedelta(days=1)).astimezone(timezone.utc)
 
 
+# ---------- meetings 표 구조 (잠깐 기억해 둔다) ----------
+# 표 구조를 조회하는 쿼리(pg_catalog)는 한 번에 0.3초 이상 걸려서, 요청마다 하면 지난 기록·사진이 느려진다.
+# PostgreSQL 에서만 2분 동안 기억하고, 서버가 켜질 때 컬럼이 추가되는 경우를 생각해 오래 두지 않는다.
+_COLUMNS_TTL_SECONDS = 120
+_columns_cache: dict[int, tuple[float, set[str] | None]] = {}
+_columns_lock = threading.Lock()
+
+
+def clear_columns_cache() -> None:
+    with _columns_lock:
+        _columns_cache.clear()
+
+
+def _meetings_columns(db: DbSession) -> set[str] | None:
+    """meetings 표의 컬럼 이름 모음. 표가 없으면 None."""
+    bind = db.get_bind()
+    cacheable = bind.dialect.name == "postgresql"
+    key = id(bind)
+    if cacheable:
+        with _columns_lock:
+            hit = _columns_cache.get(key)
+        if hit is not None and time.monotonic() - hit[0] < _COLUMNS_TTL_SECONDS:
+            return hit[1]
+
+    insp = inspect(db.connection())  # 새 연결을 맺지 않고 이 요청의 연결을 그대로 쓴다
+    columns = {c["name"] for c in insp.get_columns("meetings")} if "meetings" in insp.get_table_names() else None
+
+    if cacheable:
+        with _columns_lock:
+            _columns_cache[key] = (time.monotonic(), columns)
+    return columns
+
+
 # ---------- 확정된 약속 읽기 ----------
 def load_confirmed_meetings(db: DbSession, group_id: int) -> list[MeetingInfo]:
     try:
-        insp = inspect(db.get_bind())
-        if "meetings" not in insp.get_table_names():
-            return []
-        columns = {c["name"] for c in insp.get_columns("meetings")}
-        if not {"id", "group_id"} <= columns:
+        columns = _meetings_columns(db)
+        if columns is None or not {"id", "group_id"} <= columns:
             return []
 
         def pick(candidates):
@@ -173,6 +205,7 @@ __all__ = [
     "to_kst_date",
     "kst_day_bounds",
     "load_confirmed_meetings",
+    "clear_columns_cache",
     "ensure_record",
     "sync_group_records",
     "auto_link_photos",

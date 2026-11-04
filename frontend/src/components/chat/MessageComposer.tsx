@@ -24,6 +24,8 @@ export default function MessageComposer({
   onTool,
   onFile,
   onFiles,
+  onSelectMode,
+  canSelect = true,
 }: {
   sending: boolean
   planning?: boolean
@@ -38,6 +40,10 @@ export default function MessageComposer({
     files: File[],
     opts?: { bundle?: boolean },
   ) => Promise<unknown> | void
+  /** select-delete chip handler (shown next to the option chips) */
+  onSelectMode?: () => void
+  /** false disables the chip (no messages) */
+  canSelect?: boolean
 }) {
   const [text, setText] = useState('')
   const imageRef = useRef<HTMLInputElement>(null)
@@ -184,6 +190,11 @@ export default function MessageComposer({
             {tool}
           </button>
         ))}
+        {onSelectMode && (
+          <button type="button" className={styles.chip} disabled={!canSelect} onClick={onSelectMode}>
+            ☑ 선택 삭제
+          </button>
+        )}
       </div>
 
       <input

@@ -29,6 +29,21 @@ function dayKey(dateString: string | null | undefined) {
   return date.toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
 }
 
+// Remember which messages are on screen and where, so the view can stay put after a delete.
+type Anchor = { id: number; offset: number }
+function captureAnchors(box: HTMLElement, store: { current: Anchor[] }) {
+  const top = box.getBoundingClientRect().top
+  const list: Anchor[] = []
+  for (const el of Array.from(box.querySelectorAll<HTMLElement>('[data-mid]'))) {
+    const r = el.getBoundingClientRect()
+    if (r.bottom <= top) continue
+    if (r.top > top + box.clientHeight) break
+    list.push({ id: Number(el.dataset.mid), offset: r.top - top })
+    if (list.length >= 40) break
+  }
+  store.current = list
+}
+
 export default function MessageList({
   messages,
   loading,
@@ -77,11 +92,18 @@ export default function MessageList({
   const boxRef = useRef<HTMLElement>(null)
   const focused = useRef(false)
   const nearBottom = useRef(true)
+  const lastSeen = useRef<number | null>(null) // last message id seen by the scroll effect
+  const anchors = useRef<Anchor[]>([])
+  const snapping = useRef(false)
   const prepending = useRef<number | null>(null) // 이전 대화를 위에 붙이기 직전의 scrollHeight
 
   useEffect(() => {
     const box = boxRef.current
+    if (messages.length === 0) lastSeen.current = null
     if (!box || messages.length === 0) return
+    const lastId = messages[messages.length - 1].id
+    const prevLast = lastSeen.current
+    lastSeen.current = lastId
     if (prepending.current !== null) {
       // 이전 대화가 위에 붙었으면 보고 있던 자리를 그대로 유지한다
       box.scrollTop = box.scrollHeight - prepending.current
@@ -100,7 +122,21 @@ export default function MessageList({
       return
     }
     // 날짜 이동 중에 위에서 읽고 있으면 새 메시지가 와도 끌어내리지 않는다
+    if (prevLast !== null && lastId <= prevLast) {
+      // delete or partial delete: no new message, so keep the place the user was looking at
+      const top = box.getBoundingClientRect().top
+      for (const a of anchors.current) {
+        const el = box.querySelector<HTMLElement>('[data-mid="' + a.id + '"]')
+        if (el) {
+          box.scrollTop += el.getBoundingClientRect().top - top - a.offset
+          break
+        }
+      }
+      captureAnchors(box, anchors)
+      return
+    }
     if (!focusDate || nearBottom.current) box.scrollTop = box.scrollHeight
+    captureAnchors(box, anchors)
   }, [messages, focusDate])
 
   async function loadOlder() {
@@ -115,6 +151,13 @@ export default function MessageList({
   function onScroll() {
     const box = boxRef.current
     if (box) nearBottom.current = box.scrollHeight - box.scrollTop - box.clientHeight < 80
+    if (box && !snapping.current) {
+      snapping.current = true
+      window.requestAnimationFrame(() => {
+        snapping.current = false
+        captureAnchors(box, anchors)
+      })
+    }
   }
 
   if (loading || messages.length === 0) {
@@ -162,6 +205,7 @@ export default function MessageList({
             </div>
           )}
           <div
+            data-mid={m.id}
             className={`${styles.row} ${isMine ? styles.mine : styles.other}${
               picking ? ` ${canDelete ? sel.pickable : sel.locked}` : ''
             }${picked || partPicked ? ` ${sel.picked}` : ''}`}

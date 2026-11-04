@@ -295,7 +295,7 @@ def upload_photos(
         prepared.append((ext, data, CONTENT_TYPES[ext]))
 
     # 2) 한 장씩 올리고, 중간에 실패하면 이번 요청에서 올린 것을 전부 지운다 (반쪽짜리 묶음 방지)
-        uploaded: list[str] = []
+    uploaded: list[str] = []
     rows: list[Photo] = []
     db.commit()  # 저장소에 올리는 동안 DB 연결을 붙잡지 않도록 먼저 돌려준다 (저장할 때 다시 받는다)
     try:

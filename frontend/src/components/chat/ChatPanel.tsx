@@ -290,13 +290,6 @@ export default function ChatPanel({
 
           <MeetModePanel meet={meet} />
 
-          {messages.length > 0 && !selectMode && (
-            <div className={sel.bar}>
-              <button type="button" className="btn secondary sm" onClick={() => setSelectMode(true)}>
-                ☑ 선택해서 삭제
-              </button>
-            </div>
-          )}
           {selectMode && (
             <p className={sel.hint}>
               지울 메시지를 눌러서 고르세요. 묶어 보낸 사진은 사진을 하나씩 눌러서 그 사진만 고를 수도 있어요. 그만하려면 아래의 “취소하고 채팅으로 돌아가기”(또는 Esc)를 누르세요. 내가 보낸 메시지만 고를 수 있어요{isOwner ? ' (방장은 모두)' : ''}. 최대 {MAX_SELECT}개까지 선택할 수 있어요.
@@ -376,11 +369,13 @@ export default function ChatPanel({
               onTool={onTool}
               onFile={uploadAndSend}
               onFiles={uploadMany}
+              onSelectMode={() => setSelectMode(true)}
+              canSelect={messages.length > 0}
             />
           )}
         </div>
 
-        <ChatSidebar members={group.members} groupId={group.id} />
+        <ChatSidebar members={group.members} groupId={group.id} shares={meet.shares} />
       </div>
 
       <PhotoViewerWindow />

@@ -17,3 +17,20 @@ out/
 # 기타
 .DS_Store
 *.log
+
+# 환경변수 및 비밀 키
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Python 실행 파일
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 프론트 설치 및 빌드 파일
+node_modules/
+.next/
+*.tsbuildinfo

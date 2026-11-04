@@ -1,0 +1,214 @@
+/* 사진을 묶어서 보내기: 보내기 전 미리보기(트레이) + 말풍선 안의 사진 격자 */
+
+/* ---------- 보내기 전 미리보기 ---------- */
+.tray {
+  margin: 10px 0 4px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--mist);
+}
+
+.thumbs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.thumb {
+  position: relative;
+  flex: none;
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--peach);
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.thumbX {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(33, 60, 64, 0.7);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.trayRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.count {
+  flex: 1;
+  min-width: 80px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* 카톡처럼 동그라미를 눌러 켜고 끄는 '묶어서 보내기' */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.circle {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: var(--white);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.circleOn {
+  border-color: var(--teal);
+  background: var(--teal);
+}
+
+/* ---------- 말풍선 안의 사진 격자 ---------- */
+.grid {
+  display: grid;
+  gap: 3px;
+  width: 244px;
+  max-width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.cols2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.cols3 {
+  grid-template-columns: 1fr 1fr 1fr;
+  width: 300px;
+}
+
+.cols4 {
+  grid-template-columns: repeat(4, 1fr);
+  width: 340px;
+}
+
+.cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 0;
+  background: var(--peach);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.cell img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cellGone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: default;
+}
+
+/* ---------- 크게 보기 ---------- */
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 35, 38, 0.8);
+}
+
+.viewer img {
+  max-width: 92vw;
+  max-height: 86vh;
+  border-radius: 8px;
+}
+
+.nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.prev {
+  left: 14px;
+}
+
+.next {
+  right: 14px;
+}
+
+.pageNo {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  border-radius: 100px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 12px;
+}
+
+.more { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 20px; font-weight: 700; }
+
+/* 고르는 중: 사진마다 동그라미 */
+.pick { position: absolute; right: 6px; top: 6px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; background: rgba(0, 0, 0, 0.25); color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.pickOn { background: var(--teal, #1b8f86); }
+.pickOff { opacity: 0.35; }
+
+/* 줄마다 칸 수가 다른 배치 (카톡처럼). 한 줄 안의 칸은 같은 너비의 정사각형 */
+.mosaic { display: flex; flex-direction: column; gap: 3px; max-width: 100%; border-radius: 14px; overflow: hidden; }
+.mrow { display: flex; gap: 3px; }
+.mrow > * { flex: 1 1 0; min-width: 0; }

@@ -1,0 +1,241 @@
+.page {
+  --mint: #247c73;
+  --ink: #213c40;
+  color: var(--ink);
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.page,
+.page * {
+  box-sizing: border-box;
+}
+
+.page button,
+.page input {
+  font: inherit;
+}
+
+.membersSection,
+.results {
+  background: #f8faf9;
+  border: 1px solid #e2ebe7;
+  border-radius: 20px;
+  padding: 20px;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.heading h2,
+.heading h3,
+.search h3,
+.mapSection h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.badge {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: white;
+  color: var(--mint);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.memberGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.memberCard {
+  padding: 16px;
+  border: 1px solid #dce5e1;
+  border-radius: 14px;
+  background: white;
+}
+
+.memberActive {
+  border-color: var(--mint);
+  background: #e8f3f0;
+}
+
+.memberButton,
+.placeButton {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.memberName,
+.placeName {
+  margin: 0;
+  font-weight: 700;
+}
+
+.memberDeparture {
+  min-height: 40px;
+  margin: 10px 0;
+  color: #61716d;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.removeButton {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #bd4545;
+  font-size: 12px !important;
+  cursor: pointer;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.search,
+.mapSection {
+  min-width: 0;
+}
+
+.search {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hint {
+  margin: 8px 0 0;
+  color: #74817d;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.searchRow {
+  display: flex;
+  gap: 8px;
+}
+
+.input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid #ccd9d2;
+  border-radius: 12px;
+  background: white;
+  color: var(--ink);
+}
+
+.input:focus {
+  outline: 2px solid #a8dcd1;
+  outline-offset: 2px;
+}
+
+.button {
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--mint);
+  color: white;
+  font-weight: 600 !important;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: #1c665f;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.saveButton {
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px;
+}
+
+.message {
+  margin: 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: #fff0ed;
+  color: #a43c36;
+  font-size: 13px;
+}
+
+.resultList {
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.resultCard {
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid #dce5e1;
+  border-radius: 14px;
+  background: white;
+}
+
+.resultSelected {
+  border-color: var(--mint);
+}
+
+.empty {
+  padding: 28px 0;
+  color: #74817d;
+  text-align: center;
+  font-size: 13px;
+}
+
+.mapHeader {
+  margin-bottom: 14px;
+}
+
+.mapCanvas {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #dce5e1;
+  border-radius: 20px;
+}
+
+@media (max-width: 1000px) {
+  .memberGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .memberGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .membersSection,
+  .results {
+    padding: 14px;
+  }
+}

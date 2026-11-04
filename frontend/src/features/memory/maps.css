@@ -1,0 +1,555 @@
+/* 지도 / 장소 기능 전용 스타일 — 팀장 디자인 토큰(globals.css)을 그대로 쓰고, 클래스는 km-(지도) pp-(장소 선택) mm-(추억지도) 로 시작해요 */
+
+/* ---------- 공통 카카오 지도 ---------- */
+.km-wrap {
+  width: 100%;
+}
+.km-map {
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--line);
+  background: var(--mist);
+  position: relative;
+}
+.km-error {
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-radius: var(--radius-ctl);
+  padding: 10px 14px;
+}
+.km-label {
+  background: var(--white);
+  color: var(--ink);
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(33, 60, 64, 0.15);
+  cursor: pointer;
+  font-family: var(--font);
+}
+.km-label.selected {
+  background: var(--teal);
+  color: #fff;
+}
+.km-bubble {
+  background: var(--ink);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* ---------- 장소 검색 + 지도 (KakaoMap) ---------- */
+.km-layout {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.km-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.km-searchrow {
+  display: flex;
+  gap: 8px;
+}
+.km-input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  background: var(--white);
+  font: inherit;
+  color: var(--ink);
+}
+.km-input:focus {
+  outline: 2px solid var(--teal);
+  outline-offset: -1px;
+}
+.km-resultbox {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--mist);
+  padding: 16px;
+}
+.km-h3 {
+  font-size: 16px;
+  font-weight: 700;
+}
+.km-empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 28px 0;
+}
+.km-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.km-item {
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  background: var(--white);
+  padding: 12px 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.km-item:hover {
+  border-color: var(--teal);
+}
+.km-item.selected {
+  border-color: var(--teal);
+  background: var(--mint);
+}
+.km-addr {
+  font-size: 12px;
+  color: var(--muted);
+}
+.km-picked {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--teal);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+}
+.km-main {
+  min-width: 0;
+}
+
+/* ---------- 사진 올리기 장소 선택 (PlacePicker) ---------- */
+.pp-searchrow {
+  display: flex;
+  gap: 8px;
+}
+.pp-searchrow .btn {
+  flex-shrink: 0;
+}
+.pp-msg {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.pp-results {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  background: var(--white);
+}
+.pp-results li + li {
+  border-top: 1px solid var(--line);
+}
+.pp-result {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 10px 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pp-result:hover {
+  background: var(--mint);
+}
+.pp-result span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.pp-card {
+  position: relative;
+  background: var(--mint);
+  border-radius: var(--radius-card);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--teal);
+}
+.pp-card strong {
+  font-size: 18px;
+  color: var(--ink);
+  margin-top: 4px;
+}
+.pp-card span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.pp-card em {
+  font-style: normal;
+  font-size: 13px;
+  color: var(--teal);
+  margin-top: 4px;
+}
+.pp-clear {
+  position: absolute;
+  right: 16px;
+  top: 14px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ---------- 추억지도 화면 ---------- */
+.mm-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.mm-search {
+  flex: 1;
+  min-width: 240px;
+  max-width: 420px;
+  height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  background: var(--white);
+  font: inherit;
+  color: var(--ink);
+}
+.mm-search:focus {
+  outline: 2px solid var(--teal);
+  outline-offset: -1px;
+}
+.mm-chip {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.mm-chip.active {
+  background: var(--mint);
+  color: var(--teal);
+  font-weight: 700;
+  border-color: transparent;
+}
+.mm-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 24px;
+  align-items: start;
+}
+.mm-mapbox {
+  position: relative;
+}
+.mm-empty {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(360px, 86%);
+  text-align: center;
+  background: var(--white);
+  border-radius: var(--radius-card);
+  box-shadow: 0 6px 24px rgba(33, 60, 64, 0.12);
+  padding: 24px;
+  z-index: 5;
+}
+.mm-empty h3 {
+  font-size: 17px;
+  margin-bottom: 6px;
+}
+.mm-empty p {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+.mm-legend {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.mm-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--teal);
+  margin-right: 5px;
+}
+.mm-dot.gray {
+  background: #8b9695;
+}
+.mm-side > * + * {
+  margin-top: 16px;
+}
+.mm-photo {
+  border-radius: var(--radius-ctl);
+  overflow: hidden;
+  margin: 14px 0;
+}
+.mm-photo .ph-collage {
+  border-radius: var(--radius-ctl);
+  aspect-ratio: 1.3 / 1;
+}
+.mm-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 4px 0 6px;
+}
+.mm-memo {
+  font-size: 14px;
+  margin: 8px 0 14px;
+  color: var(--ink);
+}
+.mm-by {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.mm-others {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 12px;
+}
+.mm-other strong {
+  display: block;
+  font-size: 14px;
+}
+.mm-other .meta {
+  display: block;
+  margin: 2px 0 4px;
+}
+.mm-soon {
+  font-size: 12px;
+  color: var(--muted);
+}
+.mm-notice {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-top: 28px;
+}
+.mm-notice svg {
+  flex-shrink: 0;
+  color: var(--teal);
+  margin-top: 2px;
+}
+.mm-notice strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* ---------- 멤버 출발지 ---------- */
+.dp-members {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.dp-member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  background: var(--white);
+  cursor: pointer;
+  font: inherit;
+  color: var(--ink);
+  min-width: 190px;
+}
+.dp-member.active {
+  border-color: var(--teal);
+  background: var(--mint);
+}
+.dp-member small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+.dp-del {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: var(--danger);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+@media (max-width: 1100px) {
+  .km-layout,
+  .mm-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- 추억지도 사진 말풍선 (PhotoMap: 아이폰 사진 지도 스타일) ---------- */
+.pm-pin {
+  position: relative;
+  display: block;
+  width: 68px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font);
+  transform-origin: 50% 100%;
+  transition: transform 0.15s ease;
+}
+.pm-pin:hover {
+  transform: scale(1.06);
+}
+.pm-pin:focus-visible {
+  outline: none;
+}
+.pm-pin:focus-visible .pm-frame {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+.pm-frame {
+  position: relative;
+  display: block;
+  width: 68px;
+  height: 68px;
+  border-radius: 16px;
+  border: 3px solid #fff;
+  background: var(--mint);
+  overflow: hidden;
+  box-shadow: 0 3px 12px rgba(33, 60, 64, 0.3);
+  box-sizing: border-box;
+}
+.pm-frame.noimg::before {
+  content: '🖼';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  opacity: 0.55;
+}
+.pm-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pm-count {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 14px 7px 4px;
+  text-align: left;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0));
+}
+.pm-tail {
+  display: block;
+  width: 0;
+  height: 0;
+  margin: -1px auto 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 9px solid #fff;
+  filter: drop-shadow(0 2px 2px rgba(33, 60, 64, 0.2));
+}
+.pm-pin.multi .pm-frame {
+  box-shadow:
+    5px 5px 0 -1px rgba(255, 255, 255, 0.95),
+    5px 5px 0 0 rgba(33, 60, 64, 0.18),
+    0 3px 12px rgba(33, 60, 64, 0.3);
+}
+.pm-pin.selected {
+  transform: scale(1.14);
+}
+.pm-pin.selected:hover {
+  transform: scale(1.18);
+}
+.pm-pin.selected .pm-frame {
+  border-color: var(--teal);
+}
+.pm-pin.selected .pm-tail {
+  border-top-color: var(--teal);
+}
+.pm-name {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--ink);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
+
+/* 추억지도 카드의 사진 → 사진 상세로 이동 */
+.mm-photo-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: var(--radius-ctl);
+}
+.mm-photo-link:hover .ph-collage,
+.mm-photo-link:hover img {
+  opacity: 0.9;
+}
+.mm-photo-link:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}

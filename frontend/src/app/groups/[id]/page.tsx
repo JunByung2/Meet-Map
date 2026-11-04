@@ -5,10 +5,15 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
+import { LAST_GROUP_KEY } from "@/components/Sidebar";
+import { ddayLabel } from "@/lib/dday";
+import { pickName, readNameMode } from "@/lib/nameMode";
+import Avatar from "@/components/Avatar";
 
 type Member = {
   user_id: number;
   nickname: string;
+  account_nickname?: string | null;
   profile_image: string | null;
   role: string;
 };
@@ -18,6 +23,7 @@ type GroupDetail = {
   name: string;
   icon: string | null;
   description: string | null;
+  started_on: string | null;
   my_role: string;
   members: Member[];
 };
@@ -78,7 +84,14 @@ export default function GroupDetailPage() {
   const loadGroup = useCallback(async () => {
     try {
       const data = await api<GroupDetail>(`/groups/${groupId}`);
-      setGroup(data);
+      const mode = readNameMode();
+      setGroup({
+        ...data,
+        members: data.members.map((m) => ({
+          ...m,
+          nickname: pickName(m, mode),
+        })),
+      });
       if (data.my_role === "owner") {
         await loadInvite();
       }
@@ -130,6 +143,45 @@ export default function GroupDetailPage() {
     }
   }
 
+  // 방장이 멤버를 내보낸다
+  async function onKick(m: Member) {
+    if (!window.confirm(`${m.nickname}님을 이 그룹에서 내보낼까요?`)) return;
+    setError("");
+    try {
+      await api(`/groups/${groupId}/members/${m.user_id}`, {
+        method: "DELETE",
+      });
+      await loadGroup();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  // 멤버가 스스로 그룹을 나간다
+  async function onLeave() {
+    const wasOwner = group?.my_role === "owner";
+    const lastOne = (group?.members.length ?? 0) <= 1;
+    const msg = lastOne
+      ? "마지막 멤버예요. 나가면 아무도 이 그룹에 들어올 수 없게 돼요. 그래도 나갈까요?"
+      : wasOwner
+        ? "방장이 나가면 먼저 들어온 멤버가 방장이 돼요. 나갈까요?"
+        : "이 그룹에서 나갈까요? 공유 중인 내 위치도 함께 사라져요.";
+    if (!window.confirm(msg)) return;
+    setError("");
+    try {
+      await api(`/groups/${groupId}/members/me`, { method: "DELETE" });
+      try {
+        // 나간 그룹이 '마지막으로 연 그룹'으로 남지 않게 지운다
+        localStorage.removeItem(LAST_GROUP_KEY);
+      } catch {
+        /* 무시 */
+      }
+      router.push("/groups");
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
   if (loading) {
     return (
       <AppShell>
@@ -177,6 +229,11 @@ export default function GroupDetailPage() {
             {group.name}
           </h1>
           {group.description && <p className="page-sub">{group.description}</p>}
+          {ddayLabel(group.started_on) && (
+            <p className="meta" style={{ marginTop: 6 }}>
+              🗓 {ddayLabel(group.started_on)}
+            </p>
+          )}
         </div>
         <span className="chip">{isOwner ? "방장" : "멤버"}</span>
       </div>
@@ -197,18 +254,30 @@ export default function GroupDetailPage() {
                 style={{ padding: "10px 0" }}
               >
                 <div className="row">
-                  <span
-                    className={`avatar lg ${AVATAR_TONES[i % AVATAR_TONES.length]}`}
-                  >
-                    {m.nickname.slice(0, 1)}
-                  </span>
+                  <Avatar
+                    userId={m.user_id}
+                    name={m.nickname}
+                    image={m.profile_image}
+                    size="lg"
+                    tone={AVATAR_TONES[i % AVATAR_TONES.length]}
+                  />
                   <strong>{m.nickname}</strong>
                 </div>
-                {m.role === "owner" ? (
-                  <span className="chip">방장</span>
-                ) : (
-                  <span className="chip outline">멤버</span>
-                )}
+                <div className="row">
+                  {m.role === "owner" ? (
+                    <span className="chip">방장</span>
+                  ) : (
+                    <span className="chip outline">멤버</span>
+                  )}
+                  {isOwner && m.role !== "owner" && (
+                    <button
+                      className="btn secondary sm"
+                      onClick={() => onKick(m)}
+                    >
+                      내보내기
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -289,6 +358,20 @@ export default function GroupDetailPage() {
           </section>
         )}
       </div>
+
+      <section className="card" style={{ marginTop: 20 }}>
+        <h2 className="card-title" style={{ marginBottom: 4 }}>
+          그룹 나가기
+        </h2>
+        <p className="muted" style={{ marginBottom: 12 }}>
+          나가면 이 그룹의 채팅과 사진을 볼 수 없어요. 다시 들어오려면 초대
+          링크가 필요해요.
+          {isOwner && " 방장이 나가면 먼저 들어온 멤버가 방장이 돼요."}
+        </p>
+        <button className="btn secondary" onClick={onLeave}>
+          그룹 나가기
+        </button>
+      </section>
     </AppShell>
   );
 }

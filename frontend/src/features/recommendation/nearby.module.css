@@ -1,0 +1,404 @@
+/* ===== 추천 역 카드 ===== */
+.stationGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+  align-items: start;
+}
+
+.stationCard {
+  background: #fff;
+  border: 1px solid #e3e8e7;
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.stationHead {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.rank {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #167a68;
+  color: #fff;
+  font-weight: 800;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stationName {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.stationAddr {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #6b7775;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.stats > div {
+  background: #f3f7f6;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 2px;
+}
+
+.stats span {
+  font-size: 12px;
+  color: #6b7775;
+}
+
+.stats strong {
+  font-size: 18px;
+}
+
+.memberTimes {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.memberTimes li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mapBtn {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 14px;
+  border-radius: 10px;
+  border: 1px solid #cfd8d6;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mapBtn[aria-pressed="true"] {
+  background: #213c40;
+  border-color: #213c40;
+  color: #fff;
+}
+
+/* ===== 주변 장소 패널 ===== */
+.wrap {
+  margin-top: 14px;
+  border-top: 1px solid #e3e8e7;
+  padding-top: 14px;
+}
+
+.toggle {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 10px;
+  border: 1.5px solid #167a68;
+  background: #fff;
+  color: #167a68;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.toggle[aria-expanded="true"] {
+  background: #167a68;
+  color: #fff;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.tab {
+  min-height: 42px;
+  border: 1px solid #cfd8d6;
+  background: #fff;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab[aria-selected="true"] {
+  background: #167a68;
+  border-color: #167a68;
+  color: #fff;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.filter {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid #cfd8d6;
+  background: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.filter[aria-pressed="true"] {
+  background: #e6f3f0;
+  border-color: #167a68;
+  color: #0f5a4c;
+  font-weight: 700;
+}
+
+.note {
+  font-size: 13px;
+  color: #6b7775;
+  margin: 12px 0;
+  line-height: 1.5;
+}
+
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d9822b;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.error {
+  color: #b3261e;
+  font-size: 14px;
+}
+
+.empty {
+  color: #6b7775;
+  font-size: 14px;
+  padding: 12px 0;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.item {
+  border: 1px solid #e3e8e7;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+
+.itemSelected {
+  border: 2px solid #d9822b;
+  padding: 11px;
+  background: #fff8f0;
+}
+
+.itemTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.name {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.dist {
+  font-size: 13px;
+  color: #6b7775;
+  white-space: nowrap;
+}
+
+.meta {
+  font-size: 13px;
+  color: #6b7775;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.pick {
+  flex: 1 1 150px;
+  min-height: 42px;
+  border-radius: 10px;
+  border: 1.5px solid #167a68;
+  background: #fff;
+  color: #167a68;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.pick[aria-pressed="true"] {
+  background: #167a68;
+  color: #fff;
+}
+
+.sub {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #cfd8d6;
+  background: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: #213c40;
+}
+
+.sub[aria-pressed="true"] {
+  border-color: #d9822b;
+  color: #a65a0a;
+  font-weight: 700;
+}
+
+.more {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 12px;
+  border-radius: 10px;
+  border: 1px solid #cfd8d6;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ===== 투표 후보 고정 상자 ===== */
+.tray {
+  position: sticky;
+  bottom: 12px;
+  z-index: 20;
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 2px solid #167a68;
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.trayList {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.trayTitle {
+  width: 100%;
+  margin: 0;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.trayNote {
+  width: 100%;
+  margin: 0;
+  font-size: 13px;
+  color: #b3261e;
+}
+
+.chipTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px 2px 10px;
+  background: #e6f3f0;
+  border-radius: 999px;
+  font-size: 13px;
+  max-width: 100%;
+}
+
+.chipTag span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 150px;
+}
+
+.chipX {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+.send {
+  flex-shrink: 0;
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: 12px;
+  border: 0;
+  background: #167a68;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.send:disabled {
+  background: #b9c5c3;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .stationGrid {
+    grid-template-columns: 1fr;
+  }
+  .tray {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .send {
+    width: 100%;
+  }
+}

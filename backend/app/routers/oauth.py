@@ -1,10 +1,19 @@
 """
-소셜 로그인 (카카오 / 구글)
+소셜 로그인 (카카오 / 구글) + 계정 연동
 
 흐름:
   1) GET /auth/{provider}/login     : state 를 만들어 쿠키에 저장하고 소셜 로그인 화면으로 보냄
   2) GET /auth/{provider}/callback  : state 검증 -> code 를 토큰으로 교환 -> 사용자 정보 조회
                                       -> 회원 찾기/만들기 -> 세션 쿠키 발급 -> 프론트로 이동
+
+연동 (이미 로그인한 회원이 소셜 계정을 자기 계정에 붙이는 흐름):
+  GET /auth/{provider}/link         : 로그인한 회원만 시작 가능. 콜백에서 새 회원을 만들지 않고
+                                      지금 로그인한 회원에 oauth_accounts 행을 추가한다.
+                                      끝나면 /settings?link=결과 로 돌아간다.
+
+연결 관리:
+  GET    /auth/me/identities          : 내 계정에 연결된 로그인 수단 목록
+  DELETE /auth/me/identities/{provider}: 소셜 연동 해제 (마지막 로그인 수단은 해제 불가)
 
 로그인 이후(세션 쿠키, 접근통제)는 자체 로그인과 똑같이 동작한다.
 """
@@ -17,7 +26,7 @@ from urllib.parse import urlencode
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession
 
@@ -34,6 +43,7 @@ from app.config import (
     SESSION_TTL_DAYS,
 )
 from app.db import get_db
+from app.deps.auth import get_current_user
 from app.models import OAuthAccount, Session, User
 from app.security import hash_token, new_session_token
 
@@ -41,6 +51,7 @@ logger = logging.getLogger("meetmap")
 router = APIRouter(prefix="/auth", tags=["oauth"])
 
 STATE_COOKIE = "oauth_state"  # CSRF 방지용 state 를 잠깐 담아두는 쿠키
+LINK_COOKIE = "oauth_link"    # '로그인'이 아니라 '내 계정에 연동'하는 흐름이라는 표시
 
 
 # ---------- 제공자별 설정 ----------
@@ -72,7 +83,7 @@ PROVIDERS = {
         "client_id": KAKAO_CLIENT_ID,
         "client_secret": KAKAO_CLIENT_SECRET,
         "redirect_uri": KAKAO_REDIRECT_URI,
-        "scope": None,
+        "scope": "profile_nickname profile_image",
         "extra_params": {},
         "parse": parse_kakao,
     },
@@ -105,6 +116,7 @@ def fail_redirect(reason: str = "login_failed") -> RedirectResponse:
     """실패하면 이유를 자세히 알려주지 않고 로그인 화면으로 돌려보낸다."""
     resp = RedirectResponse(f"{FRONTEND_URL}/login?error={reason}", status_code=302)
     resp.delete_cookie(STATE_COOKIE, path="/")
+    resp.delete_cookie(LINK_COOKIE, path="/")
     return resp
 
 
@@ -133,6 +145,10 @@ def fetch_userinfo(cfg: dict, access_token: str) -> dict:
     return r.json()
 
 
+# 소셜에서 닉네임을 못 받았을 때 임시로 들어가는 기본값
+DEFAULT_NICKNAMES = {"카카오사용자", "구글사용자"}
+
+
 def find_or_create_user(
     db: DbSession, provider: str, provider_user_id: str, nickname: str, image: str | None
 ) -> User | None:
@@ -144,7 +160,18 @@ def find_or_create_user(
     )
     account = db.scalar(find)
     if account:
-        return db.get(User, account.user_id)
+        user = db.get(User, account.user_id)
+        # 예전에 기본값으로 저장된 닉네임이면, 이번에 받은 진짜 닉네임으로 바꾼다.
+        # (사용자가 설정에서 직접 바꾼 닉네임은 기본값이 아니므로 건드리지 않는다)
+        if (
+            user is not None
+            and user.status == "active"
+            and user.nickname in DEFAULT_NICKNAMES
+            and nickname not in DEFAULT_NICKNAMES
+        ):
+            user.nickname = nickname[:30]
+            db.commit()
+        return user
 
     user = User(nickname=nickname[:30], profile_image=image[:500] if image else None)
     db.add(user)
@@ -161,10 +188,57 @@ def find_or_create_user(
     return user
 
 
+def _current_user_or_none(request: Request, db: DbSession) -> User | None:
+    """쿠키의 세션으로 지금 로그인한 회원을 찾는다. 없으면 None."""
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+    if not token:
+        return None
+    row = db.get(Session, hash_token(token))
+    if row is None or row.expires_at <= datetime.now(timezone.utc):
+        return None
+    user = db.get(User, row.user_id)
+    return user if user is not None and user.status == "active" else None
+
+
+def _link_result(result: str) -> RedirectResponse:
+    """연동이 끝나면 설정 페이지로 돌려보낸다. (result: ok / already / taken / dup / login / error)"""
+    resp = RedirectResponse(f"{FRONTEND_URL}/settings?link={result}", status_code=302)
+    resp.delete_cookie(STATE_COOKIE, path="/")
+    resp.delete_cookie(LINK_COOKIE, path="/")
+    return resp
+
+
+def link_account(db: DbSession, me: User, provider: str, provider_user_id: str) -> str:
+    """이 소셜 계정을 '지금 로그인한 나'에게 붙인다. 결과 문자열을 돌려준다."""
+    existing = db.scalar(
+        select(OAuthAccount).where(
+            OAuthAccount.provider == provider,
+            OAuthAccount.provider_user_id == provider_user_id,
+        )
+    )
+    if existing is not None:
+        return "already" if existing.user_id == me.id else "taken"  # taken: 다른 회원에 이미 연결됨
+
+    same_provider = db.scalar(
+        select(OAuthAccount).where(
+            OAuthAccount.user_id == me.id, OAuthAccount.provider == provider
+        )
+    )
+    if same_provider is not None:
+        return "dup"  # 이미 같은 종류(카카오 등)가 하나 연결돼 있음
+
+    db.add(OAuthAccount(user_id=me.id, provider=provider, provider_user_id=provider_user_id))
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return "taken"
+    return "ok"
+
+
 # ---------- API ----------
 
-@router.get("/{provider}/login")
-def oauth_login(provider: str):
+def _start_oauth(provider: str, link: bool) -> RedirectResponse:
     cfg = get_provider(provider)
     state = secrets.token_urlsafe(32)
 
@@ -183,7 +257,25 @@ def oauth_login(provider: str):
         STATE_COOKIE, state,
         max_age=600, httponly=True, secure=COOKIE_SECURE, samesite="lax", path="/",
     )
+    if link:
+        resp.set_cookie(
+            LINK_COOKIE, "1",
+            max_age=600, httponly=True, secure=COOKIE_SECURE, samesite="lax", path="/",
+        )
+    else:
+        resp.delete_cookie(LINK_COOKIE, path="/")
     return resp
+
+
+@router.get("/{provider}/login")
+def oauth_login(provider: str):
+    return _start_oauth(provider, link=False)
+
+
+@router.get("/{provider}/link")
+def oauth_link(provider: str, user: User = Depends(get_current_user)):
+    # 로그인한 사람만 연동을 시작할 수 있다 (로그인 안 했으면 401)
+    return _start_oauth(provider, link=True)
 
 
 @router.get("/{provider}/callback")
@@ -196,11 +288,12 @@ def oauth_callback(
     db: DbSession = Depends(get_db),
 ):
     cfg = get_provider(provider)
+    link_mode = request.cookies.get(LINK_COOKIE) == "1"
 
     # 1) 사용자가 취소했거나, state 가 우리가 보낸 값과 다르면 거부
     saved_state = request.cookies.get(STATE_COOKIE)
     if error or not code or not state or not saved_state or not hmac.compare_digest(state, saved_state):
-        return fail_redirect()
+        return _link_result("error") if link_mode else fail_redirect()
 
     # 2) code -> 토큰 -> 사용자 정보
     try:
@@ -208,11 +301,18 @@ def oauth_callback(
         info = fetch_userinfo(cfg, access_token)
     except (httpx.HTTPError, KeyError, ValueError):
         logger.warning("%s 로그인: 토큰 교환 또는 사용자 정보 조회 실패", provider)
-        return fail_redirect()
+        return _link_result("error") if link_mode else fail_redirect()
 
     provider_user_id, nickname, image = cfg["parse"](info)
     if not provider_user_id:
-        return fail_redirect()
+        return _link_result("error") if link_mode else fail_redirect()
+
+    # 2-1) 연동 모드: 새 회원을 만들지 않고, 지금 로그인한 내 계정에 붙인다
+    if link_mode:
+        me = _current_user_or_none(request, db)
+        if me is None:
+            return _link_result("login")
+        return _link_result(link_account(db, me, provider, provider_user_id))
 
     # 3) 회원 찾기/만들기
     user = find_or_create_user(db, provider, provider_user_id, nickname, image)
@@ -235,4 +335,51 @@ def oauth_callback(
         httponly=True, secure=COOKIE_SECURE, samesite="lax", path="/",
     )
     resp.delete_cookie(STATE_COOKIE, path="/")
+    resp.delete_cookie(LINK_COOKIE, path="/")
     return resp
+
+
+# ---------- 연결된 로그인 수단 보기 / 해제 ----------
+
+@router.get("/me/identities")
+def my_identities(
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+):
+    """내 계정에 연결된 소셜 로그인 목록과 비밀번호 로그인 사용 여부"""
+    providers = db.scalars(
+        select(OAuthAccount.provider).where(OAuthAccount.user_id == user.id)
+    ).all()
+    return {"providers": sorted(set(providers)), "has_password": user.password is not None}
+
+
+@router.delete("/me/identities/{provider}", status_code=status.HTTP_204_NO_CONTENT)
+def unlink_identity(
+    provider: str,
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+):
+    """소셜 연동을 해제한다. 해제하면 로그인할 방법이 하나도 안 남는 경우는 막는다."""
+    if provider not in PROVIDERS:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Not Found")
+
+    mine = db.scalars(
+        select(OAuthAccount).where(OAuthAccount.user_id == user.id)
+    ).all()
+    target = [a for a in mine if a.provider == provider]
+    if not target:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "연결돼 있지 않아요.")
+
+    remaining = len(mine) - len(target) + (1 if user.password is not None else 0)
+    if remaining < 1:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "마지막 로그인 방법은 해제할 수 없어요. 다른 로그인 방법을 먼저 연결해 주세요.",
+        )
+
+    db.execute(
+        delete(OAuthAccount).where(
+            OAuthAccount.user_id == user.id, OAuthAccount.provider == provider
+        )
+    )
+    db.commit()

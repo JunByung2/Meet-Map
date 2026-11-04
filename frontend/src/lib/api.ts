@@ -13,8 +13,16 @@ export async function api<T = unknown>(
 ): Promise<T> {
   const res = await fetch(`/api${path}`, {
     method: options.method ?? "GET",
-    headers: options.body ? { "Content-Type": "application/json" } : undefined,
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    // FormData(사진 업로드)는 브라우저가 Content-Type 을 알아서 붙이므로 JSON 처리를 하지 않는다
+    headers:
+      options.body && !(options.body instanceof FormData)
+        ? { "Content-Type": "application/json" }
+        : undefined,
+    body: !options.body
+      ? undefined
+      : options.body instanceof FormData
+        ? options.body
+        : JSON.stringify(options.body),
     credentials: "same-origin",
   });
 

@@ -1,18 +1,17 @@
-"use client";
+'use client';
 
-import { useState, type CSSProperties } from 'react'
-import BaseKakaoMap, { type MapPlace } from '@/features/map/BaseKakaoMap'
+import { useState, type CSSProperties } from 'react';
+import BaseKakaoMap, { type MapPlace } from '@/features/map/BaseKakaoMap';
 import {
   SHARE_MINUTES,
   useLocationShare,
   type ShareMode,
-} from '@/hooks/useLocationShare'
-import { pickName, useNameMode } from '@/lib/nameMode'
-import ArrivalBoard from '@/components/chat/ArrivalBoard'
+} from '@/hooks/useLocationShare';
+import { pickName, useNameMode } from '@/lib/nameMode';
 
 type Meet = ReturnType<typeof useLocationShare>;
 
-const ACCENT = '#3f7d6e'
+const ACCENT = '#3f7d6e';
 
 // 옆으로 넘기는 카드 줄
 const rail: CSSProperties = {
@@ -23,22 +22,22 @@ const rail: CSSProperties = {
   padding: '4px 2px 10px',
   margin: '0 -2px',
   WebkitOverflowScrolling: 'touch',
-}
+};
 
 // 카드 한 장의 공통 모양 (다음 카드가 살짝 보이도록 폭을 80%로)
 const slide: CSSProperties = {
-  flex: '0 0 80%',
-  maxWidth: 320,
-  minHeight: 200,
+  flex: '0 0 65%',
+  maxWidth: 260,
+  minHeight: 165,
   scrollSnapAlign: 'start',
-  borderRadius: 24,
-  padding: 20,
+  borderRadius: 18,
+  padding: 14,
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'space-between',
-  gap: 16,
+  gap: 10,
   boxSizing: 'border-box',
-}
+};
 
 const avatar: CSSProperties = {
   width: 48,
@@ -52,7 +51,7 @@ const avatar: CSSProperties = {
   fontSize: 20,
   fontWeight: 700,
   flexShrink: 0,
-}
+};
 
 const track: CSSProperties = {
   height: 8,
@@ -60,11 +59,11 @@ const track: CSSProperties = {
   background: 'rgba(0,0,0,0.08)',
   overflow: 'hidden',
   margin: '10px 0 14px',
-}
+};
 
 // 공유 방식 뱃지: 1회 공유(주황) / 10분 공유(초록)
 function ModeBadge({ mode }: { mode: ShareMode }) {
-  const once = mode === 'once'
+  const once = mode === 'once';
   return (
     <span
       style={{
@@ -79,7 +78,7 @@ function ModeBadge({ mode }: { mode: ShareMode }) {
     >
       {once ? '📍 1회 공유' : `⏱ ${SHARE_MINUTES}분 공유`}
     </span>
-  )
+  );
 }
 
 function ProblemGuide({ meet }: { meet: Meet }) {
@@ -93,13 +92,13 @@ function ProblemGuide({ meet }: { meet: Meet }) {
       disabled={meet.busy}
       onClick={() => void meet.start()}
     >
-      {problem === "denied" ? "허용했어요. 다시 시도" : "다시 시도"}
+      {problem === 'denied' ? '허용했어요. 다시 시도' : '다시 시도'}
     </button>
   );
 
   return (
     <section className="card" role="alert">
-      {problem === "denied" && (
+      {problem === 'denied' && (
         <>
           <h2 className="card-title">위치 권한이 꺼져 있어요</h2>
           <p className="muted">
@@ -108,7 +107,7 @@ function ProblemGuide({ meet }: { meet: Meet }) {
           </p>
           <ul
             className="muted"
-            style={{ margin: "8px 0 12px", paddingLeft: 18 }}
+            style={{ margin: '8px 0 12px', paddingLeft: 18 }}
           >
             <li>PC 크롬·엣지: 주소창 왼쪽 자물쇠 → 위치 → 허용</li>
             <li>안드로이드 크롬: 주소창 자물쇠 → 권한 → 위치 허용</li>
@@ -120,7 +119,7 @@ function ProblemGuide({ meet }: { meet: Meet }) {
           <p className="muted">기기마다 메뉴 이름이 조금 다를 수 있어요.</p>
         </>
       )}
-      {problem === "unavailable" && (
+      {problem === 'unavailable' && (
         <>
           <h2 className="card-title">위치를 확인할 수 없어요</h2>
           <p className="muted">
@@ -128,7 +127,7 @@ function ProblemGuide({ meet }: { meet: Meet }) {
           </p>
         </>
       )}
-      {problem === "timeout" && (
+      {problem === 'timeout' && (
         <>
           <h2 className="card-title">위치 확인이 오래 걸려요</h2>
           <p className="muted">
@@ -136,7 +135,7 @@ function ProblemGuide({ meet }: { meet: Meet }) {
           </p>
         </>
       )}
-      {problem === "unsupported" && (
+      {problem === 'unsupported' && (
         <>
           <h2 className="card-title">
             이 브라우저는 위치 기능을 지원하지 않아요
@@ -144,8 +143,8 @@ function ProblemGuide({ meet }: { meet: Meet }) {
           <p className="muted">다른 브라우저로 열어 주세요.</p>
         </>
       )}
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        {problem !== "unsupported" && retry}
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        {problem !== 'unsupported' && retry}
         <button
           type="button"
           className="btn secondary sm"
@@ -160,18 +159,18 @@ function ProblemGuide({ meet }: { meet: Meet }) {
 
 export default function MeetModePanel({ meet }: { meet: Meet }) {
   const { mine, others, shares, asking, busy, message, now, mode, setMode } =
-    meet
-  const [showMap, setShowMap] = useState(false)
-  const [selectedId, setSelectedId] = useState('')
-  const nameMode = useNameMode()
+    meet;
+  const [showMap, setShowMap] = useState(false);
+  const [selectedId, setSelectedId] = useState('');
+  const nameMode = useNameMode();
 
   const left = mine
     ? Math.max(
         0,
         Math.ceil((new Date(mine.expires_at).getTime() - now) / 60000),
       )
-    : 0
-  const percent = Math.min(100, Math.round((left / SHARE_MINUTES) * 100))
+    : 0;
+  const percent = Math.min(100, Math.round((left / SHARE_MINUTES) * 100));
 
   // 지도에 찍는 점: 서버가 돌려준 대략적인 위치(500m 격자 중심)만 사용한다
   const mapPlaces: MapPlace[] = shares.map((s) => ({
@@ -184,12 +183,12 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
   }));
 
   const openMap = (userId?: number) => {
-    setSelectedId(userId !== undefined ? `loc-${userId}` : "");
+    setSelectedId(userId !== undefined ? `loc-${userId}` : '');
     setShowMap(true);
   };
 
   return (
-    <div style={{ display: "grid", gap: 12, marginBottom: 16 }}>
+    <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
       {message && (
         <p className="error" role="alert">
           {message}
@@ -197,7 +196,6 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
       )}
 
       <ProblemGuide meet={meet} />
-      <ArrivalBoard meet={meet} />
 
       {asking && !mine && !meet.problem && (
         <section className="card" role="dialog" aria-label="MeetMode 위치 공유">
@@ -225,7 +223,7 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
                 },
               ] as const
             ).map((opt) => {
-              const active = mode === opt.value
+              const active = mode === opt.value;
               return (
                 <label
                   key={opt.value}
@@ -257,13 +255,13 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
                     </span>
                   </span>
                 </label>
-              )
+              );
             })}
           </div>
 
           <ul
             className="muted"
-            style={{ margin: "8px 0 12px", paddingLeft: 18 }}
+            style={{ margin: '8px 0 12px', paddingLeft: 18 }}
           >
             <li>내가 직접 누를 때만 공유돼요. 자동으로 공유되지 않아요.</li>
             <li>이 그룹 친구들에게만, 대략적인 위치(약 500m 범위)로 보여요.</li>
@@ -274,7 +272,7 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
             </li>
             <li>동의하면 브라우저가 위치 권한을 한 번 물어봐요.</li>
           </ul>
-          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
             <button
               type="button"
               className="btn sm"
@@ -324,7 +322,7 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
                 <div
                   style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}
                 >
-                  <strong style={{ fontSize: 40, lineHeight: 1 }}>
+                  <strong style={{ fontSize: 30, lineHeight: 1 }}>
                     {left}
                   </strong>
                   <span className="muted">분 뒤 자동으로 멈춰요</span>
@@ -362,16 +360,16 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
           )}
 
           {others.map((s) => {
-            const name = pickName(s, nameMode) || '알 수 없음'
-            const once = s.mode === 'once'
+            const name = pickName(s, nameMode) || '알 수 없음';
+            const once = s.mode === 'once';
             const ago = Math.max(
               0,
               Math.floor((now - new Date(s.updated_at).getTime()) / 60000),
-            )
+            );
             const remain = Math.max(
               0,
               Math.ceil((new Date(s.expires_at).getTime() - now) / 60000),
-            )
+            );
             return (
               <section key={s.user_id} className="card" style={slide}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -407,7 +405,7 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
                   </button>
                 </div>
               </section>
-            )
+            );
           })}
         </div>
       )}
@@ -416,9 +414,9 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
         <section className="card">
           <div
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
               marginBottom: 8,
             }}
           >

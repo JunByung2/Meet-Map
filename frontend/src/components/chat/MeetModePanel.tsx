@@ -8,6 +8,7 @@ import {
   type ShareMode,
 } from '@/hooks/useLocationShare'
 import { pickName, useNameMode } from '@/lib/nameMode'
+import ArrivalBoard from '@/components/chat/ArrivalBoard'
 
 type Meet = ReturnType<typeof useLocationShare>;
 
@@ -196,6 +197,7 @@ export default function MeetModePanel({ meet }: { meet: Meet }) {
       )}
 
       <ProblemGuide meet={meet} />
+      <ArrivalBoard meet={meet} />
 
       {asking && !mine && !meet.problem && (
         <section className="card" role="dialog" aria-label="MeetMode 위치 공유">

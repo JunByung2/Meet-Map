@@ -1,0 +1,292 @@
+/* 약속 페이지 달력: 멤버별 색으로 되는 날 / 안 되는 날을 보여 준다 */
+.wrap {
+  display: grid;
+  gap: 14px;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.month {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.monthLabel {
+  font-size: 18px;
+  font-weight: 800;
+  min-width: 112px;
+  text-align: center;
+}
+.nav {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--ink);
+}
+.nav:hover {
+  background: var(--mint);
+}
+
+.seg {
+  display: inline-flex;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--white);
+}
+.segBtn {
+  border: 0;
+  background: transparent;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+}
+.segBtn + .segBtn {
+  border-left: 1.5px solid var(--line);
+}
+.segBtn:hover {
+  background: var(--mint);
+}
+.segOn {
+  background: var(--teal);
+  color: #fff;
+}
+.segOn:hover {
+  background: var(--teal-dark);
+}
+
+.rowLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px 5px 8px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--white);
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.who:hover {
+  background: var(--mint);
+}
+.whoOff {
+  opacity: 0.45;
+}
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.dow {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 2px 0;
+}
+.sun {
+  color: #c0533f;
+}
+.sat {
+  color: #3b6fc2;
+}
+
+.cell {
+  position: relative;
+  min-height: 78px;
+  padding: 6px 6px 8px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--white);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--ink);
+}
+.cell:hover {
+  border-color: var(--teal);
+}
+.out {
+  background: transparent;
+  opacity: 0.55;
+}
+.past {
+  opacity: 0.4;
+  cursor: default;
+}
+.today {
+  box-shadow: inset 0 0 0 2px var(--teal);
+}
+.selected {
+  border-color: var(--teal-dark);
+  background: var(--mint);
+}
+.allGood {
+  border-color: #1fa58a;
+  background: #e8f7f2;
+}
+.num {
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.meet {
+  font-size: 12px;
+}
+
+.bars {
+  display: grid;
+  gap: 3px;
+}
+.bar {
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+}
+/* 안 되는 날: 같은 멤버 색의 빗금 막대 */
+.barOff {
+  height: 7px;
+  border: 1.5px solid var(--c);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--c) 0 2px,
+    transparent 2px 5px
+  );
+}
+.count {
+  margin-top: auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.countGood {
+  color: #168a72;
+}
+.countBad {
+  color: var(--danger);
+}
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.toolHint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.panel {
+  border: 1.5px solid var(--line);
+  border-radius: 16px;
+  background: var(--white);
+  padding: 14px 16px;
+  display: grid;
+  gap: 10px;
+}
+.panelHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.panelTitle {
+  font-size: 16px;
+  font-weight: 800;
+}
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.groupLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  min-width: 52px;
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 7px;
+  border-radius: 999px;
+  background: var(--mist);
+  font-size: 13px;
+}
+.tagOff {
+  background: transparent;
+  border: 1.5px dashed var(--line);
+  color: var(--muted);
+}
+.mine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.err {
+  color: var(--danger);
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .cell {
+    min-height: 62px;
+    padding: 4px 4px 6px;
+    border-radius: 9px;
+  }
+  .grid {
+    gap: 4px;
+  }
+  .count {
+    font-size: 10px;
+  }
+  .monthLabel {
+    min-width: 92px;
+    font-size: 16px;
+  }
+}

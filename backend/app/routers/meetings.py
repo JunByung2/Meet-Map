@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -18,9 +19,12 @@ from app.models import (
     MeetingParticipant,
     MeetingRecord,
     MeetingVote,
+    MeetingVote,
+    MemberAvailability,
     User,
 )
-from app.records_sync import to_kst_date
+
+from app.records_sync import KST, to_kst_date
 
 router = APIRouter(tags=["meetings"])
 
@@ -30,10 +34,24 @@ router = APIRouter(tags=["meetings"])
 # --------------------
 
 class MeetingCreate(BaseModel):
+    """투표 없이 한 사람이 바로 만드는 확정 약속"""
     title: str = Field(min_length=1, max_length=100)
     location: str = Field(min_length=1, max_length=200)
     meeting_time: datetime
     status: str = "confirmed"
+    # 카카오 장소 검색으로 고른 장소 정보 (선택)
+    place_id: str | None = Field(default=None, max_length=40)
+    place_address: str | None = Field(default=None, max_length=200)
+    place_lat: float | None = Field(default=None, ge=-90, le=90)
+    place_lng: float | None = Field(default=None, ge=-180, le=180)
+    # 함께하는 멤버 (선택, 이 그룹 멤버만)
+    participant_ids: list[int] | None = Field(default=None, max_length=50)
+
+
+class AvailabilitySet(BaseModel):
+    """내가 표시하는 날짜들. status=unknown 이면 표시를 지운다."""
+    days: list[date] = Field(min_length=1, max_length=62)
+    status: Literal["available", "unavailable", "unknown"]
 
 
 class CandidateCreate(BaseModel):
@@ -227,32 +245,60 @@ def create_meeting(
     group_id: int,
     body: MeetingCreate,
     member=Depends(require_group_member),
+    user: User = Depends(get_current_user),
     db: DbSession = Depends(get_db),
 ):
-    if not body.title.strip() or not body.location.strip():
+    title, location = body.title.strip(), body.location.strip()
+    if not title or not location:
         raise HTTPException(
             400,
             "약속 제목과 장소를 입력해 주세요.",
         )
+    if body.status != "confirmed":
+        raise HTTPException(400, "직접 만드는 약속은 바로 확정돼요.")
 
-    if body.status == "confirmed":
-        clash = find_time_conflict(db, group_id, body.meeting_time)
-        if clash is not None:
-            raise HTTPException(409, conflict_message(clash))
+    # 지난 날짜로는 만들 수 없다 (한국 시간 기준 오늘부터)
+    if to_kst_date(_aware(body.meeting_time)) < datetime.now(KST).date():
+        raise HTTPException(400, "오늘 이후 날짜로 약속을 만들어 주세요.")
 
+    clash = find_time_conflict(db, group_id, body.meeting_time)
+    if clash is not None:
+        raise HTTPException(409, conflict_message(clash))
+
+    wanted = set(body.participant_ids or [])
+    if wanted:
+        valid = set(
+            db.scalars(
+                select(GroupMember.user_id).where(
+                    GroupMember.group_id == group_id,
+                    GroupMember.user_id.in_(wanted),
+                )
+            ).all()
+        )
+        if valid != wanted:
+            raise HTTPException(400, "이 그룹의 멤버만 고를 수 있어요.")
+
+    has_coords = body.place_lat is not None and body.place_lng is not None
     meeting = Meeting(
         group_id=group_id,
-        title=body.title.strip(),
-        location=body.location.strip(),
+        title=title,
+        location=location,
         meeting_time=body.meeting_time,
-        status=body.status,
+        place_id=body.place_id if has_coords else None,
+        place_address=body.place_address if has_coords else None,
+        place_lat=body.place_lat if has_coords else None,
+        place_lng=body.place_lng if has_coords else None,
+        created_by=user.id,
+        status="confirmed",
     )
 
     db.add(meeting)
+    db.flush()
+    db.add_all(MeetingParticipant(meeting_id=meeting.id, user_id=uid) for uid in sorted(wanted))
     db.commit()
     db.refresh(meeting)
 
-    return meeting_to_dict(meeting)
+    return meeting_to_dict(meeting, sorted(wanted))
 
 
 @router.get("/groups/{group_id}/meetings/{meeting_id}")
@@ -357,6 +403,67 @@ def update_meeting(
     db.refresh(meeting)
     return meeting_to_dict(meeting, participants_by_meeting(db, [meeting.id]).get(meeting.id))
 
+# --------------------
+# 달력: 날짜별 되는 날 / 안 되는 날 (그룹 멤버끼리 서로 볼 수 있고, 표시는 자기 것만 바꾼다)
+# --------------------
+
+AVAILABILITY_MAX_DAYS = 400  # 한 번에 조회할 수 있는 최대 기간
+
+
+@router.get("/groups/{group_id}/availability")
+def list_availability(
+    group_id: int,
+    start: date,
+    end: date,
+    member=Depends(require_group_member),
+    db: DbSession = Depends(get_db),
+):
+    if end < start:
+        raise HTTPException(400, "끝 날짜가 시작 날짜보다 빠를 수 없어요.")
+    if (end - start).days > AVAILABILITY_MAX_DAYS:
+        raise HTTPException(400, f"한 번에 {AVAILABILITY_MAX_DAYS}일까지만 볼 수 있어요.")
+    rows = db.scalars(
+        select(MemberAvailability)
+        .where(
+            MemberAvailability.group_id == group_id,
+            MemberAvailability.day >= start,
+            MemberAvailability.day <= end,
+        )
+        .order_by(MemberAvailability.day, MemberAvailability.user_id)
+    ).all()
+    return [{"user_id": r.user_id, "day": r.day.isoformat(), "status": r.status} for r in rows]
+
+
+@router.put("/groups/{group_id}/availability")
+def set_my_availability(
+    group_id: int,
+    body: AvailabilitySet,
+    member=Depends(require_group_member),
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+):
+    today = datetime.now(KST).date()
+    days = sorted(set(body.days))
+    if days[0] < today:
+        raise HTTPException(400, "지난 날짜는 바꿀 수 없어요.")
+    if days[-1] > today + timedelta(days=366):
+        raise HTTPException(400, "1년 이후 날짜는 표시할 수 없어요.")
+
+    # 내 표시만 바꾼다: 대상 날짜의 내 기존 표시를 지우고, 필요하면 새로 넣는다
+    db.execute(
+        delete(MemberAvailability).where(
+            MemberAvailability.group_id == group_id,
+            MemberAvailability.user_id == user.id,
+            MemberAvailability.day.in_(days),
+        )
+    )
+    if body.status != "unknown":
+        db.add_all(
+            MemberAvailability(group_id=group_id, user_id=user.id, day=d, status=body.status)
+            for d in days
+        )
+    db.commit()
+    return [{"user_id": user.id, "day": d.isoformat(), "status": body.status} for d in days]
 
 # --------------------
 # 후보 등록 및 조회

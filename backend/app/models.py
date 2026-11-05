@@ -224,6 +224,21 @@ class MeetingParticipant(Base):
         BigId, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
 
+class MemberAvailability(Base):
+    """멤버가 표시한 날짜별 '되는 날 / 안 되는 날' (달력). 표시하지 않은 날은 행이 없다(미정)."""
+    __tablename__ = "member_availability"
+
+    group_id: Mapped[int] = mapped_column(
+        BigId, ForeignKey("groups.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        BigId, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    status: Mapped[str] = mapped_column(String(12), nullable=False)  # 'available' | 'unavailable'
+
+    __table_args__ = (CheckConstraint("status IN ('available','unavailable')", name="ck_member_availability_status"),)
+
 class MeetingCandidate(Base):
     """약속 투표 후보"""
     __tablename__ = "meeting_candidates"

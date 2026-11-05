@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import Avatar from "@/components/Avatar";
 import DateTimePicker from "@/components/chat/DateTimePicker";
+import AvailabilityCalendar from "@/features/calendar/AvailabilityCalendar";
 import { useGroupContext, type GroupMember } from "@/hooks/useGroupContext";
 import { pickName, useNameMode, type NameMode } from "@/lib/nameMode";
 import type { PlaceValue } from "@/lib/photos";
@@ -51,6 +52,7 @@ function toLocalInput(iso: string) {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
+
 // 한국 시간 기준 날짜(YYYY-MM-DD). 약속 날짜가 오늘을 지나면 지난 기록으로 넘어간다
 const KST_DAY = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Seoul",
@@ -65,6 +67,7 @@ function isUpcoming(iso: string) {
   const d = new Date(iso);
   return !Number.isNaN(d.getTime()) && kstDay(d) >= kstDay(Date.now());
 }
+
 const memberChip = (selected: boolean): React.CSSProperties => ({
   display: "inline-flex",
   alignItems: "center",
@@ -362,10 +365,294 @@ function MeetingEditor({
   );
 }
 
+/** 투표 없이 한 사람이 바로 만드는 확정 약속: 이름, 날짜·시간, 장소, 함께하는 멤버(선택) */
+function MeetingCreateForm({
+  groupId,
+  members,
+  nameMode,
+  initialWhen,
+  onCreated,
+  onCancel,
+}: {
+  groupId: number;
+  members: GroupMember[];
+  nameMode: NameMode;
+  initialWhen: string;
+  onCreated: (created: Meeting) => void;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [when, setWhen] = useState(initialWhen);
+  const [pickOpen, setPickOpen] = useState(false);
+  const [placeText, setPlaceText] = useState("");
+  const [picked, setPicked] = useState<PlaceValue | null>(null); // 카카오 검색으로 고른 장소 (직접 적으면 없음)
+  const [searching, setSearching] = useState(false);
+  const search = usePlaceSearch();
+  const [selected, setSelected] = useState<number[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const allSelected = members.length > 0 && selected.length === members.length;
+
+  function toggle(userId: number) {
+    setSelected((cur) =>
+      cur.includes(userId)
+        ? cur.filter((id) => id !== userId)
+        : [...cur, userId],
+    );
+  }
+
+  async function submit() {
+    if (!title.trim()) return setError("약속 이름을 적어 주세요.");
+    if (!when) return setError("날짜와 시간을 정해 주세요.");
+    if (!placeText.trim())
+      return setError("장소를 적거나 검색해서 골라 주세요.");
+    setBusy(true);
+    setError("");
+    const body: Record<string, unknown> = {
+      title: title.trim(),
+      location: placeText.trim(),
+      meeting_time: new Date(when).toISOString(),
+      participant_ids: selected,
+    };
+    if (picked && picked.name === placeText.trim()) {
+      body.place_id = picked.id || null;
+      body.place_address = picked.address || null;
+      body.place_lat = picked.lat;
+      body.place_lng = picked.lng;
+    }
+    try {
+      const created = await api<Meeting>(`/groups/${groupId}/meetings`, {
+        method: "POST",
+        body,
+      });
+      onCreated(created);
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "약속을 만들지 못했어요.",
+      );
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="stack" style={{ gap: 16 }}>
+      <h3 className="card-title">새 약속 만들기</h3>
+      <p className="muted">
+        투표 없이 바로 확정돼요. 만들면 그룹 멤버 모두에게 보여요.
+      </p>
+
+      <div>
+        <p className="muted" style={{ marginBottom: 6 }}>
+          약속 이름
+        </p>
+        <input
+          className="input ime-ko"
+          lang="ko"
+          value={title}
+          maxLength={100}
+          placeholder="예: 팀플 회의, 저녁 모임"
+          aria-label="약속 이름"
+          onChange={(e) => setTitle(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <p className="muted" style={{ marginBottom: 6 }}>
+          날짜·시간
+        </p>
+        <button
+          type="button"
+          className="btn secondary"
+          disabled={busy}
+          onClick={() => setPickOpen(true)}
+        >
+          📅{" "}
+          {when ? formatDate(new Date(when).toISOString()) : "날짜·시간 정하기"}
+        </button>
+        {pickOpen && (
+          <DateTimePicker
+            value={when}
+            onChange={setWhen}
+            onClose={() => setPickOpen(false)}
+          />
+        )}
+      </div>
+
+      <div>
+        <p className="muted" style={{ marginBottom: 6 }}>
+          장소
+        </p>
+        <div className="row" style={{ gap: 8 }}>
+          <input
+            className="input ime-ko"
+            lang="ko"
+            value={placeText}
+            maxLength={200}
+            placeholder="장소 이름을 적고 검색해 보세요 (적기만 해도 돼요)"
+            aria-label="장소"
+            onChange={(e) => {
+              setPlaceText(e.target.value);
+              if (picked && picked.name !== e.target.value.trim())
+                setPicked(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                setSearching(true);
+                search.setKeyword(placeText);
+                void search.run(placeText);
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="btn secondary sm"
+            style={{ flexShrink: 0, whiteSpace: "nowrap" }}
+            disabled={!search.ready || search.loading}
+            onClick={() => {
+              setSearching(true);
+              search.setKeyword(placeText);
+              void search.run(placeText);
+            }}
+          >
+            {search.loading ? "…" : "검색"}
+          </button>
+        </div>
+        {picked && (
+          <p className="muted" style={{ marginTop: 6 }}>
+            📍 {picked.address}
+          </p>
+        )}
+        {searching && (
+          <div style={{ marginTop: 8 }}>
+            {search.error && <p className="error">{search.error}</p>}
+            {!search.error && search.message && (
+              <p className="muted">{search.message}</p>
+            )}
+            {search.results.length > 0 && (
+              <ul
+                aria-label="장소 검색 결과"
+                style={{
+                  listStyle: "none",
+                  padding: 0,
+                  margin: 0,
+                  display: "grid",
+                  gap: 6,
+                  maxHeight: 240,
+                  overflowY: "auto",
+                }}
+              >
+                {search.results.map((r) => (
+                  <li key={r.id}>
+                    <button
+                      type="button"
+                      className="btn secondary"
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        display: "grid",
+                        gap: 2,
+                      }}
+                      onClick={() => {
+                        setPicked({
+                          id: r.id,
+                          name: r.name,
+                          address: r.address,
+                          lat: r.lat,
+                          lng: r.lng,
+                        });
+                        setPlaceText(r.name);
+                        setSearching(false);
+                        search.clear();
+                      }}
+                    >
+                      <strong>{r.name}</strong>
+                      <span className="muted">{r.address}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <div className="row-between" style={{ marginBottom: 8 }}>
+          <p className="muted">
+            함께하는 멤버 (선택) {selected.length}/{members.length}명
+          </p>
+          <button
+            type="button"
+            className="btn secondary sm"
+            disabled={busy}
+            onClick={() =>
+              setSelected(allSelected ? [] : members.map((m) => m.user_id))
+            }
+          >
+            {allSelected ? "전체 해제" : "전체 선택"}
+          </button>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {members.map((m) => {
+            const on = selected.includes(m.user_id);
+            const name = pickName(m, nameMode);
+            return (
+              <button
+                key={m.user_id}
+                type="button"
+                aria-pressed={on}
+                disabled={busy}
+                style={memberChip(on)}
+                onClick={() => toggle(m.user_id)}
+              >
+                <Avatar
+                  userId={m.user_id}
+                  name={name}
+                  image={m.profile_image}
+                  size="sm"
+                />
+                {on ? "✓ " : ""}
+                {name}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+
+      <div className="row" style={{ gap: 8, justifyContent: "flex-end" }}>
+        <button
+          type="button"
+          className="btn secondary"
+          disabled={busy}
+          onClick={onCancel}
+        >
+          취소
+        </button>
+        <button
+          type="button"
+          className="btn"
+          disabled={busy}
+          onClick={() => void submit()}
+        >
+          {busy ? "만드는 중…" : "약속 만들기"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function GroupMeetingsPage() {
   const router = useRouter();
   // 로그인 확인(안 되어 있으면 /login 으로)과 그룹 멤버 목록
-  const { groupId, group, error: groupError } = useGroupContext();
+  const { groupId, me, group, error: groupError } = useGroupContext();
   const nameMode = useNameMode();
 
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -373,6 +660,9 @@ export default function GroupMeetingsPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [createWhen, setCreateWhen] = useState("");
+  const createRef = useRef<HTMLElement | null>(null);
 
   const members = group?.members ?? [];
   const memberById = new Map(members.map((m) => [m.user_id, m]));
@@ -444,6 +734,28 @@ export default function GroupMeetingsPage() {
     }
   }
 
+  // 약속 만들기 칸 열기 (달력에서 날짜를 눌러 열면 그 날짜가 미리 채워진다)
+  function openCreate(day?: string) {
+    setEditingId(null);
+    setNotice("");
+    setCreateWhen(day ? `${day}T12:00` : "");
+    setCreating(true);
+    setTimeout(
+      () =>
+        createRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        }),
+      50,
+    );
+  }
+
+  async function handleCreated(created: Meeting) {
+    setCreating(false);
+    setNotice(`'${created.title}' 약속을 만들었어요.`);
+    await loadMeetings();
+  }
+
   function handleSaved(updated: Meeting) {
     // 날짜를 이미 지난 날로 바꾸면 이 목록에서 빠지고 지난 기록으로 넘어간다
     const moved = !isUpcoming(updated.meeting_time);
@@ -469,8 +781,9 @@ export default function GroupMeetingsPage() {
           <p className="eyebrow">우리의 일정</p>
           <h1 className="page-title">확정된 약속</h1>
           <p className="page-sub">
-            투표로 확정된 약속을 모아 봐요. 날짜·시간과 장소를 고치고, 참여한
-            멤버를 기록할 수 있어요.
+            친구들이 가능한 날을 달력에 표시하고, 약속을 직접 만들거나 투표로
+            확정해요. 날짜·시간과 장소를 고치고 함께한 멤버도 기록할 수 있어요.
+            날짜가 지나면 지난 기록으로 옮겨져요.
           </p>
         </div>
       </div>
@@ -486,16 +799,40 @@ export default function GroupMeetingsPage() {
           flexWrap: "wrap",
         }}
       >
-        <strong>투표는 채팅방에서 만들고 확정해요.</strong>
+        <strong>
+          투표는 채팅방에서, 바로 정할 약속은 여기서 직접 만들 수 있어요.
+        </strong>
 
-        <button
-          type="button"
-          className="btn secondary sm"
-          onClick={() => router.push(`/groups/${groupId}/chat`)}
-        >
-          채팅방으로 →
-        </button>
+        <div className="row" style={{ gap: 8 }}>
+          <button type="button" className="btn sm" onClick={() => openCreate()}>
+            + 약속 만들기
+          </button>
+          <button
+            type="button"
+            className="btn secondary sm"
+            onClick={() => router.push(`/groups/${groupId}/chat`)}
+          >
+            채팅방으로 →
+          </button>
+        </div>
       </div>
+
+      {/* 달력: 멤버별로 되는 날 / 안 되는 날 표시 */}
+      <section style={{ marginBottom: 32 }}>
+        <div className="row-between" style={{ marginBottom: 16 }}>
+          <h2 className="section-title">함께 가능한 날 찾기</h2>
+        </div>
+        <div className="card">
+          <AvailabilityCalendar
+            groupId={groupId}
+            members={members}
+            meId={me?.id ?? null}
+            nameMode={nameMode}
+            meetings={meetings}
+            onCreateOnDay={(day) => openCreate(day)}
+          />
+        </div>
+      </section>
 
       {/* 확정된 약속 */}
       <section>
@@ -508,6 +845,24 @@ export default function GroupMeetingsPage() {
           <p className="notice" role="status" style={{ marginBottom: 16 }}>
             {notice}
           </p>
+        )}
+
+        {creating && (
+          <article
+            className="card"
+            ref={createRef}
+            style={{ marginBottom: 16 }}
+          >
+            <MeetingCreateForm
+              key={createWhen}
+              groupId={groupId}
+              members={members}
+              nameMode={nameMode}
+              initialWhen={createWhen}
+              onCreated={(created) => void handleCreated(created)}
+              onCancel={() => setCreating(false)}
+            />
+          </article>
         )}
         {groupError && (
           <p className="error" style={{ marginBottom: 16 }}>
@@ -531,7 +886,7 @@ export default function GroupMeetingsPage() {
         ) : meetings.length === 0 ? (
           <div className="card">
             <p className="card-title">
-              {loading ? "불러오는 중…" : "아직 확정된 약속이 없어요."}
+              {loading ? "불러오는 중…" : "앞으로 예정된 확정 약속이 없어요."}
             </p>
           </div>
         ) : (

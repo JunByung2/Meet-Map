@@ -160,6 +160,11 @@ export default function ChatPanel({
 
           <MeetModePanel meet={meet} />
 
+          {selectMode && (
+            <p className={sel.hint}>
+              지울 메시지를 눌러서 고르세요. 묶어 보낸 사진은 사진을 하나씩 눌러서 그 사진만 고를 수도 있어요. 그만하려면 아래의 “취소하고 채팅으로 돌아가기”(또는 Esc)를 누르세요. 내가 보낸 메시지만 고를 수 있어요{isOwner ? ' (방장은 모두)' : ''}. 최대 {MAX_SELECT}개까지 선택할 수 있어요.
+            </p>
+          )}
           <MessageList
             messages={messages}
             loading={loading}
@@ -183,14 +188,63 @@ export default function ChatPanel({
             onTool={onTool}
             onFile={uploadAndSend}
           />
+
+=======
+
+          {selectMode ? (
+            <section className={sel.dock} aria-label="선택한 메시지 삭제">
+              <div className={sel.dockRow}>
+                <span className={sel.count}>
+                  {selected.size > 0 || photoCount === 0 ? `메시지 ${selected.size}개` : ''}
+                  {selected.size > 0 && photoCount > 0 ? ' · ' : ''}
+                  {photoCount > 0 ? `사진 ${photoCount}장` : ''} 선택됨
+                </span>
+                <button
+                  type="button"
+                  className="btn secondary sm"
+                  onClick={() =>
+                    setSelected(
+                      selected.size >= Math.min(deletable.length, MAX_SELECT)
+                        ? new Set()
+                        : new Set(deletable.slice(-MAX_SELECT).map((m) => m.id)),
+                    )
+                  }
+                >
+                  {deletable.length > 0 && selected.size >= Math.min(deletable.length, MAX_SELECT) ? '선택 해제' : '전체 선택'}
+                </button>
+                <button type="button" className="btn secondary sm" onClick={leaveSelect}>
+                  취소하고 채팅으로 돌아가기
+                </button>
+                <button
+                  type="button"
+                  className="btn sm"
+                  disabled={pickedTotal === 0 || deleting}
+                  onClick={() => void deleteSelected()}
+                >
+                  {deleting ? '삭제하는 중…' : `삭제 (${pickedTotal})`}
+                </button>
+              </div>
+              <div className={styles.status} role="status">
+                {status}
+              </div>
+            </section>
+          ) : (
+            <MessageComposer
+              sending={sending}
+              planning={starting}
+              status={status}
+              onSend={send}
+              onTool={onTool}
+              onFile={uploadAndSend}
+              onFiles={uploadMany}
+              onSelectMode={() => setSelectMode(true)}
+              canSelect={messages.length > 0}
+            />
+          )}
         </div>
 
-        {/* 오른쪽 멤버 정보 및 위치 지도 */}
-        <ChatSidebar
-          members={group.members}
-          groupId={group.id}
-          shares={meet.shares}
-        />
+        <ChatSidebar members={group.members} groupId={group.id} shares={meet.shares} />
+
       </div>
 
       {/* 투표 생성 */}

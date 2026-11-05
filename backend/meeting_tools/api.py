@@ -2,9 +2,9 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from meeting_tools.recommendation.recommend_service import recommend_places
+from meeting_tools.transit.national_route import fetch_transit_routes
 from meeting_tools.transit.kakao_route import (
     TransitError,
-    fetch_kakao_routes,
     get_fastest_seconds,
 )
 
@@ -29,7 +29,7 @@ class RecommendRequest(BaseModel):
 @router.post("/transit")
 def transit(body: TransitRequest):
     try:
-        routes = fetch_kakao_routes(
+        routes = fetch_transit_routes(
             body.start.model_dump(),
             body.end.model_dump(),
         )

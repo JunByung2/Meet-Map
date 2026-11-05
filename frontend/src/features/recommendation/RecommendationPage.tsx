@@ -42,6 +42,16 @@ interface SearchPlace {
   y: string;
 }
 
+function travelTime(minutes: number) {
+  if (!Number.isFinite(minutes) || minutes < 0) return "시간 정보 없음";
+  if (minutes > 0 && minutes < 1) return "1분 미만";
+  const whole = Math.floor(minutes);
+  const hours = Math.floor(whole / 60);
+  const rest = whole % 60;
+  if (hours === 0) return `${rest}분`;
+  return rest === 0 ? `${hours}시간` : `${hours}시간 ${rest}분`;
+}
+
 export default function RecommendationPage() {
   const params = useSearchParams();
   const groupId = params.get("groupId") ?? "";
@@ -562,7 +572,7 @@ function DepartureEditor({
                           {index + 1}번 {member.nickname} →{" "}
                           {selectedRecommendation.name}
                           {typeof minutes === "number"
-                            ? ` · 예상 ${minutes}분`
+                            ? ` · 예상 ${travelTime(minutes)}`
                             : ""}
                         </span>
                       </li>
@@ -632,11 +642,11 @@ function DepartureEditor({
                 <div className={css.stats}>
                   <div>
                     <span>평균 이동시간</span>
-                    <strong>{place.average}분</strong>
+                    <strong>{travelTime(place.average)}</strong>
                   </div>
                   <div>
                     <span>가장 오래 걸리는 멤버</span>
-                    <strong>{place.maximum}분</strong>
+                    <strong>{travelTime(place.maximum)}</strong>
                   </div>
                 </div>
                 <ul className={css.memberTimes}>
@@ -646,7 +656,7 @@ function DepartureEditor({
                         {group.members.find((m) => m.user_id === id)
                           ?.nickname ?? "멤버"}
                       </span>
-                      <strong>{place.member_minutes[i]}분</strong>
+                      <strong>{travelTime(place.member_minutes[i])}</strong>
                     </li>
                   ))}
                 </ul>

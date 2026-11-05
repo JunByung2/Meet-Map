@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import TransitCanvas from "./TransitCanvas";
-import TransferTiming from "./TransferTiming";
 import { loadMapSdk } from "./sdk";
 import type { Place, TransitRoute } from "./types";
 import styles from "./transit.module.css";
@@ -20,15 +19,23 @@ interface SearchResult {
 const API_BASE = "/api";
 const modeName = (mode: string) =>
   ({
+    WAIT: "승차 대기",
+    TRAIN: "기차",
+    EXPRESSBUS: "고속·시외버스",
     BUS: "버스",
     SUBWAY: "지하철",
     BUS_AND_SUBWAY: "버스 + 지하철",
     WALKING: "도보",
   })[mode] ?? "이동";
-const timeLabel = (seconds: number | null) =>
-  seconds === null
-    ? "시간 정보 없음"
-    : `${Math.round((seconds / 60) * 10) / 10}분`;
+const timeLabel = (seconds: number | null) => {
+  if (seconds === null) return "시간 정보 없음";
+  if (seconds > 0 && seconds < 60) return "1분 미만";
+  const totalMinutes = Math.floor(seconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes}분`;
+  return minutes === 0 ? `${hours}시간` : `${hours}시간 ${minutes}분`;
+};
 const distanceLabel = (distance: number | null) =>
   distance === null
     ? "거리 정보 없음"
@@ -36,9 +43,10 @@ const distanceLabel = (distance: number | null) =>
       ? `${(distance / 1000).toFixed(1)}km`
       : `${Math.round(distance)}m`;
 const fareLabel = (route: TransitRoute) => {
-  if (route.fare !== null) return `${route.fare.toLocaleString("ko-KR")}원`;
+  const suffix = route.fare_partial ? " (확인된 구간만)" : "";
+  if (route.fare !== null) return `${route.fare.toLocaleString("ko-KR")}원${suffix}`;
   if (route.fare_min !== null && route.fare_max !== null) {
-    return `${route.fare_min.toLocaleString("ko-KR")}~${route.fare_max.toLocaleString("ko-KR")}원`;
+    return `${route.fare_min.toLocaleString("ko-KR")}~${route.fare_max.toLocaleString("ko-KR")}원${suffix}`;
   }
   return "요금 정보 없음";
 };
@@ -224,7 +232,8 @@ export default function TransitPage({
   };
 
   const visibleRoutes = routes
-    .filter((route) => filter === "ALL" || route.mode === filter)
+    .filter((route) => filter === "ALL" || route.mode === filter ||
+      (["TRAIN", "EXPRESSBUS"].includes(filter) && route.steps.some((step) => step.mode === filter)))
     .sort((a, b) =>
       sort === "transfers"
         ? (a.transfers ?? Infinity) - (b.transfers ?? Infinity) ||
@@ -236,7 +245,7 @@ export default function TransitPage({
     visibleRoutes.find((route) => route.id === selectedId) ??
     visibleRoutes[0] ??
     null;
-  const hasPath = activeRoute?.steps.some((step) => step.points.length >= 2);
+  const hasPath = !!activeRoute?.hub_line?.length || activeRoute?.steps.some((step) => step.points.length >= 2);
 
   return (
     <div className={styles.page}>
@@ -355,6 +364,8 @@ export default function TransitPage({
                   }}
                 >
                   <option value="ALL">전체 수단</option>
+                  <option value="TRAIN">기차 포함</option>
+                  <option value="EXPRESSBUS">고속·시외버스 포함</option>
                   <option value="SUBWAY">지하철</option>
                   <option value="BUS">버스</option>
                   <option value="BUS_AND_SUBWAY">버스 + 지하철</option>
@@ -398,7 +409,7 @@ export default function TransitPage({
                       {route.transfers === null
                         ? "환승 정보 없음"
                         : `환승 ${route.transfers}회`}{" "}
-                      · {distanceLabel(route.distance)}
+                      · {route.hub_line?.length ? "거점 간 직선거리 합계 " : ""}{distanceLabel(route.distance)}
                     </div>
                     <p className={styles.hint}>예상 요금 {fareLabel(route)}</p>
                     <p className={styles.hint}>
@@ -419,7 +430,8 @@ export default function TransitPage({
             route={activeRoute}
           />
           <p className={styles.hint}>
-            지도: 출발·도착 표시 / 파란색 버스 / 보라색 지하철 / 회색 점선 도보
+            지도: 출발·도착 표시 / 파란색 버스 / 보라색 지하철 / 초록색 기차 / 주황색 고속·시외버스 / 회색 점선 도보
+            {!!activeRoute?.hub_line?.length && " / 청회색 점선은 경로 좌표가 없는 구간의 직선 연결"}
           </p>
           {activeRoute && !hasPath && (
             <p className={styles.hint}>
@@ -427,17 +439,10 @@ export default function TransitPage({
             </p>
           )}
           {activeRoute && (
-            <details className={`${styles.panel} ${styles.details}`}>
-              <summary>서울 버스 도착 정보</summary>
-              <TransferTiming key={activeRoute.id} route={activeRoute} />
-            </details>
-          )}
-          {activeRoute && (
             <section className={`${styles.panel} ${styles.details}`}>
               <h2>이렇게 이동하세요</h2>
               <p className={styles.hint}>
-                경로 API의 예상 시간 기준입니다. 서울 버스 실시간 도착은 위
-                영역에서 확인할 수 있어요. 막차·혼잡도 정보는 포함하지 않습니다.
+                TAGO 장거리편은 오늘 시간표 기준이며, 역·터미널 전후 시내 구간은 조회 시점의 예상 시간입니다.
               </p>
               {!activeRoute.steps.length && (
                 <p>이 경로의 구간별 안내가 제공되지 않았어요.</p>
@@ -445,12 +450,12 @@ export default function TransitPage({
               <ol className={styles.steps}>
                 {activeRoute.steps.map((step, index) => {
                   const transfer =
-                    (step.mode === "BUS" || step.mode === "SUBWAY") &&
+                    ["BUS", "SUBWAY", "TRAIN", "EXPRESSBUS"].includes(step.mode) &&
                     activeRoute.steps
                       .slice(0, index)
                       .some(
                         (previous) =>
-                          previous.mode === "BUS" || previous.mode === "SUBWAY",
+                          ["BUS", "SUBWAY", "TRAIN", "EXPRESSBUS"].includes(previous.mode),
                       );
                   return (
                     <li key={index} className={styles.step}>
@@ -473,8 +478,8 @@ export default function TransitPage({
                         </p>
                       )}
                       <p className={styles.hint}>
-                        {timeLabel(step.seconds)} ·{" "}
-                        {distanceLabel(step.distance)}
+                        {timeLabel(step.seconds)}
+                        {step.distance !== null && ` · ${distanceLabel(step.distance)}`}
                       </p>
                       {!!step.stops.length && (
                         <details>

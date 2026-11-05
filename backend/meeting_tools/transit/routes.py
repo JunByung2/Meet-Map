@@ -4,7 +4,8 @@ import math
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from meeting_tools.transit.kakao_route import TransitError, fetch_kakao_routes
+from meeting_tools.transit.national_route import fetch_transit_routes
+from meeting_tools.transit.kakao_route import TransitError
 
 router = APIRouter(prefix="/transit", tags=["지도 교통"])
 
@@ -53,6 +54,7 @@ def normalize_step(step):
                   if isinstance(item, dict) and item.get("name")] if isinstance(stops, list) else [],
         "vehicles": [str(item["name"]) for item in vehicles
                      if isinstance(item, dict) and item.get("name")] if isinstance(vehicles, list) else [],
+        "vehicle_types": list(dict.fromkeys(str(v["type"]) for v in vehicles if isinstance(v, dict) and v.get("type"))) if isinstance(vehicles, list) else [],
         "points": points,
     }
 
@@ -62,7 +64,7 @@ def transit_routes(body: RouteRequest):
     if abs(body.start.x - body.end.x) < 0.000001 and abs(body.start.y - body.end.y) < 0.000001:
         raise HTTPException(400, "출발지와 목적지가 같습니다.")
     try:
-        raw_routes = fetch_kakao_routes(body.start.model_dump(), body.end.model_dump())
+        raw_routes = fetch_transit_routes(body.start.model_dump(), body.end.model_dump())
     except TransitError as error:
         raise HTTPException(502, str(error)) from None
 
@@ -82,6 +84,8 @@ def transit_routes(body: RouteRequest):
         steps = raw.get("steps", [])
         routes.append({
             "id": f"route-{index}", "mode": str(info.get("type", "UNKNOWN")),
+            "gap_lines": info.get("gapLines", []), "fare_partial": bool(fare.get("partial")),
+            "hub_line": info.get("hubLine", []),
             "seconds": seconds, "distance": number(info.get("totalDistance")),
             "transfers": number(info.get("transfers")),
             "fare": number(fare.get("value")),

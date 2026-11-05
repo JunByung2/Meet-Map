@@ -17,6 +17,9 @@ export interface TransitStep {
 }
 
 export interface TransitRoute {
+  fare_partial?: boolean
+  gap_lines?: [number, number][][]
+  hub_line?: [number, number][]
   id: string
   mode: string
   seconds: number

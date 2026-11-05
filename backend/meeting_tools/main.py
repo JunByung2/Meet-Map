@@ -5,9 +5,9 @@ from meeting_tools.recommendation.recommend_service import recommend_places
 from meeting_tools.transit.routes import router as transit_map_router
 
 from meeting_tools.transit.seoul_bus import router as seoul_bus_router
+from meeting_tools.transit.national_route import fetch_transit_routes
 from meeting_tools.transit.kakao_route import (
     TransitError,
-    fetch_kakao_routes,
     get_fastest_seconds,
 )
 
@@ -44,7 +44,7 @@ def health():
 @app.post("/transit")
 def transit(body: TransitRequest):
     try:
-        routes = fetch_kakao_routes(
+        routes = fetch_transit_routes(
             body.start.model_dump(),
             body.end.model_dump(),
         )

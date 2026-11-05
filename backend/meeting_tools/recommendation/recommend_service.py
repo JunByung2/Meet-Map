@@ -1,4 +1,4 @@
-"""가장 오래 걸리는 멤버의 이동시간이 짧은 지하철역을 우선 추천한다."""
+"""최대 이동시간과 멤버 간 시간 차이를 함께 고려해 만남 장소를 추천한다."""
 import logging
 from collections import Counter
 import math
@@ -6,15 +6,17 @@ import os
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
+from meeting_tools.recommendation.hub_screening import shortlist, verified_seconds
 
 import requests
-from meeting_tools.transit.kakao_route import TransitError, fetch_kakao_routes, get_fastest_seconds
+from meeting_tools.transit.national_route import fetch_transit_routes, tago_enabled
+from meeting_tools.transit.kakao_route import TransitError, get_fastest_seconds
 
 logger = logging.getLogger("meetmap.recommendation")
-QUERIES = (("subway", None),)
-RECOMMENDATION_POLICY = "subway-minimax-time-v5"
+QUERIES = (("subway", None), ("train", "기차역"), ("terminal", "버스터미널"))
+RECOMMENDATION_POLICY = "hub-shortlist-v12-" + ("tago" if tago_enabled() else "tmap" if os.getenv("TMAP_APP_KEY", "").strip() else "kakao")
 RADII = (5000, 10000, 20000)
-MAX_CANDIDATES = 24
+MAX_CANDIDATES = 5
 TARGET_CANDIDATES = 6
 SEARCH_SECONDS = 35
 
@@ -62,18 +64,39 @@ def _documents(point, radius, kind, query, key):
     return data["documents"]
 
 
+
+def meeting_place_allowed(name):
+    # 장소 검색 분류만으로는 여객 취급 여부가 보장되지 않는다.
+    # 명시적으로 비여객 시설·폐업으로 표시된 장소는 추천하지 않는다.
+    compact = re.sub(r"\s+", "", str(name))
+    return not any(word in compact for word in (
+        "신호장", "신호소", "화물역", "화물전용", "차량기지", "폐역", "폐업", "영업중지",
+    ))
+
+
+def ranking_key(result):
+    gap = max(result["member_seconds"]) - min(result["member_seconds"])
+    score = result["maximum_seconds"] + 0.5 * gap
+    return (score, result["average_seconds"], result["maximum_seconds"], result["id"])
+
+
 def _candidate(doc, kind, point, radius):
-    if kind != "subway" or not isinstance(doc, dict):
+    if kind not in ("subway", "train", "terminal") or not isinstance(doc, dict):
         return None
-    # 지하철역 카테고리 검색 결과만 허용한다.
-    if doc.get("category_group_code", "SW8") != "SW8":
+    # 키워드에 역/터미널이 포함된 카페·주차장·정류장은 후보에서 제외한다.
+    category = [part.strip() for part in str(doc.get("category_name", "")).split(">")]
+    if kind == "subway" and doc.get("category_group_code", "SW8") != "SW8":
+        return None
+    if kind == "train" and ("기차역" not in category or category[-1] not in ("기차역", "KTX역", "SRT역", "KTX정차역", "SRT정차역")):
+        return None
+    if kind == "terminal" and category[-1] not in ("버스터미널", "고속버스터미널", "시외버스터미널", "종합버스터미널"):
         return None
     try:
         place_id, name = str(doc["id"]).strip(), doc["place_name"].strip()
         x, y = float(doc["x"]), float(doc["y"])
     except (KeyError, TypeError, ValueError, AttributeError):
         return None
-    if not place_id or not name or not math.isfinite(x) or not math.isfinite(y) or not (-180 <= x <= 180 and -90 <= y <= 90):
+    if not place_id or not name or not meeting_place_allowed(name) or not math.isfinite(x) or not math.isfinite(y) or not (-180 <= x <= 180 and -90 <= y <= 90):
         return None
     item = {"id": place_id, "name": name, "x": x, "y": y, "candidate_type": kind, "source": "Kakao",
             "address": doc.get("road_address_name") or doc.get("address_name", "")}
@@ -88,21 +111,32 @@ def _station_name(name):
 
 def _same_station(a, b):
     # 같은 이름만으로 다른 지역의 동명 역을 합치지 않는다.
+    if (a.get("candidate_type") == "terminal") != (b.get("candidate_type") == "terminal"):
+        return False
     return _station_name(a["name"]) == _station_name(b["name"]) and distance_km(a, b) <= 0.3
 
 
+def corridor(departures):
+    if len(departures) < 2:
+        return []
+    a, b = max(((a, b) for i, a in enumerate(departures) for b in departures[i+1:]),
+               key=lambda pair: distance_km(*pair))
+    if distance_km(a, b) < 100:
+        return []
+    return [{axis: a[axis] + (b[axis] - a[axis])*fraction for axis in ("x", "y")}
+            for fraction in (.5, .3, .7)]
+
+
 def _select(candidates, departures):
-    # 중간지점과 역 사이 직선거리로 후보 우선순위를 정한다.
-    center = {"x": sum(p["x"] for p in departures)/len(departures),
-              "y": sum(p["y"] for p in departures)/len(departures)}
-    def prior(item):
-        return (distance_km(center, item), item["id"])
-    ordered, selected, ids = sorted((p for p in candidates if p["candidate_type"] == "subway"), key=prior), [], set()
-    for item in ordered:
-        if len(selected) < MAX_CANDIDATES and item["id"] not in ids:
-            selected.append(item)
-            ids.add(item["id"])
-    return sorted(selected, key=prior)[:MAX_CANDIDATES]
+    from meeting_tools.transit.tago_intercity import HUBS
+    hubs = [{"x": x, "y": y, "mode": mode}
+            for mode, entries in HUBS.items() for name, x, y, station_id in entries
+            if station_id and meeting_place_allowed(name)]
+    eligible = [p for p in candidates
+                if p["candidate_type"] in ("subway", "train", "terminal")
+                and meeting_place_allowed(p["name"])]
+    return shortlist(eligible, departures, hubs, distance_km, RECOMMENDATION_POLICY,
+                     limit=MAX_CANDIDATES)
 
 
 def search_candidates(center: dict, departures: list | None = None) -> list:
@@ -148,12 +182,31 @@ def search_candidates(center: dict, departures: list | None = None) -> list:
             if fatal:
                 raise fatal
 
+    anchors = corridor(departures)
+    if anchors:
+        batch(anchors, 20000)
+        # 중심 좌표가 산간인 경우에도 근처의 알려진 여객역을 함께 평가한다.
+        from meeting_tools.transit.tago_intercity import HUBS
+        for mode, entries in HUBS.items():
+            for name, x, y, station_id in entries:
+                if not station_id or not meeting_place_allowed(name):
+                    continue
+                point = {"x": x, "y": y}
+                if min(distance_km(anchor, point) for anchor in anchors) > 60:
+                    continue
+                item = {**point, "id": "hub-" + station_id, "name": name,
+                        "address": "", "source": "TAGO",
+                        "candidate_type": "train" if mode == "TRAIN" else "terminal"}
+                if not any(_same_station(item, existing) for existing in found.values()):
+                    found[item["id"]] = item
     for radius in RADII:
         batch([center], radius)
+        if len(found) >= TARGET_CANDIDATES:
+            break
         if time.monotonic() >= deadline:
             break
-    if time.monotonic() < deadline:
-        for radius in (10000, 20000):
+    if len(found) < TARGET_CANDIDATES and time.monotonic() < deadline:
+        for radius in (10000,):
             batch(departures, radius)
             if time.monotonic() >= deadline:
                 break
@@ -162,7 +215,7 @@ def search_candidates(center: dict, departures: list | None = None) -> list:
             raise failures[0]
         if not successful:
             raise SearchUnavailable("후보 장소 검색이 시간 내에 끝나지 않았어요.", code="SEARCH_UNAVAILABLE")
-        raise RecommendationError("중간 지역과 출발지 주변에서 지하철역 후보를 찾지 못했어요. 출발지를 확인해 주세요.", 422, "NO_CANDIDATES")
+        raise RecommendationError("중간 지역과 출발지 주변에서 지하철역·기차역·버스터미널 후보를 찾지 못했어요. 출발지를 확인해 주세요.", 422, "NO_CANDIDATES")
     return _select(list(found.values()), departures)
 
 
@@ -170,7 +223,8 @@ def evaluate_candidate(candidate: dict, departures: list) -> dict:
     times = []
     for departure in departures:
         same = abs(departure["x"]-candidate["x"]) < .000001 and abs(departure["y"]-candidate["y"]) < .000001
-        seconds = 0.0 if same else get_fastest_seconds(fetch_kakao_routes(departure, candidate))
+        seconds = 0.0 if same else verified_seconds(departure, candidate, RECOMMENDATION_POLICY,
+            lambda: get_fastest_seconds(fetch_transit_routes(departure, candidate)))
         if isinstance(seconds, bool) or not isinstance(seconds, (int, float)) or not math.isfinite(seconds) or seconds < 0:
             raise TransitError("경로의 이동시간 정보가 올바르지 않습니다.")
         times.append(seconds)
@@ -190,7 +244,9 @@ def recommend_places(departures: list) -> dict:
             or not math.isfinite(p[k]) or abs(p[k]) > bound for k, bound in (("x", 180), ("y", 90))):
             raise RecommendationError("출발지 좌표를 확인해 주세요.", 422, "INVALID_DEPARTURES")
     center = {"x": sum(p["x"] for p in departures)/len(departures), "y": sum(p["y"] for p in departures)/len(departures)}
+    started = time.monotonic()
     candidates = search_candidates(center, departures)
+    logger.warning("[추천] 실제 경로 검증 시작: 후보 %s개, 멤버 %s명", len(candidates), len(departures))
     results, excluded = [], 0
     failures = Counter()
     with ThreadPoolExecutor(max_workers=4) as executor:
@@ -201,6 +257,7 @@ def recommend_places(departures: list) -> dict:
                 value["center_distance_meters"] = round(distance_km(center,
                     {"x": value["longitude"], "y": value["latitude"]}) * 1000, 1)
                 results.append(value)
+                logger.warning("[추천] 검증 완료: %s (%0.1f초)", value["name"], time.monotonic()-started)
             except TransitError as error:
                 excluded += 1
                 code = getattr(error, "code", "TRANSIT_ERROR")
@@ -213,12 +270,13 @@ def recommend_places(departures: list) -> dict:
         logger.warning("[추천 경로 요약] excluded=%s failures=%s", excluded, dict(failures))
     if not results:
         raise RecommendationError("후보 장소는 찾았지만 전원의 대중교통 이동시간을 확인하지 못했어요. 경로 제공 여부를 확인하거나 잠시 후 다시 시도해 주세요.", code="NO_REACHABLE_CANDIDATES")
-    # 가장 오래 이동하는 멤버의 부담을 우선 줄인다. 초 단위 원본으로 비교한다.
-    results.sort(key=lambda p: (p["maximum_seconds"],
-        max(p["member_seconds"])-min(p["member_seconds"]), p["average_seconds"], p["id"]))
+    # 초 단위로 계산하며, 화면에 반올림된 시간은 정렬에 사용하지 않는다.
+    for result in results:
+        result["score_seconds"] = ranking_key(result)[0]
+    results.sort(key=ranking_key)
     top = [{**p, "average": round(p["average_seconds"]/60, 1), "maximum": round(p["maximum_seconds"]/60, 1),
             "time_gap_minutes": round((max(p["member_seconds"])-min(p["member_seconds"]))/60, 1),
             "member_minutes": [round(s/60, 1) for s in p["member_seconds"]]} for p in results[:3]]
     return {"center": {"latitude": center["y"], "longitude": center["x"]}, "candidate_count": len(candidates),
-            "evaluated_count": len(results), "excluded_count": excluded, "ranking_rule": "최대 이동시간이 짧은 순 → 멤버 간 이동시간 차이가 작은 순",
-            "candidate_strategy": "중간 지역·출발지 주변의 지하철역 후보를 전원의 대중교통 최대 이동시간 우선 비교", "recommendation_policy": RECOMMENDATION_POLICY, "recommendations": top}
+            "evaluated_count": len(results), "excluded_count": excluded, "ranking_rule": "최대 이동시간 + 멤버 간 시간 차이 × 0.5가 작은 순 → 동점이면 평균 이동시간이 짧은 순",
+            "candidate_strategy": "거점 기반 예상시간으로 최대 5곳 선별 후 전원의 경로를 확인해 최종 정렬 (예상시간은 최종 결과에 사용하지 않음)", "recommendation_policy": RECOMMENDATION_POLICY, "recommendations": top}

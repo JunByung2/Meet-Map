@@ -64,13 +64,21 @@ export default function TransitCanvas({ origin, destination, route }: {
       label.textContent = `${index === 0 ? '출발' : '도착'} · ${place.name}`
       overlays.push(new k.CustomOverlay({ map: instance, position, content: label, yAnchor: 1.4, zIndex: 10 }))
     })
+    for (const segment of route?.gap_lines ?? []) {
+      if (segment.length < 2) continue
+      const path = segment.map(([x, y]) => extend(x, y))
+      overlays.push(new k.Polyline({
+        map: instance, path, strokeColor: '#315f72', strokeWeight: 4,
+        strokeOpacity: 0.85, strokeStyle: 'shortdash', zIndex: 0,
+      }))
+    }
     route?.steps.forEach((step) => {
       if (step.points.length < 2) return
       const path = step.points.map(([x, y]) => extend(x, y))
       overlays.push(new k.Polyline({
         map: instance, path,
         strokeWeight: step.mode === 'WALKING' ? 4 : 6,
-        strokeColor: step.mode === 'BUS' ? '#2786bb' : step.mode === 'SUBWAY' ? '#7960b2' : '#7f8c88',
+        strokeColor: step.mode === 'TRAIN' ? '#208359' : step.mode === 'EXPRESSBUS' ? '#c16820' : step.mode === 'BUS' ? '#2786bb' : step.mode === 'SUBWAY' ? '#7960b2' : '#7f8c88',
         strokeOpacity: 0.9,
         strokeStyle: step.mode === 'WALKING' ? 'shortdash' : 'solid',
       }))

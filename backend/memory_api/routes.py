@@ -1,61 +1,37 @@
 """다현 사진 테이블의 읽기 전용 조회. 테이블·컬럼을 생성/변경하지 않는다."""
 import math
-import os
-from urllib.parse import quote
+import logging
+import time
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlalchemy import MetaData, Table, inspect, select
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps.auth import require_group_member
-from app.models import GroupMember, User
+from app.models import GroupMember, User, Photo
+from app import storage
 
 router = APIRouter(prefix="/memory/groups/{group_id}", tags=["추억지도 조회"])
+logger = logging.getLogger("meetmap.memory")
 LIMIT = 500
 REQUIRED = {"id", "group_id", "user_id", "storage_path", "caption", "title", "memo", "batch_id", "sort_order",
             "place_id", "place_name", "place_address", "place_lat", "place_lng", "created_at"}
 
 
-def storage_config():
-    url = os.getenv("SUPABASE_URL", "").rstrip("/")
-    key = os.getenv("SUPABASE_SERVICE_KEY", "")
-    bucket = os.getenv("PHOTO_BUCKET", "memory-photos")
-    return url, key, bucket
-
-
 def sign_paths(paths, group_id):
-    url, key, bucket = storage_config()
-    if not url or not key:
+    if not storage.is_configured():
         return {}, "not_configured"
-    # 다현이 사용한 그룹별 저장 경로만 서명한다.
     allowed = list(dict.fromkeys(path for path in paths
-        if isinstance(path, str) and path.startswith(f"groups/{group_id}/photos/") and ".." not in path.split("/")))
+        if isinstance(path, str) and path.startswith(f"groups/{group_id}/photos/")
+        and ".." not in path.split("/")))
     if not allowed:
         return {}, "ready"
-    result = {}
     try:
-        with httpx.Client(timeout=20) as client:
-            for start in range(0, len(allowed), 100):
-                response = client.post(
-                    f"{url}/storage/v1/object/sign/{quote(bucket, safe='')}",
-                    headers={"Authorization": f"Bearer {key}", "apikey": key},
-                    json={"expiresIn": 1800, "paths": allowed[start:start + 100]},
-                )
-                response.raise_for_status()
-                items = response.json()
-                if not isinstance(items, list):
-                    return {}, "unavailable"
-                for item in items:
-                    if not isinstance(item, dict):
-                        continue
-                    path = item.get("path")
-                    signed = item.get("signedURL")
-                    if path in allowed and isinstance(signed, str) and signed.startswith("/object/sign/") and not item.get("error"):
-                        result[path] = f"{url}/storage/v1{signed}"
-    except (httpx.HTTPError, ValueError):
+        # 사진 페이지와 동일한 주소 캐시·HTTP 연결을 재사용한다.
+        result = storage.signed_urls(allowed)
+    except (storage.StorageError, ValueError, TypeError):
         return {}, "unavailable"
     return result, "ready" if len(result) == len(allowed) else "partial"
 
@@ -68,16 +44,12 @@ def memory_photos(
     db: Session = Depends(get_db),
 ):
     response.headers["Cache-Control"] = "private, no-store"
+    started = time.perf_counter()
     try:
-        bind = db.get_bind()
-        schema = "public" if bind.dialect.name == "postgresql" else None
-        if not inspect(bind).has_table("group_photos", schema=schema):
-            raise HTTPException(503, "공용 DB에 다현이의 group_photos 테이블이 아직 없습니다. 테이블은 자동 생성하지 않습니다.")
-        photo = Table("group_photos", MetaData(), schema=schema, autoload_with=bind)
-        if not REQUIRED.issubset(photo.c.keys()):
-            raise HTTPException(503, "사진 테이블의 장소 관련 컬럼 구성이 다현 버전과 다릅니다. 담당자에게 스키마를 확인해 주세요.")
+        # 필요한 컬럼만 선택한다. 매 요청의 테이블 구조 재조회는 하지 않는다.
+        photo = Photo.__table__
         # 반드시 해당 그룹 사진만 읽는다. 장소가 없는 사진은 추억지도 대상에서 제외.
-        rows = db.execute(select(photo).where(
+        rows = db.execute(select(*(photo.c[key] for key in sorted(REQUIRED))).where(
             photo.c.group_id == group_id,
             photo.c.place_lat.is_not(None), photo.c.place_lng.is_not(None), photo.c.place_name.is_not(None),
         ).order_by(photo.c.created_at.desc(), photo.c.id.desc()).limit(LIMIT + 1)).mappings().all()
@@ -86,9 +58,18 @@ def memory_photos(
         user_ids = {row["user_id"] for row in rows if row["user_id"] is not None}
         nicknames = dict(db.execute(select(User.id, User.nickname).where(User.id.in_(user_ids))).all()) if user_ids else {}
     except SQLAlchemyError:
+        db.rollback()
         raise HTTPException(503, "사진 DB 조회에 실패했습니다. 기존 DB 연결과 사진 테이블을 확인해 주세요.") from None
 
+    db_ms = (time.perf_counter() - started) * 1000
+    # 데이터가 일반 값으로 읽힌 뒤 연결을 반환한다. 외부 저장소 대기 중 DB를 점유하지 않는다.
+    db.close()
+    signing_started = time.perf_counter()
     urls, storage_state = sign_paths([row["storage_path"] for row in rows], group_id) if rows else ({}, "ready")
+    storage_ms = (time.perf_counter() - signing_started) * 1000
+    response.headers["Server-Timing"] = f"db;dur={db_ms:.1f}, storage;dur={storage_ms:.1f}"
+    if db_ms + storage_ms >= 500:
+        logger.warning("[추억지도 시간] db=%.0fms storage=%.0fms photos=%s", db_ms, storage_ms, len(rows))
     photos = []
     for row in rows:
         lat, lng = row["place_lat"], row["place_lng"]

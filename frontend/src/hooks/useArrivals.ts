@@ -56,9 +56,15 @@ export function useArrivals(groupId: number) {
     activeGroup.current = groupId
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setArrivals(null)
-    void reload()
+    let polling = false
+    const poll = async () => {
+      if (polling) return
+      polling = true
+      try { await reload() } finally { polling = false }
+    }
+    void poll()
     const timer = window.setInterval(() => {
-      if (!document.hidden) void reload()
+      if (!document.hidden) void poll()
     }, REFRESH_MS)
     return () => window.clearInterval(timer)
   }, [groupId, reload])

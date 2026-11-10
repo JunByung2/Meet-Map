@@ -2,7 +2,7 @@
 import hashlib
 import json
 from datetime import datetime, timezone
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -27,6 +27,7 @@ class CreatePlan(BaseModel):
 
 class DepartureIn(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    target_user_id: int | None = Field(default=None, gt=0)
     place_id: str = Field(min_length=1, max_length=100)
     name: str = Field(min_length=1, max_length=200)
     address: str = Field(default="", max_length=500)
@@ -70,6 +71,7 @@ def serialize_departure(departure):
     if departure is None:
         return None
     return {
+        "updated_by": departure.updated_by,
         "place_id": departure.place_id,
         "name": departure.name,
         "address": departure.address,
@@ -80,7 +82,7 @@ def serialize_departure(departure):
 
 def state(db, plan, user):
     members, departures, snapshot = members_and_departures(db, plan)
-    complete = 2 <= len(members) <= 5 and all(m.user_id in departures for m in members)
+    complete = 2 <= len(departures) <= 5
     # 이 API는 require_group_member를 통과한 같은 그룹 멤버에게만 제공한다.
     # 순서는 user_id 기준으로 고정하여 모든 접속자의 번호/색상이 같도록 한다.
     return {
@@ -131,12 +133,16 @@ def read_plan(group_id: int, plan_id: UUID, user: User = Depends(get_current_use
 def save_departure(group_id: int, plan_id: UUID, body: DepartureIn,
                    user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     plan = get_plan(db, group_id, plan_id, lock=True)
-    own = db.get(Departure, (plan.id, user.id))
+    target_id = body.target_user_id or user.id
+    if not db.get(GroupMember, (group_id, target_id)):
+        raise HTTPException(403, "같은 그룹 멤버의 출발지만 입력할 수 있어요.")
+    own = db.get(Departure, (plan.id, target_id))
     if own is None:
-        own = Departure(plan_id=plan.id, user_id=user.id)
+        own = Departure(plan_id=plan.id, user_id=target_id)
         db.add(own)
-    for key, value in body.model_dump().items():
+    for key, value in body.model_dump(exclude={"target_user_id"}).items():
         setattr(own, key, value)
+    own.updated_by = user.id
     own.updated_at = datetime.now(timezone.utc)
     plan.revision += 1
     plan.result = None
@@ -146,9 +152,13 @@ def save_departure(group_id: int, plan_id: UUID, body: DepartureIn,
 
 @router.delete("/{plan_id}/my-departure")
 def delete_departure(group_id: int, plan_id: UUID, user: User = Depends(get_current_user),
-                     db: Session = Depends(get_db)):
+                     db: Session = Depends(get_db),
+                     target_user_id: Annotated[int | None, Query(gt=0)] = None):
     plan = get_plan(db, group_id, plan_id, lock=True)
-    own = db.get(Departure, (plan.id, user.id))
+    target_id = target_user_id or user.id
+    if not db.get(GroupMember, (group_id, target_id)):
+        raise HTTPException(403, "같은 그룹 멤버의 출발지만 변경할 수 있어요.")
+    own = db.get(Departure, (plan.id, target_id))
     if own:
         db.delete(own)
         plan.revision += 1
@@ -162,8 +172,9 @@ def recommend(group_id: int, plan_id: UUID, user: User = Depends(get_current_use
               db: Session = Depends(get_db)):
     plan = get_plan(db, group_id, plan_id)
     members, departures, snapshot = members_and_departures(db, plan)
-    if not (2 <= len(members) <= 5) or any(m.user_id not in departures for m in members):
-        raise HTTPException(409, "그룹 멤버 2~5명 전원의 출발지를 먼저 입력해 주세요.")
+    members = [m for m in members if m.user_id in departures]
+    if not 2 <= len(members) <= 5:
+        raise HTTPException(409, "출발지를 입력한 멤버 2~5명으로 추천할 수 있어요.")
     if plan.result and plan.result_snapshot == snapshot:
         generated_at = plan.result.get("generated_at")
         if generated_at:

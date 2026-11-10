@@ -1,4 +1,5 @@
 export interface SavedDeparture {
+  updated_by?: number | null
   place_id: string
   name: string
   address: string

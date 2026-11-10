@@ -54,7 +54,7 @@ export function usePlacePlan(groupId: string, planId: string) {
     }
   }, [base])
 
-  async function saveDeparture(departure: SavedDeparture | null) {
+  async function saveDeparture(departure: SavedDeparture | null, targetUserId?: number) {
     if (mutation.current) return false
     mutation.current = true
     version.current += 1
@@ -64,8 +64,8 @@ export function usePlacePlan(groupId: string, planId: string) {
     // 저장 중에도 이전 추천을 보여주지 않는다.
     setPlan((current) => current ? { ...current, result: null } : current)
     try {
-      const next = await api<PlanState>(`${base}/my-departure`, departure
-        ? { method: 'PUT', body: departure } : { method: 'DELETE' })
+      const next = await api<PlanState>(`${base}/my-departure${!departure && targetUserId ? `?target_user_id=${targetUserId}` : ''}`, departure
+        ? { method: 'PUT', body: { place_id: departure.place_id, name: departure.name, address: departure.address, latitude: departure.latitude, longitude: departure.longitude, target_user_id: targetUserId } } : { method: 'DELETE' })
       if (mounted.current) { setPlan(next); setConnected(true); setConnectionError('') }
       return true
     } catch (err) {

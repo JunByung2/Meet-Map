@@ -7,7 +7,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T = unknown>(
+async function performRequest<T = unknown>(
   path: string,
   options: { method?: string; body?: unknown } = {},
 ): Promise<T> {
@@ -40,4 +40,26 @@ export async function api<T = unknown>(
   }
 
   return data as T;
+}
+
+// 진행 중인 GET만 공유한다. 응답 완료 후 보관하지 않으며 서버에서는 공유하지 않는다.
+const pendingReads = new Map<string, Promise<unknown>>();
+export function api<T = unknown>(
+  path: string,
+  options: { method?: string; body?: unknown } = {},
+): Promise<T> {
+  const method = (options.method ?? "GET").toUpperCase();
+  if (typeof window === "undefined") return performRequest<T>(path, options);
+  if (method !== "GET" || options.body !== undefined) {
+    // 로그인·로그아웃과 수정 이후의 조회는 이전 요청에 합치지 않는다.
+    pendingReads.clear();
+    return performRequest<T>(path, options).finally(() => pendingReads.clear());
+  }
+  const existing = pendingReads.get(path);
+  if (existing) return existing as Promise<T>;
+  const request = performRequest<T>(path, options).finally(() => {
+    if (pendingReads.get(path) === request) pendingReads.delete(path);
+  });
+  pendingReads.set(path, request);
+  return request;
 }

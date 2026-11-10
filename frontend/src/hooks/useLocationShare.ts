@@ -134,9 +134,15 @@ export function useLocationShare(groupId: number) {
     activeGroup.current = groupId
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setShares([])
-    void refresh()
+    let polling = false
+    const poll = async () => {
+      if (polling) return
+      polling = true
+      try { await refresh() } finally { polling = false }
+    }
+    void poll()
     const timer = window.setInterval(() => {
-      if (!document.hidden) void refresh()
+      if (!document.hidden) void poll()
     }, REFRESH_MS)
     return () => window.clearInterval(timer)
   }, [groupId, refresh])

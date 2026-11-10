@@ -119,8 +119,7 @@ def _can_edit(photo: Photo, user: User, member: GroupMember) -> bool:
     return photo.user_id == user.id or member.role == "owner"
 
 
-def _to_out(db: DbSession, photos: list[Photo], user: User, member: GroupMember) -> list[PhotoOut]:
-    urls = _storage_call(storage.signed_urls, [p.storage_path for p in photos]) if photos else {}
+def _to_out(db: DbSession, photos: list[Photo], user: User, member: GroupMember, *, release_db: bool = False) -> list[PhotoOut]:
     user_ids = {p.user_id for p in photos if p.user_id is not None}
     nicknames = (
         dict(db.execute(select(User.id, User.nickname).where(User.id.in_(user_ids))).all()) if user_ids else {}
@@ -136,7 +135,7 @@ def _to_out(db: DbSession, photos: list[Photo], user: User, member: GroupMember)
         if photos
         else set()
     )
-    return [
+    output = [
         PhotoOut(
             id=p.id,
             group_id=p.group_id,
@@ -155,12 +154,20 @@ def _to_out(db: DbSession, photos: list[Photo], user: User, member: GroupMember)
             place_lat=p.place_lat,
             place_lng=p.place_lng,
             created_at=p.created_at,
-            signed_url=urls.get(p.storage_path),
+            signed_url=None,
             can_edit=_can_edit(p, user, member),
             from_chat=p.storage_path in chat_paths or p.title == "채팅 사진",
         )
         for p in photos
     ]
+
+    # ORM 속성과 권한 정보를 먼저 복사한 뒤 읽기 전용 목록 요청의 연결을 반환한다.
+    if release_db:
+        db.close()
+    urls = _storage_call(storage.signed_urls, [p.storage_path for p in output]) if output else {}
+    for item in output:
+        item.signed_url = urls.get(item.storage_path)
+    return output
 
 
 def _parse_place(
@@ -222,7 +229,7 @@ def list_photos(
     rows = db.execute(
         select(Photo).where(Photo.group_id == group_id).order_by(Photo.created_at.desc(), Photo.id.desc()).limit(LIST_LIMIT)
     ).scalars().all()
-    return _to_out(db, list(rows), user, member)
+    return _to_out(db, list(rows), user, member, release_db=True)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=list[PhotoOut])

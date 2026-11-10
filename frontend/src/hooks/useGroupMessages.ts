@@ -132,14 +132,22 @@ export function useGroupMessages(
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setMessages([]);
-    void fetchMessages(true);
-
+    let polling = false;
     let tick = 0;
+    const poll = async (initial: boolean) => {
+      if (polling) return;
+      polling = true;
+      try {
+        await fetchMessages(initial);
+        if (!initial) {
+          tick += 1;
+          if (tick % SYNC_EVERY === 0) await syncDeleted();
+        }
+      } finally { polling = false; }
+    };
+    void poll(true);
     const timer = window.setInterval(() => {
-      if (document.hidden) return;
-      void fetchMessages(false);
-      tick += 1;
-      if (tick % SYNC_EVERY === 0) void syncDeleted();
+      if (!document.hidden) void poll(false);
     }, POLL_MS);
 
     return () => window.clearInterval(timer);

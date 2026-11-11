@@ -1,12 +1,21 @@
+/* ==========================================
+   전체 레이아웃
+========================================== */
+
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 370px);
-  gap: 24px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(400px, 1.1fr);
+  gap: 20px;
   align-items: start;
 }
+
 .chatMain {
   min-width: 0;
 }
+
+/* ==========================================
+   상단 배너
+========================================== */
 
 .banner {
   display: flex;
@@ -20,6 +29,10 @@
   font-size: 13px;
   font-weight: 700;
 }
+
+/* ==========================================
+   채팅 메시지
+========================================== */
 
 .messages {
   display: flex;
@@ -99,6 +112,33 @@
   font-size: 10px;
 }
 
+.bubbleBare,
+.mine .bubbleBare {
+  padding: 0;
+  border: 0;
+  background: none;
+  white-space: normal;
+}
+
+/* ==========================================
+   날짜 구분
+========================================== */
+
+.dateBand {
+  align-self: center;
+  margin: 4px 0;
+  padding: 4px 14px;
+  border-radius: 100px;
+  background: var(--mint);
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ==========================================
+   채팅 입력창
+========================================== */
+
 .composer {
   margin-top: 8px;
   padding: 13px;
@@ -135,32 +175,10 @@
   gap: 10px;
 }
 
-/* 전송 버튼 */
 .send {
   flex: none;
   white-space: nowrap;
   padding-inline: 20px;
-}
-
-/* 투표 카드 말풍선 */
-.bubbleBare,
-.mine .bubbleBare {
-  padding: 0;
-  border: 0;
-  background: none;
-  white-space: normal;
-}
-
-/* 날짜 구분 */
-.dateBand {
-  align-self: center;
-  margin: 4px 0;
-  padding: 4px 14px;
-  border-radius: 100px;
-  background: var(--mint);
-  color: var(--teal);
-  font-size: 11px;
-  font-weight: 700;
 }
 
 .hint {
@@ -177,78 +195,157 @@
   overflow-wrap: anywhere;
 }
 
-/* 오른쪽 사이드바 */
+/* ==========================================
+   오른쪽 패널
+========================================== */
+
 .side {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
+  width: 100%;
   min-width: 0;
 }
 
-/* 위치 공유 제목 */
-.locationHeading {
+/* 공통 카드 */
+.memberCard,
+.compactCard,
+.actionSection {
+  background: var(--white);
+  border: 1px solid #e4eae6;
+  border-radius: 22px;
+  box-sizing: border-box;
+}
+
+/* ==========================================
+   함께 대화 중
+========================================== */
+
+.memberCard {
+  width: 100%;
+  padding: 25px;
+  min-width: 0;
+}
+
+.sideTitle {
+  margin: 0 0 15px;
+  color: #34464a;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.avatars {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.names {
+  color: #819093;
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+/* ==========================================
+   실시간 위치 + 대화 속 모아보기
+========================================== */
+
+.topWidgets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  align-items: stretch;
+}
+
+.compactCard {
+  padding: 20px;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cardHeading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
+  margin-bottom: 15px;
 }
 
-.locationHeading .sideTitle {
-  margin-bottom: 10px;
+.cardHeading .sideTitle {
+  margin: 0;
+  font-size: 14px;
 }
 
-/* 공유 인원 */
+.compactCard > .sideTitle {
+  margin-bottom: 17px;
+  font-size: 14px;
+}
+
 .locationCount {
   flex: none;
-  margin-bottom: 10px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: var(--mint);
+  padding: 5px 9px;
+  border-radius: 20px;
+  background: #e7f1ed;
   color: var(--teal);
   font-size: 10px;
-  font-weight: 700;
+  white-space: nowrap;
 }
 
 /* 지도 */
+
+.smallMap,
 .locationMap {
   width: 100%;
+  min-width: 0;
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
-/* 위치 공유 멤버 목록 */
+/* 위치 공유 목록 */
+
+.compactLocationList,
 .locationList {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 10px;
   margin-top: 12px;
 }
 
+.compactLocationPerson,
 .locationPerson {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
   font-size: 11px;
 }
 
+.compactLocationPerson > span:last-child,
 .locationPerson > span:last-child {
   display: flex;
   flex-direction: column;
+  gap: 3px;
   min-width: 0;
-  gap: 2px;
 }
 
+.compactLocationPerson strong,
 .locationPerson strong {
   overflow-wrap: anywhere;
 }
 
+.compactLocationPerson small,
 .locationPerson small {
-  color: var(--muted);
+  color: #89999b;
   font-size: 10px;
+  overflow-wrap: anywhere;
 }
 
-/* 위치 표시 점 */
 .locationDot {
   flex: none;
   width: 8px;
@@ -258,67 +355,100 @@
   background: var(--teal);
 }
 
-/* 위치 안내 */
 .locationNotice {
   margin: 10px 0 0;
-  color: var(--muted);
+  color: #89999b;
   font-size: 10px;
   line-height: 1.6;
 }
 
 /* 위치 공유가 없을 때 */
+
+.compactEmpty,
 .locationEmpty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 150px;
-  padding: 16px 10px;
-  border-radius: 10px;
-  background: var(--mist);
+  min-height: 145px;
+  padding: 15px 8px;
+  border-radius: 12px;
+  background: #f3f6f4;
   text-align: center;
 }
 
+.compactEmpty > span,
 .locationEmpty > span {
-  margin-bottom: 8px;
-  font-size: 25px;
+  margin-bottom: 12px;
+  font-size: 27px;
 }
 
+.compactEmpty p,
 .locationEmpty p {
-  margin: 0 0 5px;
+  margin: 0 0 7px;
+  color: #405357;
   font-size: 12px;
   font-weight: 700;
 }
 
+.compactEmpty small,
 .locationEmpty small {
-  color: var(--muted);
+  color: #89999b;
   font-size: 10px;
-  line-height: 1.5;
-}
-
-/* 사이드바 제목 */
-.sideTitle {
-  margin-bottom: 14px;
-  font-size: 14px;
-}
-
-/* 멤버 프로필 */
-.avatars {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-
-.names {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.8;
+  line-height: 1.6;
   overflow-wrap: anywhere;
 }
 
-/* 태그 */
+/* ==========================================
+   대화 속 모아보기
+========================================== */
+
+.collectionLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.collectionLink {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px 9px;
+  border-radius: 11px;
+  color: var(--teal);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  box-sizing: border-box;
+  transition: background 0.2s;
+}
+
+.collectionLink:hover {
+  background: #f0f5f2;
+}
+
+.linkArrow {
+  margin-left: auto;
+  flex: none;
+}
+
+.linkBtn {
+  display: block;
+  margin: 10px 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--teal);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
 .tag {
   display: inline-block;
   margin-bottom: 10px;
@@ -330,7 +460,6 @@
   font-weight: 800;
 }
 
-/* 추억 영역 */
 .placeholder {
   display: grid;
   place-items: center;
@@ -341,22 +470,208 @@
   font-size: 31px;
 }
 
-/* 링크 버튼 */
-.linkBtn {
-  display: block;
-  text-decoration: none;
-  margin: 10px 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--teal);
-  font-family: inherit;
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
+/* ==========================================
+   투표 + 장소 선택
+========================================== */
+
+.actionSection {
+  width: 100%;
+  min-width: 0;
+  padding: 22px;
 }
 
-/* 이전 대화 더 보기 */
+.actionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 17px;
+}
+
+.actionHeader .sideTitle {
+  margin: 0;
+  font-size: 16px;
+}
+
+.actionDescription {
+  color: #8a999a;
+  font-size: 11px;
+}
+
+/* 두 개의 큰 영역 */
+
+.actionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+  align-items: start;
+}
+
+/* 투표 영역과 장소 영역 */
+
+.actionColumn {
+  width: 100%;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid #e8eeea;
+  border-radius: 15px;
+  background: #f7f9f7;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* 영역 제목 */
+
+.actionTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 0 0 13px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid #e5ebe7;
+  color: #3d5052;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* 개수 표시 */
+
+.itemCount {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  flex: none;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 20px;
+  background: #e5f0eb;
+  color: var(--teal);
+  font-size: 10px;
+  box-sizing: border-box;
+}
+
+/* 항목 목록 */
+
+.actionList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* 개별 투표 카드 */
+
+.actionItem {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e5ebe7;
+  border-radius: 14px;
+  background: var(--white);
+  box-shadow: 0 3px 12px rgba(50, 75, 65, 0.04);
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
+}
+
+/* 개별 장소 추천 카드 */
+
+.placeActionItem {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e5ebe7;
+  border-radius: 14px;
+  background: var(--white);
+  box-shadow: 0 3px 12px rgba(50, 75, 65, 0.04);
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
+}
+
+/* 내부 컴포넌트 */
+
+.actionItem > *,
+.placeActionItem > * {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.actionItem > div,
+.placeActionItem > div {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* 내부 카드가 부모 영역을 벗어나지 않도록 */
+
+.actionItem :global(.card),
+.placeActionItem :global(.card) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* 내부 텍스트 */
+
+.actionItem p,
+.actionItem span,
+.actionItem strong,
+.placeActionItem p,
+.placeActionItem span,
+.placeActionItem strong {
+  overflow-wrap: anywhere;
+}
+
+/* 내부 버튼 */
+
+.actionItem button,
+.placeActionItem button {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* 투표 카드 너비 */
+
+.wideBody {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* 항목 없음 */
+
+.actionEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 125px;
+  padding: 15px 8px;
+  border-radius: 11px;
+  background: var(--white);
+  color: #8a999a;
+  font-size: 11px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+/* ==========================================
+   이전 대화 더 보기
+========================================== */
+
 .olderBtn {
   align-self: center;
   flex: none;
@@ -376,7 +691,10 @@
   cursor: default;
 }
 
-/* 메시지 삭제 */
+/* ==========================================
+   메시지 삭제
+========================================== */
+
 .delBtn {
   margin-left: 8px;
   padding: 0;
@@ -393,7 +711,10 @@
   color: #c0392b;
 }
 
-/* 메뉴 */
+/* ==========================================
+   메시지 메뉴
+========================================== */
+
 .menuBack {
   position: fixed;
   inset: 0;
@@ -427,7 +748,10 @@
   background: var(--mist);
 }
 
-/* 삭제 확인창 */
+/* ==========================================
+   삭제 확인창
+========================================== */
+
 .confirmBack {
   position: fixed;
   inset: 0;
@@ -465,32 +789,56 @@
   gap: 8px;
 }
 
-/* 투표 카드 */
-.wideBody {
-  width: min(92%, 400px);
-  max-width: min(92%, 400px);
-}
+/* ==========================================
+   반응형
+========================================== */
 
-/* 태블릿 및 작은 화면 */
-@media (max-width: 1050px) {
+@media (max-width: 1100px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .side {
-    display: grid;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topWidgets,
+  .actionGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
   }
 }
 
-/* 모바일 */
 @media (max-width: 650px) {
   .body {
     max-width: 85%;
   }
 
-  .side {
+  .memberCard {
+    padding: 18px;
+  }
+
+  .topWidgets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .compactCard {
+    padding: 12px;
+  }
+
+  .actionSection {
+    padding: 14px;
+  }
+
+  .actionGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  .topWidgets {
     grid-template-columns: minmax(0, 1fr);
   }
 }

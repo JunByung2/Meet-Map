@@ -5,29 +5,107 @@ import { useMemo } from 'react';
 
 import type { GroupMember } from '@/hooks/useGroupContext';
 import type { SharedLocation } from '@/hooks/useLocationShare';
+import type { ChatMessage } from '@/hooks/useGroupMessages';
 
+import VoteMessage, { pollRefOf } from './VoteMessage';
+import PlanMessage from '@/features/recommendation/PlanMessage';
 import BaseKakaoMap, { type MapPlace } from '@/components/BaseKakaoMap';
-
 import Avatar from '@/components/Avatar';
 import styles from './chat.module.css';
 
 const AVATAR_TONES = ['', 'peach', 'lavender'];
 
+const PLACE_PLAN_LINE =
+  /^\/recommend\?groupId=([1-9]\d*)&planId=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+
 interface ChatSidebarProps {
   members: GroupMember[];
   groupId: number;
   shares?: SharedLocation[];
+  messages: ChatMessage[];
+  myUserId: number;
+  onPost: (text: string) => Promise<unknown> | void;
 }
 
 export default function ChatSidebar({
   members,
   groupId,
   shares,
+  messages,
+  myUserId,
+  onPost,
 }: ChatSidebarProps) {
-  // 위치 공유 데이터가 없으면 빈 배열 사용
   const safeShares = Array.isArray(shares) ? shares : [];
 
-  // 지도에 표시할 수 있는 좌표만 추리기
+  // ==========================================
+  // 최근 7일 이내 투표 및 장소 추천 메시지
+  // ==========================================
+
+  const latestActions = useMemo(() => {
+    const now = Date.now();
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    const sevenDaysAgo = now - sevenDays;
+
+    return messages
+      .filter((message) => {
+        const text = message.text ?? '';
+        const lastLine = text.split('\n').pop() ?? '';
+
+        const createdAt = new Date(message.created_at).getTime();
+
+        // 날짜가 잘못된 메시지 제외
+        if (!Number.isFinite(createdAt)) {
+          return false;
+        }
+
+        // 최근 7일 이내의 메시지만 표시
+        if (createdAt < sevenDaysAgo || createdAt > now) {
+          return false;
+        }
+
+        const isVote = Boolean(pollRefOf(text));
+        const isPlacePlan = PLACE_PLAN_LINE.test(lastLine);
+
+        return isVote || isPlacePlan;
+      })
+      .sort((a, b) => {
+        const timeA = new Date(a.created_at).getTime();
+        const timeB = new Date(b.created_at).getTime();
+
+        return timeB - timeA || b.id - a.id;
+      });
+  }, [messages]);
+
+  // ==========================================
+  // 투표 목록
+  // 최근 7일 이내 항목 전체 표시
+  // ==========================================
+
+  const voteMessages = useMemo(
+    () =>
+      latestActions.filter((message) => Boolean(pollRefOf(message.text ?? ''))),
+    [latestActions],
+  );
+
+  // ==========================================
+  // 장소 추천 목록
+  // 최근 7일 이내 항목 전체 표시
+  // ==========================================
+
+  const placeMessages = useMemo(
+    () =>
+      latestActions.filter((message) => {
+        const lastLine = (message.text ?? '').split('\n').pop() ?? '';
+
+        return PLACE_PLAN_LINE.test(lastLine);
+      }),
+    [latestActions],
+  );
+
+  // ==========================================
+  // 실시간 위치 지도 데이터
+  // ==========================================
+
   const mapPlaces = useMemo<MapPlace[]>(() => {
     return safeShares
       .filter(
@@ -43,181 +121,196 @@ export default function ChatSidebar({
       }));
   }, [safeShares]);
 
+  // ==========================================
+  // 화면
+  // ==========================================
+
   return (
     <aside className={styles.side}>
-      {/* 그룹 멤버 */}
-      <section className="card">
+      {/* ======================================
+          1. 그룹 멤버
+      ====================================== */}
+
+      <section className={`card ${styles.memberCard}`}>
         <h2 className={styles.sideTitle}>함께 대화 중</h2>
 
         <div className={styles.avatars}>
-          {members.map((m, i) => (
+          {members.map((member, index) => (
             <span
-              key={m.user_id}
-              title={m.nickname}
+              key={member.user_id}
+              title={member.nickname}
               style={{ display: 'inline-flex' }}
             >
               <Avatar
-                userId={m.user_id}
-                name={m.nickname}
-                image={m.profile_image}
+                userId={member.user_id}
+                name={member.nickname}
+                image={member.profile_image}
                 size="sm"
-                tone={AVATAR_TONES[i % AVATAR_TONES.length]}
+                tone={AVATAR_TONES[index % AVATAR_TONES.length]}
               />
             </span>
           ))}
         </div>
 
         <div className={styles.names}>
-          {members.length}명 · {members.map((m) => m.nickname).join(' · ')}
+          {members.length}명 ·{' '}
+          {members.map((member) => member.nickname).join(' · ')}
         </div>
       </section>
 
-      {/* 실시간 위치 공유 */}
-      <section className="card">
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 8,
-            marginBottom: 12,
-          }}
-        >
-          <h2 className={styles.sideTitle}>실시간 위치</h2>
+      {/* ======================================
+          2. 실시간 위치 + 대화 속 모아보기
+      ====================================== */}
 
-          <span
-            style={{
-              fontSize: 11,
-              color: 'var(--teal)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {safeShares.length}명 공유 중
-          </span>
-        </div>
+      <div className={styles.topWidgets}>
+        {/* 실시간 위치 */}
 
-        {mapPlaces.length > 0 ? (
-          <>
-            <div style={{ overflow: 'hidden', borderRadius: 10 }}>
-              <BaseKakaoMap places={mapPlaces} height="220px" />
-            </div>
+        <section className={`card ${styles.compactCard}`}>
+          <div className={styles.cardHeading}>
+            <h2 className={styles.sideTitle}>실시간 위치</h2>
 
-            {/* 위치 공유 중인 멤버 목록 */}
-            <div style={{ marginTop: 12 }}>
-              {safeShares.map((share) => (
-                <div
-                  key={share.user_id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 9,
-                    padding: '9px 0',
-                    borderBottom: '1px solid var(--line)',
-                    fontSize: 12,
-                  }}
-                >
-                  <span
-                    aria-hidden="true"
-                    style={{
-                      width: 8,
-                      height: 8,
-                      flexShrink: 0,
-                      borderRadius: '50%',
-                      background: 'var(--teal)',
-                    }}
-                  />
-
-                  <span style={{ flex: 1 }}>
-                    <strong>
-                      {share.nickname || `멤버 ${share.user_id}`}
-                      {share.mine ? ' (나)' : ''}
-                    </strong>
-
-                    <small
-                      style={{
-                        display: 'block',
-                        marginTop: 3,
-                        color: 'var(--muted)',
-                      }}
-                    >
-                      {share.area || '주변 위치 확인 중'}
-                    </small>
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <p
-              className="muted"
-              style={{
-                marginTop: 10,
-                fontSize: 10,
-                lineHeight: 1.6,
-              }}
-            >
-              약 500m 범위의 대략적인 위치예요. 공유가 종료되면 지도에서
-              사라져요.
-            </p>
-          </>
-        ) : (
-          <div
-            style={{
-              padding: '25px 10px',
-              borderRadius: 10,
-              background: 'var(--mist)',
-              textAlign: 'center',
-            }}
-          >
-            <div style={{ fontSize: 26, marginBottom: 8 }}>📍</div>
-
-            <p style={{ fontSize: 12, margin: 0 }}>
-              현재 공유 중인 위치가 없어요.
-            </p>
-
-            <small
-              className="muted"
-              style={{
-                display: 'block',
-                marginTop: 6,
-                fontSize: 11,
-              }}
-            >
-              채팅에서 MeetMode를 눌러 위치를 공유할 수 있어요.
-            </small>
+            <span className={styles.locationCount}>
+              {safeShares.length}명 공유 중
+            </span>
           </div>
-        )}
-      </section>
 
-      {/* 함께한 추억 */}
-      <section className="card">
-        <span className={styles.tag}>대화에 연결된 추억</span>
+          {mapPlaces.length > 0 ? (
+            <>
+              <div className={styles.smallMap}>
+                <BaseKakaoMap places={mapPlaces} height="170px" />
+              </div>
 
-        <div className={styles.placeholder}>🌳</div>
+              <div className={styles.compactLocationList}>
+                {safeShares.map((share) => (
+                  <div
+                    key={share.user_id}
+                    className={styles.compactLocationPerson}
+                  >
+                    <span className={styles.locationDot} />
 
-        <h3 className={styles.sideTitle} style={{ marginBottom: 6 }}>
-          함께한 순간
-        </h3>
+                    <span>
+                      <strong>
+                        {share.nickname || `멤버 ${share.user_id}`}
+                        {share.mine ? ' (나)' : ''}
+                      </strong>
 
-        <p className="muted" style={{ marginBottom: 12 }}>
-          약속한 날 올린 사진과 정한 장소가 ‘지난 기록’에 날짜별로 모여요.
-        </p>
+                      <small>{share.area || '주변 위치 확인 중'}</small>
+                    </span>
+                  </div>
+                ))}
+              </div>
 
-        <Link href={`/groups/${groupId}/records`} className="btn secondary sm">
-          추억 보기
-        </Link>
-      </section>
+              <p className={styles.locationNotice}>
+                약 500m 범위의 대략적인 위치예요.
+              </p>
+            </>
+          ) : (
+            <div className={styles.compactEmpty}>
+              <span>📍</span>
 
-      {/* 사진 및 약속 모아보기 */}
-      <section className="card">
-        <h2 className={styles.sideTitle}>대화 속 모아보기</h2>
+              <p>현재 공유 중인 위치가 없어요.</p>
 
-        <Link href={`/groups/${groupId}/photos`} className={styles.linkBtn}>
-          사진 모아보기 →
-        </Link>
+              <small>채팅에서 MeetMode를 눌러 위치를 공유할 수 있어요.</small>
+            </div>
+          )}
+        </section>
 
-        <Link href={`/groups/${groupId}/meetings`} className={styles.linkBtn}>
-          공유한 약속 →
-        </Link>
+        {/* 대화 속 모아보기 */}
+
+        <section className={`card ${styles.compactCard}`}>
+          <h2 className={styles.sideTitle}>대화 속 모아보기</h2>
+
+          <div className={styles.collectionLinks}>
+            <Link
+              href={`/groups/${groupId}/photos`}
+              className={styles.collectionLink}
+            >
+              <span>📷</span>
+              <span>사진 모아보기</span>
+              <span className={styles.linkArrow}>→</span>
+            </Link>
+
+            <Link
+              href={`/groups/${groupId}/meetings`}
+              className={styles.collectionLink}
+            >
+              <span>📅</span>
+              <span>공유한 약속</span>
+              <span className={styles.linkArrow}>→</span>
+            </Link>
+          </div>
+        </section>
+      </div>
+
+      {/* ======================================
+          3. 투표 + 장소 선택
+      ====================================== */}
+
+      <section className={`card ${styles.actionSection}`}>
+        <div className={styles.actionHeader}>
+          <h2 className={styles.sideTitle}>투표 · 장소 선택</h2>
+
+          <span className={styles.actionDescription}>최근 7일 이내 항목</span>
+        </div>
+
+        <div className={styles.actionGrid}>
+          {/* ==================================
+              투표 목록
+          ================================== */}
+
+          <section className={styles.actionColumn}>
+            <h3 className={styles.actionTitle}>
+              <span>🗳 투표</span>
+
+              <span className={styles.itemCount}>{voteMessages.length}</span>
+            </h3>
+
+            {voteMessages.length > 0 ? (
+              <div className={styles.actionList}>
+                {voteMessages.map((message) => (
+                  <article key={message.id} className={styles.actionItem}>
+                    <VoteMessage
+                      text={message.text ?? ''}
+                      groupId={groupId}
+                      myUserId={myUserId}
+                      onPost={onPost}
+                    />
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.actionEmpty}>
+                최근 일주일 동안 생성된 투표가 없어요.
+              </div>
+            )}
+          </section>
+
+          {/* ==================================
+              장소 추천 목록
+          ================================== */}
+
+          <section className={styles.actionColumn}>
+            <h3 className={styles.actionTitle}>
+              <span>📍 장소 선택</span>
+
+              <span className={styles.itemCount}>{placeMessages.length}</span>
+            </h3>
+
+            {placeMessages.length > 0 ? (
+              <div className={styles.actionList}>
+                {placeMessages.map((message) => (
+                  <article key={message.id} className={styles.placeActionItem}>
+                    <PlanMessage text={message.text ?? ''} groupId={groupId} />
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.actionEmpty}>
+                최근 일주일 동안 추천된 장소가 없어요.
+              </div>
+            )}
+          </section>
+        </div>
       </section>
     </aside>
   );

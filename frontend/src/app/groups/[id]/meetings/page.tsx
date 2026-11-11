@@ -7,6 +7,8 @@ import AppShell from "@/components/AppShell";
 import Avatar from "@/components/Avatar";
 import DateTimePicker from "@/components/chat/DateTimePicker";
 import AvailabilityCalendar from "@/features/calendar/AvailabilityCalendar";
+import AvailabilityMini from "@/features/calendar/AvailabilityMini";
+import mini from "@/features/calendar/availabilityMini.module.css";
 import { useGroupContext, type GroupMember } from "@/hooks/useGroupContext";
 import { pickName, useNameMode, type NameMode } from "@/lib/nameMode";
 import type { PlaceValue } from "@/lib/photos";
@@ -662,6 +664,8 @@ export default function GroupMeetingsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
   const [createWhen, setCreateWhen] = useState("");
+  const [calendarOpen, setCalendarOpen] = useState(false); // 작은 달력을 누르면 큰 달력 창이 열린다
+  const [miniKey, setMiniKey] = useState(0); // 큰 달력을 닫을 때 작은 달력이 최신 표시를 다시 불러오게
   const createRef = useRef<HTMLElement | null>(null);
 
   const members = group?.members ?? [];
@@ -750,6 +754,23 @@ export default function GroupMeetingsPage() {
     );
   }
 
+  function closeCalendar() {
+    setCalendarOpen(false);
+    setMiniKey((k) => k + 1);
+  }
+
+  useEffect(() => {
+    if (!calendarOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setCalendarOpen(false);
+        setMiniKey((k) => k + 1);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [calendarOpen]);
+
   async function handleCreated(created: Meeting) {
     setCreating(false);
     setNotice(`'${created.title}' 약속을 만들었어요.`);
@@ -781,9 +802,9 @@ export default function GroupMeetingsPage() {
           <p className="eyebrow">우리의 일정</p>
           <h1 className="page-title">확정된 약속</h1>
           <p className="page-sub">
-            친구들이 가능한 날을 달력에 표시하고, 약속을 직접 만들거나 투표로
-            확정해요. 날짜·시간과 장소를 고치고 함께한 멤버도 기록할 수 있어요.
-            날짜가 지나면 지난 기록으로 옮겨져요.
+            친구들이 가능한 날을 달력에 표시하고, 약속을 직접 만들어요.
+            날짜·시간과 장소를 고치고 함께한 멤버도 기록할 수 있어요. 날짜가
+            지나면 지난 기록으로 옮겨져요.
           </p>
         </div>
       </div>
@@ -799,9 +820,7 @@ export default function GroupMeetingsPage() {
           flexWrap: "wrap",
         }}
       >
-        <strong>
-          투표는 채팅방에서, 바로 정할 약속은 여기서 직접 만들 수 있어요.
-        </strong>
+        <strong>약속은 여기서 직접 만들고, 투표는 채팅방에서 만들어요.</strong>
 
         <div className="row" style={{ gap: 8 }}>
           <button type="button" className="btn sm" onClick={() => openCreate()}>
@@ -817,190 +836,237 @@ export default function GroupMeetingsPage() {
         </div>
       </div>
 
-      {/* 달력: 멤버별로 되는 날 / 안 되는 날 표시 */}
-      <section style={{ marginBottom: 32 }}>
-        <div className="row-between" style={{ marginBottom: 16 }}>
-          <h2 className="section-title">함께 가능한 날 찾기</h2>
-        </div>
-        <div className="card">
-          <AvailabilityCalendar
-            groupId={groupId}
-            members={members}
-            meId={me?.id ?? null}
-            nameMode={nameMode}
-            meetings={meetings}
-            onCreateOnDay={(day) => openCreate(day)}
-          />
-        </div>
-      </section>
-
-      {/* 확정된 약속 */}
-      <section>
-        <div className="row-between" style={{ marginBottom: 16 }}>
-          <h2 className="section-title">확정된 약속 목록</h2>
-          {!loading && <span className="chip">{meetings.length}개</span>}
-        </div>
-
-        {notice && (
-          <p className="notice" role="status" style={{ marginBottom: 16 }}>
-            {notice}
-          </p>
-        )}
-
-        {creating && (
-          <article
-            className="card"
-            ref={createRef}
-            style={{ marginBottom: 16 }}
-          >
-            <MeetingCreateForm
-              key={createWhen}
-              groupId={groupId}
-              members={members}
-              nameMode={nameMode}
-              initialWhen={createWhen}
-              onCreated={(created) => void handleCreated(created)}
-              onCancel={() => setCreating(false)}
-            />
-          </article>
-        )}
-        {groupError && (
-          <p className="error" style={{ marginBottom: 16 }}>
-            {groupError}
-          </p>
-        )}
-
-        {error ? (
-          <div className="card">
-            <p className="error">{error}</p>
-
-            <button
-              type="button"
-              className="btn"
-              onClick={() => void loadMeetings()}
-              style={{ marginTop: 16 }}
-            >
-              다시 시도
-            </button>
+      <div className={mini.split}>
+        {/* 확정된 약속 */}
+        <section>
+          <div className="row-between" style={{ marginBottom: 16 }}>
+            <h2 className="section-title">확정된 약속 목록</h2>
+            {!loading && <span className="chip">{meetings.length}개</span>}
           </div>
-        ) : meetings.length === 0 ? (
-          <div className="card">
-            <p className="card-title">
-              {loading ? "불러오는 중…" : "앞으로 예정된 확정 약속이 없어요."}
+
+          {notice && (
+            <p className="notice" role="status" style={{ marginBottom: 16 }}>
+              {notice}
             </p>
-          </div>
-        ) : (
-          <div className="stack">
-            {meetings.map((meeting) => {
-              const people = (meeting.participant_ids ?? [])
-                .map((id) => memberById.get(id))
-                .filter((m): m is GroupMember => !!m);
+          )}
 
-              return (
-                <article className="card" key={meeting.id}>
-                  {editingId === meeting.id ? (
-                    <MeetingEditor
-                      groupId={groupId}
-                      meeting={meeting}
-                      members={members}
-                      nameMode={nameMode}
-                      onSaved={handleSaved}
-                      onCancel={() => setEditingId(null)}
-                    />
-                  ) : (
-                    <div
-                      className="row-between"
-                      style={{ gap: 16, flexWrap: "wrap" }}
-                    >
-                      <div className="row" style={{ alignItems: "flex-start" }}>
-                        <span className="avatar lg">📅</span>
+          {creating && (
+            <article
+              className="card"
+              ref={createRef}
+              style={{ marginBottom: 16 }}
+            >
+              <MeetingCreateForm
+                key={createWhen}
+                groupId={groupId}
+                members={members}
+                nameMode={nameMode}
+                initialWhen={createWhen}
+                onCreated={(created) => void handleCreated(created)}
+                onCancel={() => setCreating(false)}
+              />
+            </article>
+          )}
+          {groupError && (
+            <p className="error" style={{ marginBottom: 16 }}>
+              {groupError}
+            </p>
+          )}
 
-                        <div>
-                          <h3 className="card-title">{meeting.title}</h3>
+          {error ? (
+            <div className="card">
+              <p className="error">{error}</p>
 
-                          <p className="muted" style={{ marginTop: 6 }}>
-                            {formatDate(meeting.meeting_time)}
-                          </p>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => void loadMeetings()}
+                style={{ marginTop: 16 }}
+              >
+                다시 시도
+              </button>
+            </div>
+          ) : meetings.length === 0 ? (
+            <div className="card">
+              <p className="card-title">
+                {loading ? "불러오는 중…" : "앞으로 예정된 확정 약속이 없어요."}
+              </p>
+            </div>
+          ) : (
+            <div className="stack">
+              {meetings.map((meeting) => {
+                const people = (meeting.participant_ids ?? [])
+                  .map((id) => memberById.get(id))
+                  .filter((m): m is GroupMember => !!m);
 
-                          <p className="muted" style={{ marginTop: 8 }}>
-                            📍 {meeting.location || "장소 미정"}
-                          </p>
+                return (
+                  <article className="card" key={meeting.id}>
+                    {editingId === meeting.id ? (
+                      <MeetingEditor
+                        groupId={groupId}
+                        meeting={meeting}
+                        members={members}
+                        nameMode={nameMode}
+                        onSaved={handleSaved}
+                        onCancel={() => setEditingId(null)}
+                      />
+                    ) : (
+                      <div
+                        className="row-between"
+                        style={{ gap: 16, flexWrap: "wrap" }}
+                      >
+                        <div
+                          className="row"
+                          style={{ alignItems: "flex-start" }}
+                        >
+                          <span className="avatar lg">📅</span>
 
-                          <div style={{ marginTop: 10 }}>
-                            {people.length === 0 ? (
-                              <p className="muted">
-                                👥 참여 멤버를 아직 기록하지 않았어요.
-                              </p>
-                            ) : (
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexWrap: "wrap",
-                                  gap: 6,
-                                  alignItems: "center",
-                                }}
-                              >
-                                <span className="muted">
-                                  👥 참여 {people.length}명
-                                </span>
-                                {people.map((m) => (
-                                  <span
-                                    key={m.user_id}
-                                    className="chip"
-                                    style={{
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: 4,
-                                    }}
-                                  >
-                                    <Avatar
-                                      userId={m.user_id}
-                                      name={pickName(m, nameMode)}
-                                      image={m.profile_image}
-                                      size="sm"
-                                    />
-                                    {pickName(m, nameMode)}
+                          <div>
+                            <h3 className="card-title">{meeting.title}</h3>
+
+                            <p className="muted" style={{ marginTop: 6 }}>
+                              {formatDate(meeting.meeting_time)}
+                            </p>
+
+                            <p className="muted" style={{ marginTop: 8 }}>
+                              📍 {meeting.location || "장소 미정"}
+                            </p>
+
+                            <div style={{ marginTop: 10 }}>
+                              {people.length === 0 ? (
+                                <p className="muted">
+                                  👥 참여 멤버를 아직 기록하지 않았어요.
+                                </p>
+                              ) : (
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    flexWrap: "wrap",
+                                    gap: 6,
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <span className="muted">
+                                    👥 참여 {people.length}명
                                   </span>
-                                ))}
-                              </div>
-                            )}
+                                  {people.map((m) => (
+                                    <span
+                                      key={m.user_id}
+                                      className="chip"
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 4,
+                                      }}
+                                    >
+                                      <Avatar
+                                        userId={m.user_id}
+                                        name={pickName(m, nameMode)}
+                                        image={m.profile_image}
+                                        size="sm"
+                                      />
+                                      {pickName(m, nameMode)}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div
-                        className="stack"
-                        style={{ alignItems: "flex-end", minWidth: 90 }}
-                      >
-                        <span className="chip">확정</span>
-
-                        <button
-                          type="button"
-                          className="btn secondary sm"
-                          onClick={() => {
-                            setNotice("");
-                            setEditingId(meeting.id);
-                          }}
+                        <div
+                          className="stack"
+                          style={{ alignItems: "flex-end", minWidth: 90 }}
                         >
-                          수정
-                        </button>
+                          <span className="chip">확정</span>
 
-                        <button
-                          type="button"
-                          className="btn secondary sm"
-                          onClick={() => void deleteMeeting(meeting.id)}
-                        >
-                          삭제
-                        </button>
+                          <button
+                            type="button"
+                            className="btn secondary sm"
+                            onClick={() => {
+                              setNotice("");
+                              setEditingId(meeting.id);
+                            }}
+                          >
+                            수정
+                          </button>
+
+                          <button
+                            type="button"
+                            className="btn secondary sm"
+                            onClick={() => void deleteMeeting(meeting.id)}
+                          >
+                            삭제
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </article>
-              );
-            })}
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* 작은 달력: 누르면 큰 달력 창이 열린다 */}
+        <aside className={mini.side}>
+          <AvailabilityMini
+            key={miniKey}
+            groupId={groupId}
+            members={members}
+            meetings={meetings}
+            onOpen={() => setCalendarOpen(true)}
+          />
+        </aside>
+      </div>
+
+      {calendarOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="함께 가능한 날 찾기"
+          onClick={closeCalendar}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1000,
+            background: "rgba(20, 35, 38, 0.45)",
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "center",
+            padding: "4vh 16px",
+            overflowY: "auto",
+          }}
+        >
+          <div
+            className="card"
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "min(980px, 100%)" }}
+          >
+            <div className="row-between" style={{ marginBottom: 16 }}>
+              <h2 className="section-title">🗓 함께 가능한 날 찾기</h2>
+              <button
+                type="button"
+                className="btn secondary sm"
+                onClick={closeCalendar}
+              >
+                닫기 ✕
+              </button>
+            </div>
+            <AvailabilityCalendar
+              groupId={groupId}
+              members={members}
+              meId={me?.id ?? null}
+              nameMode={nameMode}
+              meetings={meetings}
+              onCreateOnDay={(day) => {
+                closeCalendar();
+                openCreate(day);
+              }}
+            />
           </div>
-        )}
-      </section>
+        </div>
+      )}
     </AppShell>
   );
 }

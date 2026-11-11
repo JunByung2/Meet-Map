@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
+import GroupsMeetingCalendar from "@/features/calendar/GroupsMeetingCalendar";
 
 type Group = {
   id: number;
@@ -91,6 +92,17 @@ export default function GroupsPage() {
       </div>
 
       {error && <div className="error">{error}</div>}
+
+      {groups.length > 0 && (
+        <section style={{ marginBottom: 32 }}>
+          <div className="row-between" style={{ marginBottom: 16 }}>
+            <h2 className="section-title">우리 약속 달력</h2>
+          </div>
+          <div className="card">
+            <GroupsMeetingCalendar groups={groups} />
+          </div>
+        </section>
+      )}
 
       <div className="grid-main">
         <section>

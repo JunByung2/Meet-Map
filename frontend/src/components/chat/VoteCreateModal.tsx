@@ -4,54 +4,21 @@ import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { PlaceValue } from "@/lib/photos";
 import { usePlaceSearch } from "@/lib/usePlaceSearch";
-import DateTimePicker from "./DateTimePicker";
 import styles from "./vote.module.css";
 
-type Option = { key: number; place: PlaceValue | null };
+/** text: 입력한 항목 이름 / place: 검색해서 고른 장소 (직접 적기만 했으면 null) */
+type Option = { key: number; text: string; place: PlaceValue | null };
 
 const MIN_OPTIONS = 2;
 const MAX_OPTIONS = 6;
-const BLOCK_MS = 120 * 60 * 1000; // 서버가 "겹친다"고 보는 간격(2시간)
 
 let nextKey = 1;
-const blank = (): Option => ({ key: nextKey++, place: null });
+const blank = (): Option => ({ key: nextKey++, text: "", place: null });
 
-function formatWhen(value: string) {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  return new Intl.DateTimeFormat("ko-KR", {
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(d);
-}
-
-/** 날짜·시간을 안 정했을 때 쓰는 임시 시간: 확정된 약속과 겹치지 않는 가장 가까운 시각을 고른다. */
-async function fallbackTime(groupId: number): Promise<string> {
-  let times: number[] = [];
-  try {
-    const meetings = await api<{ meeting_time: string; status: string }[]>(
-      `/groups/${groupId}/meetings`,
-    );
-    times = meetings
-      .filter((m) => m.status === "confirmed")
-      .map((m) => new Date(m.meeting_time).getTime())
-      .filter((t) => Number.isFinite(t));
-  } catch {
-    /* 확인에 실패하면 지금 시각을 쓰고, 겹치면 서버가 알려 준다 */
-  }
-  let at = Date.now();
-  for (let i = 0; i < 60; i++) {
-    if (!times.some((t) => Math.abs(t - at) < BLOCK_MS)) break;
-    at += BLOCK_MS;
-  }
-  return new Date(at).toISOString();
-}
-
-/** 항목 한 줄: 장소는 카카오 검색으로만 고른다. */
+/**
+ * 항목 한 줄: 이름을 직접 적어도 되고, [검색]으로 카카오 장소를 골라도 된다.
+ * 검색해서 고르면 주소·좌표가 함께 저장돼 지도에 표시할 수 있다.
+ */
 function OptionRow({
   index,
   option,
@@ -66,78 +33,53 @@ function OptionRow({
   onRemove: () => void;
 }) {
   const search = usePlaceSearch();
-  const [changing, setChanging] = useState(false); // 이미 고른 장소를 다시 검색하는 중
-  const searching = !option.place || changing;
+  const [showResults, setShowResults] = useState(false);
 
-  // 고른 장소를 바꾸고 싶을 때: 이전 이름으로 바로 검색해 보여 준다 (취소하면 원래 장소가 그대로 남는다)
-  function startChange() {
-    const prev = option.place?.name ?? "";
-    search.setKeyword(prev);
-    setChanging(true);
-    if (prev) void search.run(prev);
-  }
-
-  function stopChange() {
-    setChanging(false);
-    search.clear();
-    search.setKeyword("");
+  function runSearch() {
+    const q = option.text.trim();
+    search.setKeyword(q);
+    setShowResults(true);
+    void search.run(q);
   }
 
   return (
     <div className={styles.row}>
       <div className={styles.rowLine}>
-        {!searching && option.place ? (
-          <>
-            <input
-              className="input"
-              readOnly
-              value={option.place.name}
-              aria-label={`장소${index + 1}`}
-            />
-            <button
-              type="button"
-              className="btn secondary sm"
-              onClick={startChange}
-            >
-              변경
-            </button>
-          </>
-        ) : (
-          <>
-            <input
-              className="input ime-ko"
-              lang="ko"
-              value={search.keyword}
-              placeholder={`장소${index + 1} (검색 후 선택)`}
-              aria-label={`장소${index + 1} 검색`}
-              autoFocus={changing}
-              onChange={(e) => search.setKeyword(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  void search.run();
-                }
-              }}
-            />
-            <button
-              type="button"
-              className="btn secondary sm"
-              disabled={!search.ready || search.loading}
-              onClick={() => void search.run()}
-            >
-              {search.loading ? "…" : "검색"}
-            </button>
-            {changing && (
-              <button
-                type="button"
-                className="btn secondary sm"
-                onClick={stopChange}
-              >
-                취소
-              </button>
-            )}
-          </>
-        )}
+        <input
+          className="input ime-ko"
+          lang="ko"
+          value={option.text}
+          maxLength={200}
+          placeholder={`항목${index + 1} (검색하거나 직접 입력)`}
+          aria-label={`항목${index + 1}`}
+          onChange={(e) => {
+            const text = e.target.value;
+            setShowResults(false);
+            // 고른 장소와 다른 글자가 되면 직접 입력한 항목으로 본다
+            onChange({
+              text,
+              place:
+                option.place && option.place.name === text.trim()
+                  ? option.place
+                  : null,
+            });
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              runSearch();
+            }
+          }}
+        />
+        <button
+          type="button"
+          className="btn secondary sm"
+          style={{ flexShrink: 0, whiteSpace: "nowrap" }}
+          disabled={!search.ready || search.loading || !option.text.trim()}
+          onClick={runSearch}
+        >
+          {search.loading ? "…" : "검색"}
+        </button>
         {removable && (
           <button
             type="button"
@@ -150,14 +92,16 @@ function OptionRow({
         )}
       </div>
 
-      {search.error && searching && (
+      {option.place && <p className={styles.when}>📍 {option.place.address}</p>}
+
+      {showResults && search.error && (
         <p className={styles.msg}>{search.error}</p>
       )}
-      {!search.error && searching && search.message && (
+      {showResults && !search.error && search.message && (
         <p className={styles.when}>{search.message}</p>
       )}
 
-      {searching && search.results.length > 0 && (
+      {showResults && search.results.length > 0 && (
         <ul className={styles.found} aria-label="장소 검색 결과">
           {search.results.map((r) => (
             <li key={r.id}>
@@ -165,6 +109,7 @@ function OptionRow({
                 type="button"
                 onClick={() => {
                   onChange({
+                    text: r.name,
                     place: {
                       id: r.id,
                       name: r.name,
@@ -173,7 +118,7 @@ function OptionRow({
                       lng: r.lng,
                     },
                   });
-                  setChanging(false);
+                  setShowResults(false);
                   search.clear();
                   search.setKeyword("");
                 }}
@@ -203,12 +148,10 @@ export default function VoteCreateModal({
   onCreated: (title: string, pollId: string) => Promise<void> | void;
 }) {
   const [title, setTitle] = useState("");
-  const [when, setWhen] = useState(""); // 투표 전체의 약속 날짜·시간 (YYYY-MM-DDTHH:mm), 비우면 임시 시간
-  const [pickOpen, setPickOpen] = useState(false);
   const [options, setOptions] = useState<Option[]>(() => {
     const seeded: Option[] = (initialPlaces ?? [])
       .slice(0, MAX_OPTIONS)
-      .map((place) => ({ key: nextKey++, place }));
+      .map((place) => ({ key: nextKey++, text: place.name, place }));
     while (seeded.length < MIN_OPTIONS) seeded.push(blank());
     return seeded;
   });
@@ -222,36 +165,36 @@ export default function VoteCreateModal({
     setError("");
     const t = title.trim();
     if (!t) return setError("투표 제목을 적어 주세요.");
-    if (options.some((o) => !o.place))
+    const texts = options.map((o) => o.text.trim());
+    if (texts.some((x) => !x))
       return setError(
-        "모든 항목에 장소를 검색해서 선택해 주세요. 쓰지 않을 항목은 ✕ 로 지워요.",
+        "모든 항목을 입력해 주세요. 쓰지 않을 항목은 ✕ 로 지워요.",
       );
+    if (new Set(texts.map((x) => x.toLowerCase())).size !== texts.length)
+      return setError("같은 이름의 항목이 있어요. 서로 다르게 적어 주세요.");
     if (options.length < MIN_OPTIONS)
       return setError(`항목은 ${MIN_OPTIONS}개 이상이어야 투표할 수 있어요.`);
     setBusy(true);
     const pollId = crypto.randomUUID(); // 이 투표의 후보들을 하나로 묶는 번호
     try {
-      const meetingTime = when
-        ? new Date(when).toISOString()
-        : await fallbackTime(groupId);
       for (const o of options) {
-        const place = o.place as PlaceValue;
+        const name = o.text.trim();
+        // 검색해서 고른 장소와 같은 이름일 때만 주소·좌표를 함께 저장한다
+        const place = o.place && o.place.name === name ? o.place : null;
         await api(`/groups/${groupId}/meeting-candidates`, {
           method: "POST",
           body: {
             title: t,
-            location: place.name,
-            meeting_time: meetingTime,
-            place_id: place.id || null,
-            place_address: place.address || null,
-            place_lat: place.lat,
-            place_lng: place.lng,
+            location: name,
+            place_id: place?.id || null,
+            place_address: place?.address || null,
+            place_lat: place ? place.lat : null,
+            place_lng: place ? place.lng : null,
             poll_id: pollId,
           },
         });
       }
-      // 날짜를 정했다면 채팅 카드에도 보이게 제목 아래 줄에 붙인다
-      await onCreated(when ? `${t}\n📅 ${formatWhen(when)}` : t, pollId);
+      await onCreated(t, pollId);
       onClose();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "투표를 만들지 못했어요.");
@@ -294,42 +237,11 @@ export default function VoteCreateModal({
           onChange={(e) => setTitle(e.target.value)}
         />
 
-        <label className={styles.label}>약속 날짜·시간 (선택)</label>
-        <div className={styles.rowLine}>
-          <button
-            type="button"
-            className="btn secondary"
-            onClick={() => setPickOpen(true)}
-            disabled={busy}
-          >
-            {when ? `📅 ${formatWhen(when)}` : "날짜·시간 정하기"}
-          </button>
-          {when && (
-            <button
-              type="button"
-              className={styles.remove}
-              onClick={() => setWhen("")}
-              aria-label="날짜·시간 지우기"
-              disabled={busy}
-            >
-              ✕
-            </button>
-          )}
-        </div>
+        <label className={styles.label}>항목</label>
         <p className={styles.when}>
-          {when
-            ? "모든 장소 항목에 이 날짜·시간이 적용돼요."
-            : "정하지 않아도 올릴 수 있지만, 확정된 약속에 임시 시간이 들어가요."}
+          이름만 적어도 되고, 장소는 검색해서 고르면 주소와 지도 정보가 함께
+          저장돼요.
         </p>
-        {pickOpen && (
-          <DateTimePicker
-            value={when}
-            onChange={setWhen}
-            onClose={() => setPickOpen(false)}
-          />
-        )}
-
-        <label className={styles.label}>항목 (장소)</label>
         {options.map((o, i) => (
           <OptionRow
             key={o.key}

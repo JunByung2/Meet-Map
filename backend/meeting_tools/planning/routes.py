@@ -15,7 +15,9 @@ from app.models import Group, GroupMember, User
 from app.routers.messages import Message
 from meeting_tools.planning.models import Departure, PlacePlan
 from meeting_tools.recommendation.nearby_service import search_nearby_places
-from meeting_tools.recommendation.recommend_service import RECOMMENDATION_POLICY, RecommendationError, recommend_places
+from meeting_tools.recommendation.recommend_service import (
+    MAX_DEPARTURES, MIN_DEPARTURES, RECOMMENDATION_POLICY, RecommendationError, recommend_places,
+)
 from meeting_tools.transit.kakao_route import TransitError
 
 router = APIRouter(prefix="/groups/{group_id}/place-plans", tags=["place-plans"],
@@ -82,7 +84,7 @@ def serialize_departure(departure):
 
 def state(db, plan, user):
     members, departures, snapshot = members_and_departures(db, plan)
-    complete = 2 <= len(departures) <= 5
+    complete = MIN_DEPARTURES <= len(departures) <= MAX_DEPARTURES
     # 이 API는 require_group_member를 통과한 같은 그룹 멤버에게만 제공한다.
     # 순서는 user_id 기준으로 고정하여 모든 접속자의 번호/색상이 같도록 한다.
     return {
@@ -173,8 +175,8 @@ def recommend(group_id: int, plan_id: UUID, user: User = Depends(get_current_use
     plan = get_plan(db, group_id, plan_id)
     members, departures, snapshot = members_and_departures(db, plan)
     members = [m for m in members if m.user_id in departures]
-    if not 2 <= len(members) <= 5:
-        raise HTTPException(409, "출발지를 입력한 멤버 2~5명으로 추천할 수 있어요.")
+    if not MIN_DEPARTURES <= len(members) <= MAX_DEPARTURES:
+        raise HTTPException(409, f"출발지를 입력한 멤버가 {MIN_DEPARTURES}명 이상이어야 추천할 수 있어요.")
     if plan.result and plan.result_snapshot == snapshot:
         generated_at = plan.result.get("generated_at")
         if generated_at:

@@ -1,38 +1,32 @@
 'use client'
 
-import { useEffect, type CSSProperties } from 'react'
+import { useState } from 'react'
 import type { useLocationShare } from '@/hooks/useLocationShare'
-import { useArrivals, type ArrivalStatus } from '@/hooks/useArrivals'
+import type {
+  Arrivals,
+  ArrivalMember,
+  ArrivalStatus,
+} from '@/hooks/useArrivals'
+import styles from './meetmode.module.css'
 
 type Meet = ReturnType<typeof useLocationShare>
 
-const ACCENT = '#3f7d6e'
+// 아바타 테두리 색: 도착 / 이동 중 / 공유 중 / 공유 안 함
+const RING: Record<ArrivalStatus, string> = {
+  arrived: '#2fb27d',
+  moving: '#e0952b',
+  sharing: '#3f7d6e',
+  not_sharing: '#c3cbc9',
+}
 
-const STATUS: Record<
-  ArrivalStatus,
-  { label: string; color: string; bg: string }
-> = {
-  arrived: { label: '도착', color: ACCENT, bg: 'rgba(63,125,110,0.16)' },
-  moving: { label: '이동 중', color: '#92610f', bg: 'rgba(183,121,31,0.16)' },
-  sharing: { label: '공유 중', color: ACCENT, bg: 'rgba(63,125,110,0.10)' },
-  not_sharing: {
-    label: '공유 안 함',
-    color: '#6b7280',
-    bg: 'rgba(0,0,0,0.06)',
-  },
+const LABEL: Record<ArrivalStatus, string> = {
+  arrived: '도착',
+  moving: '이동 중',
+  sharing: '공유 중',
+  not_sharing: '공유 안 함',
 }
 
 const ORDER: ArrivalStatus[] = ['arrived', 'moving', 'sharing', 'not_sharing']
-
-const pill = (status: ArrivalStatus): CSSProperties => ({
-  display: 'inline-block',
-  padding: '4px 10px',
-  borderRadius: 999,
-  fontSize: 13,
-  fontWeight: 700,
-  color: STATUS[status].color,
-  background: STATUS[status].bg,
-})
 
 function whenText(iso: string) {
   return new Date(iso).toLocaleString('ko-KR', {
@@ -44,127 +38,189 @@ function whenText(iso: string) {
   })
 }
 
-function relText(diffMin: number) {
+function countdown(diffMin: number) {
   if (diffMin > 0) {
     const h = Math.floor(diffMin / 60)
     const m = diffMin % 60
-    return h > 0 ? `${h}시간 ${m}분 뒤 시작` : `${m}분 뒤 시작`
+    return { label: '약속까지', value: h > 0 ? `${h}시간 ${m}분` : `${m}분` }
   }
-  if (diffMin === 0) return '지금 시작해요'
-  return `시작한 지 ${-diffMin}분 지났어요`
+  if (diffMin === 0) return { label: '약속 시간', value: '지금이에요' }
+  return { label: '약속 시간이 지났어요', value: `${-diffMin}분 지남` }
 }
 
 function distanceText(meters: number) {
   return meters >= 1000 ? `${(meters / 1000).toFixed(1)}km` : `${meters}m`
 }
 
-/** 약속이 임박하면 나타나는 Meet Mode 시작 카드 + 친구들의 도착 현황 */
-export default function ArrivalBoard({ meet }: { meet: Meet }) {
-  const { arrivals, now, reload } = useArrivals(meet.groupId)
+function subText(m: ArrivalMember) {
+  if (m.status === 'arrived') return '도착'
+  if (m.status === 'moving' && m.distance_m !== null)
+    return `약 ${distanceText(m.distance_m)}`
+  if (m.status === 'sharing') return '공유 중'
+  return '-'
+}
+
+/** 약속이 있을 때 보이는 Meet Mode 본문: 카운트다운 + 도착 현황 + 빠른 행동 */
+export default function ArrivalBoard({
+  meet,
+  arrivals,
+  now,
+  onQuick,
+}: {
+  meet: Meet
+  arrivals: Arrivals
+  now: number
+  /** 빠른 한마디를 채팅으로 보낸다 */
+  onQuick?: (text: string) => Promise<unknown> | void
+}) {
   const { sharing, asking, busy } = meet
-
-  // 내 공유 상태가 바뀌면 도착 현황도 바로 다시 가져온다
-  useEffect(() => {
-    void reload()
-  }, [sharing, reload])
-
-  if (!arrivals?.meeting) return null
+  const [copied, setCopied] = useState(false)
+  const [sent, setSent] = useState('')
 
   const meeting = arrivals.meeting
+  if (!meeting) return null
+
   const diffMin = Math.round(
     (new Date(meeting.meeting_time).getTime() - now) / 60000,
   )
+  const cd = countdown(diffMin)
   const members = [...arrivals.members].sort(
     (a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status),
   )
-  const summaryItems = ORDER.filter((s) => arrivals.summary[s] > 0)
+  const summary = (['arrived', 'moving', 'sharing'] as ArrivalStatus[])
+    .filter((s) => arrivals.summary[s] > 0)
+    .map((s) => `${arrivals.summary[s]}명 ${LABEL[s]}`)
+    .join(' · ')
+
+  const mapUrl = `https://map.kakao.com/link/search/${encodeURIComponent(
+    meeting.location,
+  )}`
+
+  async function copyPlace() {
+    try {
+      await navigator.clipboard.writeText(meeting!.location)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      /* 복사 권한이 없으면 조용히 넘어간다 */
+    }
+  }
+
+  async function quick(text: string) {
+    if (!onQuick) return
+    try {
+      await onQuick(text)
+      setSent(text)
+      setTimeout(() => setSent(''), 1800)
+    } catch {
+      /* 전송 실패 메시지는 채팅 쪽 상태줄이 보여준다 */
+    }
+  }
 
   return (
-    <section
-      className="card mint"
-      aria-label="Meet Mode 도착 현황"
-      style={{ borderRadius: 24, padding: 20 }}
-    >
-      <span className="chip">📅 오늘 약속이 있어요</span>
-      <h2 className="card-title" style={{ margin: '10px 0 4px', fontSize: 20 }}>
-        {meeting.title}
-      </h2>
-      <p className="muted" style={{ margin: 0 }}>
-        {whenText(meeting.meeting_time)} · 📍 {meeting.location}
-      </p>
-      <p style={{ margin: '4px 0 0', fontWeight: 700, color: ACCENT }}>
-        {relText(diffMin)}
-      </p>
-
-      {summaryItems.length > 0 && (
-        <div
-          style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14 }}
-        >
-          {summaryItems.map((s) => (
-            <span key={s} style={pill(s)}>
-              {STATUS[s].label} {arrivals.summary[s]}
-            </span>
-          ))}
-        </div>
-      )}
-
-      <div style={{ marginTop: 12 }}>
-        {members.map((m) => (
-          <div
-            key={m.user_id}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 12,
-              padding: '8px 0',
-            }}
-          >
-            <span>
-              <strong>{m.nickname ?? '알 수 없음'}</strong>
-              {m.mine ? ' (나)' : ''}
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {m.distance_m !== null && (
-                <span className="muted" style={{ fontSize: 13 }}>
-                  약 {distanceText(m.distance_m)}
-                </span>
-              )}
-              <span style={pill(m.status)}>{STATUS[m.status].label}</span>
-            </span>
-          </div>
-        ))}
+    <section className={styles.board} aria-label="Meet Mode 도착 현황">
+      <div>
+        <h2 className={styles.boardTitle}>{meeting.title}</h2>
+        <p className={styles.when}>
+          {whenText(meeting.meeting_time)}
+          <br />
+          📍 {meeting.location}
+        </p>
       </div>
 
+      <div className={styles.count}>
+        <span className={styles.countLabel}>{cd.label}</span>
+        <strong className={styles.countValue}>{cd.value}</strong>
+      </div>
+
+      <div className={styles.people}>
+        {members.map((m) => {
+          const name = m.nickname ?? '알 수 없음'
+          return (
+            <div key={m.user_id} className={styles.person}>
+              <span
+                className={styles.ring}
+                style={{ borderColor: RING[m.status] }}
+              >
+                {name.slice(0, 1)}
+              </span>
+              <span className={styles.pname}>{m.mine ? '나' : name}</span>
+              <span
+                className={styles.psub}
+                style={
+                  m.status === 'arrived'
+                    ? { color: '#1d7a4f', fontWeight: 700 }
+                    : m.status === 'moving'
+                      ? { color: '#b7791f', fontWeight: 700 }
+                      : undefined
+                }
+              >
+                {subText(m)}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+
+      <p className={styles.summary}>
+        {summary || '아직 위치를 공유한 친구가 없어요'}
+      </p>
+
       {!arrivals.destination_known && (
-        <p className="muted" style={{ margin: '8px 0 0', fontSize: 13 }}>
+        <p className={styles.note}>
           약속 장소의 위치를 찾지 못해서 도착 여부는 판단하지 못해요.
         </p>
       )}
 
-      <div style={{ marginTop: 14 }}>
-        {sharing ? (
-          <p className="muted" style={{ margin: 0 }}>
-            내 위치를 공유 중이에요. 약속 장소 근처에 오면 자동으로
-            &quot;도착&quot;으로 바뀌어요.
-          </p>
-        ) : (
-          !asking && (
-            <button
-              type="button"
-              className="btn sm"
-              disabled={busy}
-              onClick={meet.openAsk}
-            >
-              Meet Mode 시작 · 내 위치 공유
-            </button>
-          )
-        )}
+      {sharing ? (
+        <p className={styles.sharingNote}>
+          📍 내 위치를 공유 중이에요. 약속 장소 근처에 오면 자동으로
+          &quot;도착&quot;으로 바뀌어요.
+        </p>
+      ) : (
+        !asking && (
+          <button
+            type="button"
+            className={`btn ${styles.cta}`}
+            disabled={busy}
+            onClick={meet.openAsk}
+          >
+            내 위치 공유하기
+          </button>
+        )
+      )}
+
+      <div className={styles.links}>
+        <a
+          href={mapUrl}
+          target="_blank"
+          rel="noreferrer"
+          className={styles.linkBtn}
+        >
+          🗺 길찾기
+        </a>
+        <button type="button" className={styles.linkBtn} onClick={copyPlace}>
+          {copied ? '✅ 복사했어요' : '📋 장소 복사'}
+        </button>
       </div>
 
-      <p className="muted" style={{ margin: '10px 0 0', fontSize: 12 }}>
-        대략적인 위치(약 500m)로 판단해서 오차가 있어요. 공유가 끝나면
-        &quot;공유 안 함&quot;으로 돌아가요.
+      {onQuick && (
+        <div className={styles.quick}>
+          {['🏃 곧 도착해요', '⏳ 조금 늦어요'].map((t) => (
+            <button
+              key={t}
+              type="button"
+              className={styles.quickBtn}
+              onClick={() => void quick(t)}
+            >
+              {sent === t ? '✅ 보냈어요' : t}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <p className={styles.note}>
+        대략적인 위치(약 500m) 기준이라 오차가 있어요.
       </p>
     </section>
   )

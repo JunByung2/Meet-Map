@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { closePhotoViewer, setViewerIndex, usePhotoViewer } from "./photoViewerStore";
+import { closePhotoViewer, discardPhotoViewer, setViewerIndex, usePhotoViewer } from "./photoViewerStore";
 import css from "./photoViewer.module.css";
 
 async function toPngBlob(blob: Blob): Promise<Blob> {
@@ -35,7 +35,7 @@ export default function PhotoViewerWindow() {
     return () => window.removeEventListener("keydown", onKey);
   }, [v.open, v.index]);
 
-  useEffect(() => () => closePhotoViewer(), []); // 채팅 화면을 떠나면 닫는다
+  useEffect(() => () => discardPhotoViewer(), []); // 채팅 화면을 떠나면 닫는다
 
   useEffect(() => {
     // 지금 사진의 작은 그림이 보이도록 아래 띠를 맞춘다

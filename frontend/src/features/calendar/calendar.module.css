@@ -274,16 +274,45 @@
 }
 
 @media (max-width: 640px) {
+  /* 기본 달력 앱처럼 날짜 칸을 정사각형으로 */
   .cell {
-    min-height: 62px;
-    padding: 4px 4px 6px;
-    border-radius: 9px;
+    aspect-ratio: 1 / 1;
+    min-height: 0;
+    padding: 3px 3px 4px;
+    gap: 2px;
+    border-radius: 8px;
+    overflow: hidden;
   }
   .grid {
-    gap: 4px;
+    gap: 3px;
+  }
+  .num {
+    font-size: 12px;
+  }
+  .meet {
+    font-size: 10px;
+  }
+  /* 모바일: 줄 대신 멤버 색 점으로 (5명도 한 칸에 들어가게). 되는 날=채운 점, 안 되는 날=속이 빈 점 */
+  .bars {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 2px;
+  }
+  .bar {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+  .barOff {
+    width: 6px;
+    height: 6px;
+    border: 1.5px solid var(--c);
+    background: transparent;
+    box-sizing: border-box;
   }
   .count {
-    font-size: 10px;
+    display: none; /* 자세한 인원은 날짜를 눌렀을 때 아래에 나와요 */
   }
   .monthLabel {
     min-width: 92px;

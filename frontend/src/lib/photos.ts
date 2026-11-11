@@ -39,6 +39,9 @@ export function placeOf(p: Photo): PlaceValue | null {
 
 export type PhotoDetail = { photo: Photo; batch: Photo[] };
 
+/** 사진 달력의 그날 대표 사진 (팀원 누구나 바꿀 수 있고 서버에 저장된다) */
+export type DayCover = { day: string; photo_id: number };
+
 /** 한 번에 올린 사진 묶음 (batch_id 가 같은 사진들) */
 export type PhotoGroup = {
   key: string;
@@ -127,4 +130,20 @@ export function groupByDay(groups: PhotoGroup[]): { day: string; groups: PhotoGr
   return Array.from(map.entries())
     .sort((a, b) => (a[0] < b[0] ? 1 : -1))
     .map(([day, list]) => ({ day, groups: list }));
+}
+
+/**
+ * 그날의 대표 사진. 정해 둔 사진이 그날 사진 중에 있으면 그 사진, 없으면 그날 가장 먼저 올라온 사진.
+ * (정해 둔 사진이 지워졌거나 다른 탭에 가려져 있으면 자연스럽게 가장 먼저 올라온 사진으로 돌아간다)
+ */
+export function coverPhotoOf(groups: PhotoGroup[], coverId: number | undefined): Photo | null {
+  const all = groups.flatMap((g) => g.photos);
+  if (all.length === 0) return null;
+  const chosen = coverId === undefined ? undefined : all.find((p) => p.id === coverId);
+  if (chosen) return chosen;
+  return all.reduce((a, b) => {
+    const ta = Date.parse(a.created_at);
+    const tb = Date.parse(b.created_at);
+    return ta < tb || (ta === tb && a.id < b.id) ? a : b;
+  });
 }

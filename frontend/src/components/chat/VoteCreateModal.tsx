@@ -6,6 +6,7 @@ import type { PlaceValue } from "@/lib/photos";
 import { usePlaceSearch } from "@/lib/usePlaceSearch";
 import DateTimePicker from "./DateTimePicker";
 import styles from "./vote.module.css";
+import CalIcon from "@/components/CalIcon";
 
 type Option = { key: number; place: PlaceValue | null };
 
@@ -302,7 +303,7 @@ export default function VoteCreateModal({
             onClick={() => setPickOpen(true)}
             disabled={busy}
           >
-            {when ? `📅 ${formatWhen(when)}` : "날짜·시간 정하기"}
+            {when ? <><CalIcon /> {formatWhen(when)}</> : "날짜·시간 정하기"}
           </button>
           {when && (
             <button

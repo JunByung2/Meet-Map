@@ -11,6 +11,7 @@ import { useGroupContext, type GroupMember } from "@/hooks/useGroupContext";
 import { pickName, useNameMode, type NameMode } from "@/lib/nameMode";
 import type { PlaceValue } from "@/lib/photos";
 import { usePlaceSearch } from "@/lib/usePlaceSearch";
+import CalIcon from "@/components/CalIcon";
 
 type Meeting = {
   id: number;
@@ -176,7 +177,7 @@ function MeetingEditor({
           disabled={busy}
           onClick={() => setPickOpen(true)}
         >
-          📅{" "}
+          <CalIcon />{" "}
           {when ? formatDate(new Date(when).toISOString()) : "날짜·시간 정하기"}
         </button>
         {pickOpen && (
@@ -467,7 +468,7 @@ function MeetingCreateForm({
           disabled={busy}
           onClick={() => setPickOpen(true)}
         >
-          📅{" "}
+          <CalIcon />{" "}
           {when ? formatDate(new Date(when).toISOString()) : "날짜·시간 정하기"}
         </button>
         {pickOpen && (
@@ -913,7 +914,7 @@ export default function GroupMeetingsPage() {
                       style={{ gap: 16, flexWrap: "wrap" }}
                     >
                       <div className="row" style={{ alignItems: "flex-start" }}>
-                        <span className="avatar lg">📅</span>
+                        <span className="avatar lg"><CalIcon size="1.1em" /></span>
 
                         <div>
                           <h3 className="card-title">{meeting.title}</h3>
@@ -969,7 +970,7 @@ export default function GroupMeetingsPage() {
                       </div>
 
                       <div
-                        className="stack"
+                        className="stack meet-actions"
                         style={{ alignItems: "flex-end", minWidth: 90 }}
                       >
                         <span className="chip">확정</span>

@@ -31,3 +31,8 @@
 .mrow { display: flex; gap: 4px; }
 .mrow > * { flex: 1 1 0; min-width: 0; }
 .bubble:has(.mosaic) { width: auto; max-width: 100%; }
+
+/* 모바일: 대화창이 늘어났다 줄어드는 칸 안에서 업로드 중인 사진이 납작하게 눌려 안 보이던 문제 */
+@media (max-width: 650px) {
+  .wrap { flex: none; max-height: 38vh; }
+}

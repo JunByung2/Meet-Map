@@ -1,0 +1,150 @@
+/* 약속 페이지: 왼쪽 약속 목록 : 오른쪽 작은 달력 = 5 : 2 */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(290px, 2fr);
+  gap: 20px;
+  align-items: start;
+}
+.side {
+  position: sticky;
+  top: 16px;
+}
+@media (max-width: 900px) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .side {
+    position: static;
+  }
+}
+
+/* 작은 달력 */
+.box {
+  border: 1.5px solid var(--line);
+  border-radius: 16px;
+  background: var(--white);
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.title {
+  font-size: 15px;
+}
+.nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.nav button {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+}
+.nav button:hover {
+  background: var(--mint);
+}
+
+.open {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  border: 1.5px dashed var(--line);
+  border-radius: 12px;
+  background: transparent;
+  font-family: inherit;
+  color: var(--ink);
+  cursor: zoom-in;
+  text-align: center;
+}
+.open:hover,
+.open:focus-visible {
+  border-color: var(--teal);
+  background: var(--mist);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+.dow {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.cell {
+  position: relative;
+  display: block;
+  padding: 7px 0 9px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+}
+.out {
+  opacity: 0.35;
+}
+.today {
+  box-shadow: inset 0 0 0 1.5px var(--teal);
+}
+.all {
+  background: #1fa58a;
+  color: #fff;
+}
+.some {
+  background: #d4efe7;
+}
+.dot {
+  position: absolute;
+  left: 50%;
+  bottom: 1px;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: #f59e0b;
+}
+.all .dot {
+  background: #fff;
+}
+.hint {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--teal);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+}
+.sw {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.dotLegend {
+  position: static;
+  display: inline-block;
+  margin: 0;
+}

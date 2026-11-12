@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from meeting_tools.recommendation.recommend_service import recommend_places
+from meeting_tools.recommendation.recommend_service import MAX_DEPARTURES, MIN_DEPARTURES, recommend_places
 from meeting_tools.transit.national_route import fetch_transit_routes
 from meeting_tools.transit.kakao_route import (
     TransitError,
@@ -23,7 +23,7 @@ class TransitRequest(BaseModel):
 
 
 class RecommendRequest(BaseModel):
-    departures: list[Location] = Field(min_length=2, max_length=5)
+    departures: list[Location] = Field(min_length=MIN_DEPARTURES, max_length=MAX_DEPARTURES)
 
 
 @router.post("/transit")

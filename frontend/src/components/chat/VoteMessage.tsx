@@ -54,7 +54,7 @@ export default function VoteMessage({
           </span>
           <strong className={styles.q}>{title}</strong>
           <div className={styles.winBox}>
-            <span className={styles.rank}>1위 · 약속 확정</span>
+            <span className={styles.rank}>1위</span>
             <strong className={styles.winnerName}>{winner}</strong>
           </div>
           <button
@@ -87,7 +87,7 @@ export default function VoteMessage({
   return (
     <>
       <div className={styles.card}>
-        <span className={styles.tag}>🗳 약속 투표</span>
+        <span className={styles.tag}>🗳 투표</span>
         <strong className={styles.q}>{title}</strong>
         <ul className={styles.plain}>
           {(items ?? []).map((c) => (

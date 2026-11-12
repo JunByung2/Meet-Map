@@ -17,6 +17,9 @@ QUERIES = (("subway", None), ("train", "기차역"), ("terminal", "버스터미�
 RECOMMENDATION_POLICY = "hub-shortlist-v12-" + ("tago" if tago_enabled() else "tmap" if os.getenv("TMAP_APP_KEY", "").strip() else "kakao")
 RADII = (5000, 10000, 20000)
 MAX_CANDIDATES = 5
+MIN_DEPARTURES = 2
+# 참여 인원 제한은 없앴다. 다만 한 번에 비정상적으로 많은 경로 조회가 일어나지 않게 막는 안전장치만 둔다.
+MAX_DEPARTURES = 50
 TARGET_CANDIDATES = 6
 SEARCH_SECONDS = 35
 
@@ -237,8 +240,10 @@ def evaluate_candidate(candidate: dict, departures: list) -> dict:
 
 
 def recommend_places(departures: list) -> dict:
-    if not 2 <= len(departures) <= 5:
-        raise RecommendationError("출발지는 2~5명까지 입력해 주세요.", 422, "INVALID_DEPARTURES")
+    if len(departures) < MIN_DEPARTURES:
+        raise RecommendationError(f"출발지는 {MIN_DEPARTURES}명 이상 입력해 주세요.", 422, "INVALID_DEPARTURES")
+    if len(departures) > MAX_DEPARTURES:
+        raise RecommendationError(f"출발지는 최대 {MAX_DEPARTURES}명까지 입력할 수 있어요.", 422, "INVALID_DEPARTURES")
     for p in departures:
         if not isinstance(p, dict) or any(isinstance(p.get(k), bool) or not isinstance(p.get(k), (int, float))
             or not math.isfinite(p[k]) or abs(p[k]) > bound for k, bound in (("x", 180), ("y", 90))):

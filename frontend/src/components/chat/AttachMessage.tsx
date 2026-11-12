@@ -62,7 +62,7 @@ export default function AttachMessage({
   return <AttachOne text={text} groupId={groupId} viewerTitle={viewerTitle} />
 }
 
-// 한 말풍선에 묶이는 사진 수는 최대 16장 (4x4). 그보다 많이 보내면 16장씩 나뉘어 여러 말풍선이 된다.
+// 한 말풍선에 묶이는 사진 수는 최대 9장 (3x3). 그보다 많이 보내면 9장씩 나뉘어 여러 말풍선이 된다 (한 번에 최대 27장).
 // 배치(줄마다 몇 장)는 lib/bundleLayout.ts 가 정한다.
 
 /** 묶어서 보낸 사진: 한 말풍선에 격자로 보여 주고, 눌러서 크게 넘겨 본다 */

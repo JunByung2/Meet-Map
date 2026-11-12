@@ -30,7 +30,7 @@ export function loadMapSdk(): Promise<void> {
       script?.removeEventListener('error', onError)
     }
     const onLoad = () => { cleanup(); ready() }
-    const onError = () => { cleanup(); reject(new Error('지도를 불러오지 못했어요.')) }
+    const onError = () => { cleanup(); reject(new Error(`지도를 불러오지 못했어요. 카카오 개발자 콘솔 > 앱 > 플랫폼 > JavaScript SDK 도메인에 ${window.location.origin} 이 등록되어 있는지 확인해 주세요.`)) }
     script.addEventListener('load', onLoad)
     script.addEventListener('error', onError)
     if (isNew) document.head.appendChild(script)

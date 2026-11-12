@@ -7,6 +7,7 @@ import AppShell, { type ShellGroup } from '@/components/AppShell'
 import { api, ApiError } from '@/lib/api'
 import TransitPage from '@/features/transit/TransitPage'
 import MemoryMap from '@/features/memory/MemoryMap'
+import MemoryTabs from '@/components/MemoryTabs'
 
 interface Detail {
   id: number; name: string; icon: string | null
@@ -50,24 +51,20 @@ function MapContext({ groupId, memory, batch }: { groupId: string | null; memory
     return () => { cancelled = true }
   }, [groupId])
 
-  const base = groupId ? `/map?groupId=${encodeURIComponent(groupId)}` : '/map'
-  return <AppShell group={group}>
+  return <AppShell group={group} active={group && memory ? 'memories' : group ? 'map' : undefined}>
     {loading ? <p className="muted" role="status">지도를 준비하고 있어요.</p> : error ? <section className="card">
       <p className="error" role="alert">{error}</p>
       {needLogin && <p><Link href="/login">로그인하기</Link></p>}
       <Link href="/groups">내 그룹으로</Link>
     </section> : <>
-      <div className="page-head"><div>
-        <p className="eyebrow">{group ? group.name : '어디서든 편리하게'}</p>
-        <h1 className="page-title">지도</h1>
-        <p className="page-sub">{memory ? '그룹 친구들과 함께 남긴 장소를 돌아보세요.' : '출발지와 목적지를 정하고 교통 경로를 확인해요.'}</p>
-      </div></div>
-      <nav aria-label="지도 기능 선택" className="row" style={{ marginBottom: 24 }}>
-        <Link aria-current={!memory ? 'page' : undefined} className={!memory ? 'btn' : 'btn secondary'}
-          href={groupId ? `${base}&view=transit` : base}>교통 보기</Link>
-        {group && <Link aria-current={memory ? 'page' : undefined} className={memory ? 'btn' : 'btn secondary'}
-          href={`${base}&view=memory`}>추억지도</Link>}
-      </nav>
+      {memory && group ? <MemoryTabs groupId={group.id} current="map"
+        sub="그룹 친구들과 함께 남긴 장소를 돌아보세요." /> : <>
+        <div className="page-head"><div>
+          <p className="eyebrow">{group ? group.name : '어디서든 편리하게'}</p>
+          <h1 className="page-title">지도</h1>
+          <p className="page-sub">출발지와 목적지를 정하고 교통 경로를 확인해요.</p>
+        </div></div>
+      </>}
       {memory && group ? <MemoryMap key={`${group.id}-${batch ?? ''}`} groupId={String(group.id)} wantedBatch={batch} /> : <TransitPage embedded />}
     </>}
   </AppShell>

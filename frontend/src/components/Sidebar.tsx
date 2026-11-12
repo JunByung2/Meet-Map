@@ -14,7 +14,7 @@ export type ShellGroup = {
   memberNicknames?: string[];
 };
 
-export type ActiveMenu = "home" | "chat" | "meetings" | "photos" | "map" | "records" | "settings";
+export type ActiveMenu = "home" | "chat" | "meetings" | "photos" | "map" | "records" | "memories" | "settings";
 
 type GroupDetail = {
   id: number;
@@ -77,9 +77,9 @@ const NAV: NavItem[] = [
   { label: "그룹 홈", icon: ICONS.home, key: "home" },
   { label: "채팅", icon: ICONS.chat, key: "chat", path: "chat" },
   { label: "약속", icon: ICONS.calendar, key: "meetings", path: "meetings" },
-  { label: "지도", icon: ICONS.map, key: "map", path: "map" },
-  { label: "사진", icon: ICONS.photo, key: "photos", path: "photos" },
-  { label: "지난 기록", icon: ICONS.archive, key: "records", path: "records" },
+  { label: "지도", icon: ICONS.map, key: "map", path: "map?view=transit" },
+  // 지난 기록 · 추억지도 · 사진은 "추억" 한 화면에 모아 두고, 자세히 볼 때만 각 화면으로 간다
+  { label: "추억", icon: ICONS.photo, key: "memories", path: "memories" },
   { label: "그룹 설정", icon: ICONS.settings, key: "settings", path: "settings" },
 ];
 
@@ -192,6 +192,7 @@ export default function Sidebar({
 
   const isMapPage =
     pathname === "/map" || /^\/groups\/[^/]+\/map(?:\/|$)/.test(pathname);
+  const isMemoriesPage = /^\/groups\/[^/]+\/memories(?:\/|$)/.test(pathname);
   const isPhotosPage = /^\/groups\/[^/]+\/photos(?:\/|$)/.test(pathname);
   const isRecordsPage = /^\/groups\/[^/]+\/records(?:\/|$)/.test(pathname);
   const isMeetingsPage = /^\/groups\/[^/]+\/meetings(?:\/|$)/.test(pathname);
@@ -199,7 +200,9 @@ export default function Sidebar({
   const isSettingsPage = /^\/groups\/[^/]+\/settings(?:\/|$)/.test(pathname);
   const derived: ActiveMenu = isMapPage
     ? "map"
-    : isPhotosPage
+    : isMemoriesPage
+      ? "memories"
+      : isPhotosPage
       ? "photos"
       : isRecordsPage
         ? "records"
@@ -210,7 +213,8 @@ export default function Sidebar({
             : isSettingsPage
               ? "settings"
               : "home";
-  const current: ActiveMenu = active ?? derived;
+  const picked: ActiveMenu = active ?? derived;
+  const current: ActiveMenu = picked === "photos" || picked === "records" || picked === "memories" ? "memories" : picked;
 
   const nicknames = info?.memberNicknames;
   const people =

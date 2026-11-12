@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
+import ScrollTopOnRoute from "@/components/ScrollTopOnRoute";
 
 const notoSansKr = Noto_Sans_KR({
   subsets: ["latin"],
@@ -21,7 +22,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko" className={notoSansKr.variable}>
-      <body>{children}</body>
+      <body>
+        <ScrollTopOnRoute />
+        {children}
+      </body>
     </html>
   );
 }

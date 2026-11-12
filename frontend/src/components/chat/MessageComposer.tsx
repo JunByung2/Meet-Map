@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState, type ClipboardEvent } from 'react'
 import styles from './chat.module.css'
 import tray from './bundle.module.css'
+import { hasAllowedExtension } from '@/lib/photos'
 
-const TOOLS = ['MeetMode', '사진', '장소 선택', '투표', '약속 연결', '첨부']
-const MAX_PHOTOS = 48 // 한 번에 보낼 수 있는 사진 수
+const TOOLS = ['MeetMode', '첨부', '장소 선택', '투표'] // 첨부 안에 사진과 문서·파일이 들어 있다
+const MAX_PHOTOS = 27 // 한 번에 보낼 수 있는 사진 수 (9장씩 3묶음)
 const BUNDLE_KEY = 'meetmap.chat.bundlePhotos' // '묶어서 보내기' 선택을 기억한다 (다음에도 그대로)
 
 function readBundlePref(): boolean {
@@ -48,6 +49,7 @@ export default function MessageComposer({
   const [text, setText] = useState('')
   const imageRef = useRef<HTMLInputElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [attachOpen, setAttachOpen] = useState(false) // 첨부를 누르면 사진 / 문서·파일 중에 고른다
 
   // 보내기 전 사진 미리보기 (2장 이상 골랐을 때)
   const [pending, setPending] = useState<
@@ -107,9 +109,18 @@ export default function MessageComposer({
   }
 
   function pick(kind: 'image' | 'file', input: HTMLInputElement) {
-    const files = Array.from(input.files ?? [])
+    let files = Array.from(input.files ?? [])
+    let dropped = false
     input.value = '' // 같은 파일을 다시 골라도 동작하게
     if (files.length === 0) return
+    if (kind === 'image') {
+      // accept="image/*" 로 모바일에서 사진 선택 화면이 한결같이 뜨게 하는 대신, 서버가 받는 사진(JPG·PNG·WEBP·HEIC)만 남긴다
+      const okFiles = files.filter((f) => hasAllowedExtension(f))
+      dropped = okFiles.length < files.length
+      if (dropped) setNote('JPG, PNG, WEBP, HEIC 사진만 보낼 수 있어요. 다른 형식은 뺐어요.')
+      files = okFiles
+      if (files.length === 0) return
+    }
     if (kind === 'file') {
       if (onFiles) void onFiles(kind, files)
       else void onFile?.(kind, files[0])
@@ -124,7 +135,7 @@ export default function MessageComposer({
     const room = MAX_PHOTOS - pending.length
     if (files.length > room)
       setNote(`한 번에 최대 ${MAX_PHOTOS}장까지 보낼 수 있어요.`)
-    else setNote('')
+    else setNote(dropped ? 'JPG, PNG, WEBP, HEIC 사진만 보낼 수 있어요. 다른 형식은 뺐어요.' : '')
     setPending((cur) => [
       ...cur,
       ...files
@@ -179,12 +190,15 @@ export default function MessageComposer({
           <button
             key={tool}
             type="button"
-            className={styles.chip}
+            className={`${styles.chip} ${tool === '첨부' && attachOpen ? styles.chipOn : ''}`}
             disabled={tool === '장소 선택' && planning}
+            aria-expanded={tool === '첨부' ? attachOpen : undefined}
             onClick={() => {
-              if (tool === '사진') imageRef.current?.click()
-              else if (tool === '첨부') fileRef.current?.click()
-              else onTool(tool)
+              if (tool === '첨부') setAttachOpen((v) => !v)
+              else {
+                setAttachOpen(false)
+                onTool(tool)
+              }
             }}
           >
             {tool}
@@ -197,11 +211,34 @@ export default function MessageComposer({
         )}
       </div>
 
+      {attachOpen && (
+        <div className={styles.attachMenu}>
+          <button
+            type="button"
+            onClick={() => {
+              setAttachOpen(false)
+              imageRef.current?.click()
+            }}
+          >
+            🖼 사진
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAttachOpen(false)
+              fileRef.current?.click()
+            }}
+          >
+            📄 문서·파일
+          </button>
+        </div>
+      )}
+
       <input
         ref={imageRef}
         type="file"
         multiple
-        accept="image/png,image/jpeg,image/webp,image/gif,.heic"
+        accept="image/*"
         hidden
         onChange={(e) => pick('image', e.target)}
       />
@@ -234,7 +271,7 @@ export default function MessageComposer({
           <div className={tray.trayRow}>
             <span className={tray.count}>
               사진 {pending.length}장
-              {pending.length > 16 && bundle ? ' (16장씩 묶여요)' : ''}
+              {pending.length > 9 && bundle ? ' (9장씩 묶여요)' : ''}
             </span>
             {pending.length > 1 && (
               <button

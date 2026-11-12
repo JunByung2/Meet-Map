@@ -10,7 +10,7 @@ export type OutItem = { id: string; file: File; preview: string; status: OutStat
 export type OutGroup = { key: string; bundle: boolean; items: OutItem[]; working: boolean };
 
 const PARALLEL = 5; // 동시에 올리는 장수
-export const BUNDLE_MAX = 16; // 한 말풍선에 묶이는 최대 장수 (4x4). 더 많으면 16장씩 나눠 여러 말풍선으로 보낸다
+export const BUNDLE_MAX = 9; // 한 말풍선에 묶이는 최대 장수 (3x3). 더 많으면 9장씩 나눠 여러 말풍선으로 보낸다 (한 번에 최대 27장)
 
 /**
  * 채팅에서 사진을 보낼 때, 카톡처럼 '보내는 중' 말풍선을 보여 주기 위한 상태.

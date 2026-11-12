@@ -7,12 +7,15 @@ GET    /groups/{group_id}/photos/{photo_id}           : 사진 한 장 + 같이 
 PATCH  /groups/{group_id}/photos/{photo_id}           : 사진 설명(caption) 수정
 PATCH  /groups/{group_id}/photos/batch/{batch_id}     : 묶음의 제목/메모/장소 수정
 DELETE /groups/{group_id}/photos/batch/{batch_id}     : 묶음 삭제 (파일 + 기록)
+GET    /groups/{group_id}/photos/day-covers           : 날짜별 대표 사진 목록 (달력에 보여 줄 사진)
+PUT    /groups/{group_id}/photos/{photo_id}/day-cover : 이 사진을 그날의 대표 사진으로 정하기 (그룹 멤버 누구나)
+DELETE /groups/{group_id}/photos/day-covers/{day}     : 대표 사진을 기본(그날 첫 사진)으로 되돌리기 (그룹 멤버 누구나)
 
 접근통제: 모든 API 가 require_group_member 를 거친다. (로그인 안 함 401 / 그룹 멤버 아님 403)
 수정·삭제는 올린 사람 또는 방장만 할 수 있다.
 """
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from pydantic import BaseModel, Field
@@ -24,8 +27,8 @@ from app.config import PHOTO_MAX_BYTES, PHOTO_MAX_FILES
 from app.db import get_db
 from app.deps.auth import get_current_user, require_group_member
 from app.linked_delete import delete_photo_batches
-from app.models import ChatAttachment, GroupMember, Photo, User
-from app.records_sync import auto_link_photos
+from app.models import ChatAttachment, GroupMember, Photo, PhotoDayCover, User
+from app.records_sync import auto_link_photos, to_kst_date
 
 router = APIRouter(prefix="/groups/{group_id}/photos", tags=["photos"])
 
@@ -61,6 +64,11 @@ class PhotoOut(BaseModel):
 class PhotoDetailOut(BaseModel):
     photo: PhotoOut
     batch: list[PhotoOut]
+
+
+class DayCoverOut(BaseModel):
+    day: str       # YYYY-MM-DD (한국 시간)
+    photo_id: int  # 그날의 대표 사진
 
 
 class CaptionIn(BaseModel):
@@ -208,6 +216,18 @@ def _get_photo(db: DbSession, group_id: int, photo_id: int) -> Photo:
     return photo
 
 
+def _batch_day(db: DbSession, photo: Photo) -> date:
+    """사진이 어느 날에 속하는지. 화면이 사진을 날짜별로 묶는 기준과 같게,
+    같이 올린 묶음의 첫 사진(정렬 번호 순)이 올라온 날(한국 시간)로 정한다."""
+    first = db.execute(
+        select(Photo)
+        .where(Photo.group_id == photo.group_id, Photo.batch_id == photo.batch_id)
+        .order_by(Photo.sort_order, Photo.id)
+        .limit(1)
+    ).scalar_one()
+    return to_kst_date(first.created_at) or to_kst_date(photo.created_at)
+
+
 def _get_batch(db: DbSession, group_id: int, batch_id: str) -> list[Photo]:
     rows = db.execute(
         select(Photo).where(Photo.group_id == group_id, Photo.batch_id == batch_id).order_by(Photo.sort_order, Photo.id)
@@ -230,6 +250,40 @@ def list_photos(
         select(Photo).where(Photo.group_id == group_id).order_by(Photo.created_at.desc(), Photo.id.desc()).limit(LIST_LIMIT)
     ).scalars().all()
     return _to_out(db, list(rows), user, member, release_db=True)
+
+
+# 아래 두 주소는 "/{photo_id}" 보다 먼저 있어야 한다 (그렇지 않으면 "day-covers" 를 사진 번호로 읽으려 해서 오류가 난다)
+@router.get("/day-covers", response_model=list[DayCoverOut])
+def list_day_covers(
+    group_id: int,
+    member: GroupMember = Depends(require_group_member),
+    db: DbSession = Depends(get_db),
+):
+    """날짜별 대표 사진. 정해 둔 사진이 지워졌다면 그 날짜는 목록에 없다(기본 = 그날 첫 사진)."""
+    rows = db.execute(
+        select(PhotoDayCover.day, PhotoDayCover.photo_id)
+        .join(Photo, Photo.id == PhotoDayCover.photo_id)
+        .where(PhotoDayCover.group_id == group_id)
+    ).all()
+    return [DayCoverOut(day=d.isoformat(), photo_id=pid) for d, pid in rows]
+
+
+@router.delete("/day-covers/{day}", status_code=status.HTTP_204_NO_CONTENT)
+def reset_day_cover(
+    group_id: int,
+    day: str,
+    member: GroupMember = Depends(require_group_member),
+    db: DbSession = Depends(get_db),
+):
+    try:
+        the_day = date.fromisoformat(day)
+    except ValueError:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "날짜 형식이 올바르지 않아요. (예: 2026-11-09)") from None
+    row = db.get(PhotoDayCover, (group_id, the_day))
+    if row is not None:
+        db.delete(row)
+        db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=list[PhotoOut])
@@ -355,6 +409,27 @@ def photo_detail(
     batch = _get_batch(db, group_id, photo.batch_id)
     out = _to_out(db, batch, user, member)
     return PhotoDetailOut(photo=next(o for o in out if o.id == photo.id), batch=out)
+
+
+@router.put("/{photo_id}/day-cover", response_model=DayCoverOut)
+def set_day_cover(
+    group_id: int,
+    photo_id: int,
+    member: GroupMember = Depends(require_group_member),
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+):
+    """이 사진을 그날의 대표 사진(달력에 보이는 사진)으로 정한다. 그룹 멤버라면 누구나 바꿀 수 있다."""
+    photo = _get_photo(db, group_id, photo_id)  # 다른 그룹 사진이면 404
+    the_day = _batch_day(db, photo)
+    row = db.get(PhotoDayCover, (group_id, the_day))
+    if row is None:
+        db.add(PhotoDayCover(group_id=group_id, day=the_day, photo_id=photo.id, updated_by=user.id))
+    else:
+        row.photo_id = photo.id
+        row.updated_by = user.id
+    db.commit()
+    return DayCoverOut(day=the_day.isoformat(), photo_id=photo.id)
 
 
 @router.get("/{photo_id}/download")

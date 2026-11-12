@@ -25,6 +25,7 @@ from app.routers import (
     photos,
     meetings,
     records,
+    me_memories,
 )
 
 # 장소 추천 / 이동 도우미
@@ -63,6 +64,7 @@ app.include_router(invites.router)
 app.include_router(invites.join_router)
 app.include_router(photos.router)
 app.include_router(records.router)
+app.include_router(me_memories.router)
 app.include_router(meetings.router)
 app.include_router(messages.router)
 app.include_router(chat_files.router)

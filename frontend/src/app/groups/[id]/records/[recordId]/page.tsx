@@ -85,8 +85,8 @@ function Detail({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
       <p style={{ marginBottom: 16 }}>
         <Link href={back} className="link-arrow">← 지난 기록으로</Link>
       </p>
-      <div className="page-head">
-        <div>
+      <div className="page-head rc-head">
+        <div className="rc-main">
           <p className="eyebrow">{formatMeetDate(r.meet_date)}</p>
           <h1 className="page-title">{r.title}</h1>
           <p className="page-sub">
@@ -95,7 +95,7 @@ function Detail({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
           </p>
         </div>
         {r.can_edit && (
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="rc-actions">
             <button className="btn secondary" onClick={() => setEditing((v) => !v)} disabled={busy}>
               {editing ? "수정 취소" : "수정"}
             </button>

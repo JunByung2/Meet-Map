@@ -512,3 +512,106 @@ p {
 
 /* 한글 입력 칸: 지원하는 브라우저에서는 한글 입력 상태로 시작하도록 힌트를 준다 (브라우저/OS 에 따라 무시될 수 있음) */
 .ime-ko { ime-mode: active; }
+
+/* ---------- 모바일: 메뉴를 아래 고정 탭바로, 위쪽 바는 간단하게 ---------- */
+@media (max-width: 960px) {
+  .shell-header {
+    height: 60px;
+  }
+  .brand {
+    gap: 10px;
+    font-size: 18px;
+    white-space: nowrap;
+  }
+  .brand-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
+  .brand-logo svg {
+    width: 20px;
+    height: 20px;
+  }
+  .header-right {
+    gap: 8px;
+    white-space: nowrap;
+  }
+  .header-right > span,
+  .header-user > span:not(.avatar) {
+    display: none; /* "우리만 볼 수 있는 기록" 문구와 닉네임은 좁은 화면에서 숨김 */
+  }
+  .header-right .btn {
+    white-space: nowrap;
+    flex: none;
+  }
+
+  .shell-body {
+    min-height: calc(100vh - 60px);
+    grid-template-columns: minmax(0, 1fr); /* 내용이 길어도 화면 밖으로 밀려나지 않게 */
+  }
+  .content {
+    min-width: 0;
+  }
+  /* 사이드바 → 화면 아래에 붙는 탭바 (메뉴만 남긴다) */
+  .sidebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+    border: 0;
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 16px rgba(33, 60, 64, 0.08);
+    gap: 0;
+  }
+  .sidebar > :not(.nav) {
+    display: none;
+  }
+  .nav {
+    flex-direction: row;
+    gap: 2px;
+  }
+  .nav-item {
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 8px 2px;
+    font-size: 11px;
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .nav-item svg {
+    width: 22px;
+    height: 22px;
+  }
+  /* 탭바에 가리지 않게 */
+  .content {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  }
+  .ph-select-bar {
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ---------- 모바일 전용 다듬기 (PC 화면은 그대로) ---------- */
+@media (max-width: 640px) {
+  /* 확정된 약속: 확정 표시는 오른쪽 위, 수정/삭제는 그 아래에 나란히 */
+  .meet-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+    min-width: 0 !important;
+  }
+  .meet-actions .chip {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+  .meet-actions .btn {
+    width: 100%;
+  }
+}

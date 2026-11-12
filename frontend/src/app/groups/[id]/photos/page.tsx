@@ -4,8 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PhotoShell from "@/components/PhotoShell";
 import PhotoCollage from "@/components/PhotoCollage";
+import MemoryTabs from "@/components/MemoryTabs";
+import PhotoCalendar, { type DayCell } from "@/components/PhotoCalendar";
 import { api } from "@/lib/api";
-import { formatDate, formatDayHeading, groupByDay, groupLabel, groupPhotos, type Photo, type PhotoGroup } from "@/lib/photos";
+import type { MeetingRecord } from "@/lib/records";
+import { formatDate, formatDayHeading, groupByDay, groupLabel, groupPhotos, kstDay, type DayCover, type Photo, type PhotoGroup } from "@/lib/photos";
+import { buildCalendarDays, recordsByDayOf } from "@/lib/photoCalendar";
+import CalIcon from "@/components/CalIcon";
 
 export default function GroupPhotosPage() {
   return (
@@ -17,6 +22,8 @@ export default function GroupPhotosPage() {
 
 function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unknown) => string }) {
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [records, setRecords] = useState<MeetingRecord[]>([]); // 달력에 약속 기록이 있는 날을 표시하는 데 쓴다
+  const [covers, setCovers] = useState<DayCover[]>([]); // 날짜별 대표 사진 (정해 두지 않은 날은 그날 첫 사진)
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"all" | "chat" | "record">("all");
   const [loading, setLoading] = useState(true);
@@ -25,12 +32,22 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [calOpen, setCalOpen] = useState(false); // 달력 시트
+  const [dayFilter, setDayFilter] = useState<string | null>(null); // 달력에서 고른 날짜 (YYYY-MM-DD)
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      setPhotos(await api<Photo[]>(`/groups/${groupId}/photos`));
+      // 약속 기록은 달력 표시용이라, 못 불러와도 사진 목록은 그대로 보여 준다
+      const [list, recs, cov] = await Promise.all([
+        api<Photo[]>(`/groups/${groupId}/photos`),
+        api<MeetingRecord[]>(`/groups/${groupId}/records`).catch(() => [] as MeetingRecord[]),
+        api<DayCover[]>(`/groups/${groupId}/photos/day-covers`).catch(() => [] as DayCover[]),
+      ]);
+      setPhotos(list);
+      setRecords(recs);
+      setCovers(cov);
     } catch (e) {
       setError(onApiError(e));
     } finally {
@@ -43,19 +60,33 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
     load();
   }, [load]);
 
+  // 추억 화면의 달력에서 "이 날 사진 보기"로 넘어오면 그 날짜만 보이게 한다 (?day=YYYY-MM-DD)
+  useEffect(() => {
+    try {
+      const day = new URLSearchParams(window.location.search).get("day");
+      if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) setDayFilter(day);
+    } catch {
+      // 주소를 못 읽으면 그냥 전체를 보여 준다
+    }
+  }, []);
+
   const chatCount = photos.filter((p) => p.from_chat).length;
   const shown = useMemo(
     () => (tab === "all" ? photos : photos.filter((p) => (tab === "chat" ? !!p.from_chat : !p.from_chat))),
     [photos, tab],
   );
   const groups = useMemo(() => groupPhotos(shown), [shown]);
+  // 달력에 보여 줄 날짜별 정보: 사진 장수, 대표 사진, 약속 기록 여부
+  const recordsByDay = useMemo(() => recordsByDayOf(records), [records]);
+  const calendarDays = useMemo(() => buildCalendarDays(groups, covers, recordsByDay), [groups, covers, recordsByDay]);
   const visible = useMemo(() => {
     const q = search.trim().toLocaleLowerCase();
-    if (!q) return groups;
-    return groups.filter((g) =>
+    const byDay = dayFilter ? groups.filter((g) => kstDay(g.created_at) === dayFilter) : groups;
+    if (!q) return byDay;
+    return byDay.filter((g) =>
       [g.title, g.memo, ...g.photos.map((p) => p.caption)].some((t) => (t || "").toLocaleLowerCase().includes(q)),
     );
-  }, [groups, search]);
+  }, [groups, search, dayFilter]);
   const days = useMemo(() => groupByDay(visible), [visible]);
   const visibleCount = visible.reduce((sum, g) => sum + g.photos.length, 0);
 
@@ -130,16 +161,16 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <p className="eyebrow">우리 그룹의 사진 공간</p>
-          <h1 className="page-title">우리의 순간, 한 장씩</h1>
-          <p className="page-sub">함께 찍은 사진을 모아 두면 그룹 친구들만 볼 수 있어요.</p>
-        </div>
-        <Link className="btn" href={`${base}/upload`}>
-          + 사진 올리기
-        </Link>
-      </div>
+      <MemoryTabs
+        groupId={groupId}
+        current="photos"
+        sub="함께 찍은 사진을 모아 두면 그룹 친구들만 볼 수 있어요."
+        action={
+          <Link className="btn" href={`${base}/upload`}>
+            + 사진 올리기
+          </Link>
+        }
+      />
 
       <div className="ph-toolbar">
         <div className="ph-tabs" role="tablist" aria-label="사진 분류">
@@ -155,6 +186,25 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
             </button>
           ))}
         </div>
+        {photos.length > 0 && (
+          <button
+            type="button"
+            className={`ph-cal-btn${dayFilter ? " on" : ""}`}
+            aria-label="달력으로 사진 보기"
+            title="달력으로 보기"
+            onClick={() => setCalOpen(true)}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="16" rx="3" />
+              <path d="M3 10h18M8 3v4M16 3v4" />
+            </svg>
+          </button>
+        )}
+        {dayFilter && (
+          <button type="button" className="ph-day-chip" onClick={() => setDayFilter(null)} aria-label="날짜 선택 해제">
+            <CalIcon /> {formatDayHeading(dayFilter).replace(/^\d+년 /, "")} ✕
+          </button>
+        )}
         {photos.length > 0 &&
           (selectMode ? (
             <button type="button" className="btn secondary sm" onClick={leaveSelect}>
@@ -173,6 +223,18 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
           aria-label="사진 검색"
         />
       </div>
+
+      {dayFilter && (recordsByDay.get(dayFilter)?.length ?? 0) > 0 && (
+        <div className="ph-day-records">
+          {recordsByDay.get(dayFilter)?.map((r) => (
+            <Link key={r.id} href={`/groups/${groupId}/records/${r.id}`}>
+              📌 {r.title}
+              {r.place_name ? ` · 📍 ${r.place_name}` : ""}
+              <span aria-hidden="true"> →</span>
+            </Link>
+          ))}
+        </div>
+      )}
 
       {error && (
         <div className="error">
@@ -286,14 +348,17 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
         </>
       ) : (
         <div className="card ph-empty">
-          <h3>{search ? "검색 결과가 없어요" : tab === "chat" ? "채팅으로 보낸 사진이 없어요" : tab === "record" ? "직접 올린 사진이 없어요" : "아직 모아 둔 사진이 없어요"}</h3>
-          <p>{search ? "다른 말로 검색해 보세요." : "첫 사진을 올려서 소중한 순간을 기록해 보세요."}</p>
-          {!search && (
+          <h3>{dayFilter ? "이 날은 사진이 없어요" : search ? "검색 결과가 없어요" : tab === "chat" ? "채팅으로 보낸 사진이 없어요" : tab === "record" ? "직접 올린 사진이 없어요" : "아직 모아 둔 사진이 없어요"}</h3>
+          <p>{dayFilter ? "달력에서 다른 날을 고르거나 날짜 선택을 해제해 보세요." : search ? "다른 말로 검색해 보세요." : "첫 사진을 올려서 소중한 순간을 기록해 보세요."}</p>
+          {!search && !dayFilter && (
             <Link className="btn" href={`${base}/upload`}>
               첫 사진 올리기
             </Link>
           )}
         </div>
+      )}
+      {calOpen && (
+        <PhotoCalendar days={calendarDays} selected={dayFilter} onSelect={setDayFilter} onClose={() => setCalOpen(false)} />
       )}
     </>
   );

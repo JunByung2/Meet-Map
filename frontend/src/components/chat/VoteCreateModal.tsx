@@ -5,6 +5,7 @@ import { api, ApiError } from "@/lib/api";
 import type { PlaceValue } from "@/lib/photos";
 import { usePlaceSearch } from "@/lib/usePlaceSearch";
 import styles from "./vote.module.css";
+import CalIcon from "@/components/CalIcon";
 
 /** text: 입력한 항목 이름 / place: 검색해서 고른 장소 (직접 적기만 했으면 null) */
 type Option = { key: number; text: string; place: PlaceValue | null };

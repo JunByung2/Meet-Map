@@ -55,7 +55,7 @@ export function loadKakao(): Promise<any> {
       script.remove();
       reject(
         new Error(
-          "카카오 지도를 불러오지 못했어요. JavaScript 키와 허용 도메인(http://localhost:3000)을 확인해 주세요.",
+          `카카오 지도를 불러오지 못했어요. JavaScript 키와 허용 도메인(${window.location.origin})을 확인해 주세요.`,
         ),
       );
     };

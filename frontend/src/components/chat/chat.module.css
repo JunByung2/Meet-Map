@@ -661,14 +661,14 @@
   }
 }
 
-/* PC 오른쪽 칸: 투표 → 장소 선택 → Meet Mode.
-   칸 높이는 채팅(왼쪽)과 똑같이 맞추고, 넘치는 건 오른쪽 칸 안에서만 스크롤한다. */
+/* PC 오른쪽 칸: 투표 → 장소 선택 → Meet Mode */
 .rightWrap {
   position: relative;
   align-self: stretch;
   min-width: 0;
   min-height: 420px;
 }
+
 .rightCol {
   position: absolute;
   inset: 0;
@@ -681,39 +681,51 @@
   scrollbar-width: thin;
   padding-right: 2px;
 }
+
 .rightCol > * {
   flex: none;
   align-self: stretch !important;
   width: 100%;
   box-sizing: border-box;
-  /* Meet Mode 칸이 따로 스크롤/고정되지 않고 오른쪽 칸 스크롤을 같이 쓰게 */
   position: static !important;
   max-height: none !important;
   overflow: visible !important;
 }
-/* 모바일: "함께 정한 약속을 이곳에서 확인해 보세요" 안내 줄은 뺀다 (PC·태블릿은 그대로) */
+
+/* 모바일 약속 안내 문구 숨기기 */
 @media (max-width: 650px) {
-  .chatMain > .bannerMeet { display: none; }
+  .chatMain > .bannerMeet {
+    display: none;
+  }
 }
 
-/* PC: 채팅방을 화면 높이에 맞추고, 왼쪽 대화 목록 / 오른쪽 칸이 각자 안에서만 스크롤 */
+/* PC 채팅방 레이아웃 */
 @media (min-width: 1051px) {
   .layout {
     align-items: stretch;
     grid-template-rows: minmax(0, 1fr);
   }
+
   .chatMain {
     display: flex;
     flex-direction: column;
     min-height: 0;
   }
-  .chatMain > .banner { flex: none; }
+
+  .chatMain > .banner {
+    flex: none;
+  }
+
   .chatMain > .messages {
     flex: 1 1 auto;
     min-height: 0;
     max-height: none;
   }
-  .chatMain > .composer { flex: none; }
+
+  .chatMain > .composer {
+    flex: none;
+  }
+
   .rightCol {
     align-self: stretch;
     min-height: 0;
@@ -721,10 +733,34 @@
     overscroll-behavior: contain;
     padding-right: 2px;
   }
+
   .rightCol > * {
     flex: none;
     position: static !important;
     max-height: none !important;
     overflow: visible !important;
+  }
+}
+
+/* 모바일 채팅 입력창 개선 */
+@media (max-width: 650px) {
+  /* 입력 시 화면 자동 확대 방지 */
+  .composerBottom :global(.input) {
+    font-size: 16px;
+    flex: 1;
+    min-width: 0;
+    width: 0;
+  }
+
+  .layout,
+  .chatMain,
+  .composer,
+  .composerBottom {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .send {
+    flex-shrink: 0;
   }
 }

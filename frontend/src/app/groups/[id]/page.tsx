@@ -9,6 +9,7 @@ import { LAST_GROUP_KEY } from "@/components/Sidebar";
 import { ddayLabel } from "@/lib/dday";
 import { pickName, readNameMode } from "@/lib/nameMode";
 import Avatar from "@/components/Avatar";
+import GroupsMeetingCalendar from "@/features/calendar/GroupsMeetingCalendar";
 
 type Member = {
   user_id: number;
@@ -42,6 +43,39 @@ type InviteIssued = {
   max_uses: number;
 };
 
+type MeetingLite = {
+  id: number;
+  group_id: number;
+  title: string;
+  location: string;
+  meeting_time: string;
+  status: string;
+};
+
+const DOW = ["일", "월", "화", "수", "목", "금", "토"];
+
+function startOfToday() {
+  const n = new Date();
+  return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+}
+
+// 약속 날짜가 오늘이면 "오늘", 아니면 "D-3"
+function dLabel(iso: string) {
+  const d = new Date(iso);
+  const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.round(
+    (day.getTime() - startOfToday().getTime()) / 86400000,
+  );
+  return diff <= 0 ? "오늘" : `D-${diff}`;
+}
+
+function whenLabel(iso: string) {
+  const d = new Date(iso);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]}) ${hh}:${mm}`;
+}
+
 const AVATAR_TONES = ["", "peach", "lavender"];
 
 function formatTime(iso: string | null) {
@@ -59,6 +93,7 @@ export default function GroupDetailPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [meetings, setMeetings] = useState<MeetingLite[] | null>(null); // null = 불러오는 중
 
   function handleError(err: unknown) {
     if (err instanceof ApiError && err.status === 401) {
@@ -106,6 +141,21 @@ export default function GroupDetailPage() {
   useEffect(() => {
     loadGroup();
   }, [loadGroup]);
+
+  // 이 그룹의 약속 (실패해도 홈은 그대로 보이게 빈 목록으로 둔다)
+  useEffect(() => {
+    let cancelled = false;
+    api<MeetingLite[]>(`/groups/${groupId}/meetings`)
+      .then((list) => {
+        if (!cancelled) setMeetings(list);
+      })
+      .catch(() => {
+        if (!cancelled) setMeetings([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [groupId]);
 
   async function onIssue() {
     setError("");
@@ -204,6 +254,18 @@ export default function GroupDetailPage() {
   const isOwner = group.my_role === "owner";
   const hasLink = invite !== null && invite.max_uses !== null;
 
+  // 오늘 이후 확정 약속 중 가장 가까운 것
+  const nextMeeting = (meetings ?? [])
+    .filter(
+      (m) =>
+        m.status?.toLowerCase() === "confirmed" &&
+        new Date(m.meeting_time).getTime() >= startOfToday().getTime(),
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.meeting_time).getTime() - new Date(b.meeting_time).getTime(),
+    )[0];
+
   return (
     <AppShell
       group={{
@@ -239,6 +301,77 @@ export default function GroupDetailPage() {
       </div>
 
       {error && <div className="error">{error}</div>}
+
+      {/* 다음 약속: 들어오자마자 가장 궁금한 것 */}
+      <section className="card mint" style={{ marginBottom: 16 }}>
+        <p className="meta" style={{ marginBottom: 6 }}>
+          다음 약속
+        </p>
+        {meetings === null ? (
+          <p className="muted">불러오는 중…</p>
+        ) : nextMeeting ? (
+          <div
+            className="row-between"
+            style={{ gap: 16, flexWrap: "wrap", alignItems: "center" }}
+          >
+            <div>
+              <h2 className="card-title">
+                <span className="chip" style={{ marginRight: 8 }}>
+                  {dLabel(nextMeeting.meeting_time)}
+                </span>
+                {nextMeeting.title}
+              </h2>
+              <p className="muted" style={{ marginTop: 6 }}>
+                {whenLabel(nextMeeting.meeting_time)}
+                {nextMeeting.location ? ` · 📍 ${nextMeeting.location}` : ""}
+              </p>
+            </div>
+            <div className="row" style={{ gap: 8 }}>
+              <Link
+                href={`/groups/${group.id}/meetings`}
+                className="btn sm"
+                style={{ textDecoration: "none" }}
+              >
+                약속 보기
+              </Link>
+              <Link
+                href={`/groups/${group.id}/chat`}
+                className="btn secondary sm"
+                style={{ textDecoration: "none" }}
+              >
+                채팅방으로
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div
+            className="row-between"
+            style={{ gap: 16, flexWrap: "wrap", alignItems: "center" }}
+          >
+            <p className="muted">아직 예정된 약속이 없어요.</p>
+            <Link
+              href={`/groups/${group.id}/meetings`}
+              className="btn sm"
+              style={{ textDecoration: "none" }}
+            >
+              + 약속 만들기
+            </Link>
+          </div>
+        )}
+      </section>
+
+      {/* 우리 그룹 약속 달력 */}
+      <section style={{ marginBottom: 32 }}>
+        <div className="row-between" style={{ marginBottom: 16 }}>
+          <h2 className="section-title">약속 달력</h2>
+        </div>
+        <div className="card">
+          <GroupsMeetingCalendar
+            groups={[{ id: group.id, name: group.name, icon: group.icon }]}
+            meetings={meetings ?? []}
+          />
+        </div>
+      </section>
 
       <div className="grid-main">
         <section className="card">
@@ -359,16 +492,16 @@ export default function GroupDetailPage() {
         )}
       </div>
 
-      <section className="card" style={{ marginTop: 20 }}>
-        <h2 className="card-title" style={{ marginBottom: 4 }}>
-          그룹 나가기
-        </h2>
-        <p className="muted" style={{ marginBottom: 12 }}>
+      <section
+        className="row-between"
+        style={{ marginTop: 28, gap: 12, flexWrap: "wrap" }}
+      >
+        <p className="meta">
           나가면 이 그룹의 채팅과 사진을 볼 수 없어요. 다시 들어오려면 초대
           링크가 필요해요.
           {isOwner && " 방장이 나가면 먼저 들어온 멤버가 방장이 돼요."}
         </p>
-        <button className="btn secondary" onClick={onLeave}>
+        <button className="btn secondary sm" onClick={onLeave}>
           그룹 나가기
         </button>
       </section>

@@ -126,8 +126,8 @@
 
 .cell {
   position: relative;
-  min-height: 78px;
-  padding: 6px 6px 8px;
+  min-height: 64px;
+  padding: 5px 6px 6px;
   text-align: left;
   display: flex;
   flex-direction: column;

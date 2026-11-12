@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from meeting_tools.recommendation.recommend_service import recommend_places
+from meeting_tools.recommendation.recommend_service import MAX_DEPARTURES, MIN_DEPARTURES, recommend_places
 from meeting_tools.transit.routes import router as transit_map_router
 
 from meeting_tools.transit.seoul_bus import router as seoul_bus_router
@@ -63,7 +63,7 @@ def transit(body: TransitRequest):
     }
 
 class RecommendRequest(BaseModel):
-    departures: list[Location] = Field(min_length=2, max_length=5)
+    departures: list[Location] = Field(min_length=MIN_DEPARTURES, max_length=MAX_DEPARTURES)
 
 
 @app.post("/recommend")

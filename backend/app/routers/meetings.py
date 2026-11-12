@@ -56,8 +56,8 @@ class AvailabilitySet(BaseModel):
 
 class CandidateCreate(BaseModel):
     title: str = Field(min_length=1, max_length=100)
-    location: str = Field(min_length=1, max_length=200)  # 장소 이름
-    meeting_time: datetime
+    location: str = Field(min_length=1, max_length=200)  # 항목 이름 (장소를 검색해 고르지 않고 직접 적어도 된다)
+    meeting_time: datetime | None = None  # 투표는 약속을 만들지 않으므로 날짜는 선택 (안 보내면 만든 시각)
     # 카카오 장소 검색으로 고른 장소 정보 (선택)
     place_id: str | None = Field(default=None, max_length=40)
     place_address: str | None = Field(default=None, max_length=200)
@@ -486,15 +486,12 @@ def create_candidate(
             "후보 제목과 장소를 입력해 주세요.",
         )
 
-    clash = find_time_conflict(db, group_id, body.meeting_time)
-    if clash is not None:
-        raise HTTPException(409, conflict_message(clash))
-
+    # 투표는 약속을 만들지 않으므로 기존 약속과 시간이 겹쳐도 상관없다.
     candidate = MeetingCandidate(
         group_id=group_id,
         title=body.title.strip(),
         location=body.location.strip(),
-        meeting_time=body.meeting_time,
+        meeting_time=body.meeting_time or datetime.now(timezone.utc),
         place_id=body.place_id,
         place_address=body.place_address,
         place_lat=body.place_lat,
@@ -747,7 +744,7 @@ def confirm_candidate(
     if candidate.created_by != user.id:
         raise HTTPException(
             403,
-            "투표를 만든 사람만 약속을 확정할 수 있습니다.",
+            "투표를 만든 사람만 투표를 종료할 수 있습니다.",
         )
 
     counts = get_candidate_vote_counts(
@@ -795,34 +792,17 @@ def confirm_candidate(
             "선택한 후보가 최다 득표 후보가 아닙니다.",
         )
 
-    clash = find_time_conflict(db, group_id, candidate.meeting_time)
-    if clash is not None:
-        raise HTTPException(409, conflict_message(clash))
-
-    meeting = Meeting(
-        group_id=group_id,
-        title=candidate.title,
-        location=candidate.location,
-        meeting_time=candidate.meeting_time,
-        place_id=candidate.place_id,
-        place_address=candidate.place_address,
-        place_lat=candidate.place_lat,
-        place_lng=candidate.place_lng,
-        created_by=user.id,
-        status="confirmed",
-    )
-
-    db.add(meeting)
-    # 이 투표는 끝난 것으로 표시하고, 확정된 후보를 기록한다.
+    # 투표를 종료하면 약속이 자동으로 만들어지지 않는다. (약속은 약속 페이지에서 직접 만든다)
+    # 이 투표는 끝난 것으로 표시하고, 선택된 항목을 기록한다.
     for item in candidates:
         item.closed = True
         item.chosen = item.id == candidate_id
     db.commit()
-    db.refresh(meeting)
+    db.refresh(candidate)
 
     return {
-        "message": "약속이 확정되었습니다.",
-        "meeting": meeting_to_dict(meeting),
+        "message": "투표가 종료되었습니다.",
+        "candidate": candidate_to_dict(candidate, counts.get(candidate.id, 0)),
     }
 
 

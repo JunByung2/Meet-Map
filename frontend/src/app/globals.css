@@ -598,14 +598,20 @@ p {
 }
 
 /* ---------- 모바일 전용 다듬기 (PC 화면은 그대로) ---------- */
-@media (max-width: 640px) {
-  /* 확정된 약속: 확정 표시는 오른쪽 위, 수정/삭제는 그 아래에 나란히 */
+/* 확정된 약속 카드: 카드 폭이 좁으면(폰 어느 크기든) 확정 표시는 오른쪽 위, 수정/삭제는 그 아래에 나란히 */
+.meet-card { container-type: inline-size; }
+.meet-row > .row { flex: 1 1 240px; min-width: 0; }
+.meet-row > .row > div { min-width: 0; overflow-wrap: anywhere; }
+@container (max-width: 560px) {
+  .meet-row { flex-direction: column; align-items: stretch !important; }
+  .meet-row > .row { flex: 0 0 auto; }
   .meet-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
     width: 100%;
     min-width: 0 !important;
+    align-items: stretch !important;
   }
   .meet-actions .chip {
     grid-column: 1 / -1;
@@ -613,5 +619,24 @@ p {
   }
   .meet-actions .btn {
     width: 100%;
+    min-width: 0;
+  }
+}
+
+/* 컨테이너 쿼리를 모르는 구형 브라우저(옛 iPad 등): 태블릿 폭 이하에서 같은 정리 */
+@supports not (container-type: inline-size) {
+  @media (max-width: 900px) {
+    .meet-row { flex-direction: column; align-items: stretch !important; }
+    .meet-row > .row { flex: 0 0 auto; }
+    .meet-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      width: 100%;
+      min-width: 0 !important;
+      align-items: stretch !important;
+    }
+    .meet-actions .chip { grid-column: 1 / -1; justify-self: end; }
+    .meet-actions .btn { width: 100%; min-width: 0; }
   }
 }

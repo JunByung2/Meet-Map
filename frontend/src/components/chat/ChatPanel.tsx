@@ -22,6 +22,8 @@ import sel from './chatSelect.module.css'
 import { useLocationShare } from '@/hooks/useLocationShare'
 import MeetModePanel from './MeetModePanel'
 import VoteCreateModal from './VoteCreateModal'
+import SharedBar from './SharedBar'
+import ActionPanel from './ActionPanel'
 import { takeVotePicks } from '@/lib/votePicks'
 import type { PlaceValue } from '@/lib/photos'
 import CalIcon from "@/components/CalIcon";
@@ -331,6 +333,37 @@ export default function ChatPanel({
     }
   }, [])
 
+  // PC: 채팅방이 화면 아래에서 잘리지 않게 높이를 화면에 맞춘다.
+  // 페이지 전체는 스크롤되지 않고, 왼쪽 대화 목록과 오른쪽 칸(투표/장소/Meet Mode)이 각자 안에서만 스크롤된다.
+  const layoutRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = layoutRef.current
+    if (!el) return
+    const mq = window.matchMedia('(min-width: 1051px)')
+    const fit = () => {
+      if (!mq.matches) {
+        el.style.removeProperty('height')
+        return
+      }
+      const top = el.getBoundingClientRect().top + window.scrollY
+      const h = Math.max(480, Math.round(window.innerHeight - top - 24))
+      el.style.setProperty('height', `${h}px`, 'important')
+    }
+    fit()
+    const timers = [60, 300, 900].map((ms) => window.setTimeout(fit, ms))
+    window.addEventListener('resize', fit)
+    mq.addEventListener('change', fit)
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null
+    ro?.observe(document.body)
+    return () => {
+      timers.forEach((t) => window.clearTimeout(t))
+      window.removeEventListener('resize', fit)
+      mq.removeEventListener('change', fit)
+      ro?.disconnect()
+      el.style.removeProperty('height')
+    }
+  }, [])
+
   const meetPanel = (
     <MeetModePanel
       meet={meet}
@@ -354,14 +387,14 @@ export default function ChatPanel({
         <ChatSidebar members={group.members} groupId={group.id} />
       </div>
 
-      <div className={styles.layout}>
+      <div className={styles.layout} ref={layoutRef}>
         <div className={styles.chatMain} ref={mainRef}>
           {/* 모바일에서만: 카톡처럼 어떤 그룹 채팅방인지 맨 위에 보여 준다 */}
           <div className={styles.mobileTitle}>
             <strong>{group.name}</strong>
             <span>{group.members.length}명</span>
           </div>
-          <div className={styles.banner}>
+          <div className={`${styles.banner} ${styles.bannerMeet}`}>
             <span>함께 정한 약속을 이곳에서 확인해 보세요.</span>
             <Link href={`/groups/${group.id}/meetings`} className="link-arrow">
               약속 보기 →
@@ -378,6 +411,15 @@ export default function ChatPanel({
           )}
 
           {narrow && meetPanel}
+
+          {narrow && (
+            <SharedBar
+              messages={messages}
+              groupId={group.id}
+              myUserId={me.id}
+              onPost={send}
+            />
+          )}
 
           {selectMode && (
             <p className={sel.hint}>
@@ -464,7 +506,19 @@ export default function ChatPanel({
           )}
         </div>
 
-        {!narrow && meetPanel}
+        {!narrow && (
+          <div className={styles.rightWrap}>
+            <div className={styles.rightCol}>
+              <ActionPanel
+                messages={messages}
+                groupId={group.id}
+                myUserId={me.id}
+                onPost={send}
+              />
+              {meetPanel}
+            </div>
+          </div>
+        )}
       </div>
 
       <PhotoViewerWindow />

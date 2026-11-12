@@ -9,7 +9,7 @@ DELETE /groups/{group_id}/invite : 현재 링크 회수
 [로그인한 누구나]
 POST   /invites/{token}/join     : 초대 링크로 그룹 가입
 
-규칙: 그룹당 유효한 링크 1개 / 기본 24시간, 5회 / 토큰은 해시만 저장
+규칙: 그룹당 유효한 링크 1개 / 기본 24시간, 50회 / 토큰은 해시만 저장
 """
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -35,7 +35,7 @@ INVALID_INVITE_MSG = "유효하지 않거나 만료된 초대 링크입니다."
 
 class InviteCreateIn(BaseModel):
     expires_hours: int = Field(default=24, ge=1, le=168)  # 최대 7일
-    max_uses: int = Field(default=5, ge=1, le=50)
+    max_uses: int = Field(default=50, ge=1, le=100)
 
 
 class InviteIssued(BaseModel):

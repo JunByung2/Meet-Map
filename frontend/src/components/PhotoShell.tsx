@@ -24,7 +24,7 @@ export default function PhotoShell({
   active = "photos",
   children,
 }: {
-  active?: "photos" | "map" | "records";
+  active?: "photos" | "map" | "records" | "memories";
   children: (ctx: { groupId: string; onApiError: (e: unknown) => string }) => React.ReactNode;
 }) {
   const router = useRouter();

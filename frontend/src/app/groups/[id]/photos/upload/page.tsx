@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import PlacePicker from "@/components/PlacePicker";
 import PhotoShell from "@/components/PhotoShell";
 import { ApiError } from "@/lib/api";
+import { shrinkImage } from "@/lib/imageShrink";
 import { hasAllowedExtension, MAX_BYTES, MAX_FILES, type PlaceValue } from "@/lib/photos";
 
 type Status = "wait" | "up" | "done" | "fail";
@@ -118,8 +119,10 @@ function Upload({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
       setStatus(from, to, "up");
       try {
         const form = new FormData();
-        part.forEach((i) => {
-          form.append("files", i.file);
+        // 폰 사진(5~10MB)을 올리기 전에 줄여서 올려요 → 업로드도, 나중에 사진 목록 불러오기도 훨씬 빨라져요
+        const files = await Promise.all(part.map((i) => shrinkImage(i.file)));
+        part.forEach((i, k) => {
+          form.append("files", files[k]);
           form.append("captions", i.caption.trim());
         });
         form.append("title", title.trim());
@@ -196,7 +199,7 @@ function Upload({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
               type="file"
               hidden
               multiple
-              accept=".jpg,.jpeg,.png,.webp,.heic,image/jpeg,image/png,image/webp,image/heic"
+              accept="image/*"
               onChange={(e) => onFiles(e.target.files)}
             />
             <p className="ph-hint">여러 장을 함께 올리면 갤러리에서 한 묶음으로 보여요. 실제 파일은 [사진 저장하기]를 눌러야 올라가요.</p>
@@ -258,13 +261,6 @@ function Upload({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
               </label>
               <textarea id="ph-memo" className="ph-textarea" value={memo} maxLength={500} placeholder="별다른 계획 없이 걷기만 해도 좋았던 날." onChange={(e) => setMemo(e.target.value)} />
               <span className="hint">{memo.length} / 500자 · 제목과 메모는 이번에 올리는 사진 전체에 저장돼요</span>
-            </div>
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="ph-appt">
-                약속 연결 <span className="meta">(선택)</span>
-              </label>
-              <input id="ph-appt" className="input" value="약속 기능이 연결되면 사용할 수 있어요 (준비 중)" disabled readOnly />
-              <span className="hint">이 사진이 어떤 약속에서 찍혔는지 연결할 수 있어요.</span>
             </div>
           </section>
         </div>

@@ -90,7 +90,7 @@ class Invite(Base):
         BigInteger, ForeignKey("users.id", ondelete="SET NULL")
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    max_uses: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    max_uses: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
     used_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -146,6 +146,22 @@ class Photo(Base):
     place_lat: Mapped[float | None] = mapped_column(Float)          # 위도
     place_lng: Mapped[float | None] = mapped_column(Float)          # 경도
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PhotoDayCover(Base):
+    """사진 페이지 달력의 '그날 대표 사진' — 그룹과 날짜(한국 시간)마다 하나. 팀원 누구나 바꿀 수 있다.
+    행이 없으면 그날 가장 먼저 올라온 사진이 대표다. 대표로 정한 사진을 지우면 이 행도 함께 지워진다."""
+    __tablename__ = "photo_day_covers"
+
+    group_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("groups.id", ondelete="CASCADE"), primary_key=True, autoincrement=False
+    )
+    day: Mapped[date] = mapped_column(Date, primary_key=True, autoincrement=False)
+    photo_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("group_photos.id", ondelete="CASCADE"), nullable=False
+    )
+    updated_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class MeetingRecord(Base):

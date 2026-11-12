@@ -5,6 +5,7 @@ import { api, ApiError } from "@/lib/api";
 import type { GroupMember } from "@/hooks/useGroupContext";
 import { pickName, type NameMode } from "@/lib/nameMode";
 import css from "./calendar.module.css";
+import CalIcon from "@/components/CalIcon";
 
 type Status = "available" | "unavailable";
 type Row = { user_id: number; day: string; status: Status };
@@ -360,7 +361,7 @@ export default function AvailabilityCalendar({
                 <span>{date.getDate()}</span>
                 {titles && (
                   <span className={css.meet} aria-hidden>
-                    📅
+                    <CalIcon />
                   </span>
                 )}
               </span>
@@ -426,7 +427,7 @@ export default function AvailabilityCalendar({
 
           {meetingsByDay.get(sel) && (
             <p className="muted">
-              📅 확정된 약속: {meetingsByDay.get(sel)!.join(", ")}
+              <CalIcon /> 확정된 약속: {meetingsByDay.get(sel)!.join(", ")}
             </p>
           )}
 

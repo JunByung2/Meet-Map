@@ -18,6 +18,10 @@ export interface PhotoPin extends PinLike {
   name: string
   /** 대표 사진 주소 (없으면 사진 아이콘 자리표시) */
   thumb: string | null
+  /** 그룹 색 (전체 추억 화면에서 어느 그룹 사진인지 구분할 때만 써요) */
+  color?: string
+  /** 같은 장소에 여러 그룹 사진이 있을 때: 그룹 색 여러 개 (테두리를 나눠 칠해요) */
+  colors?: string[]
 }
 
 /** 이 거리(px)보다 가까우면 한 묶음으로 보여줘요 (썸네일 크기 68px 기준) */
@@ -30,6 +34,8 @@ interface PhotoMapProps {
   selectedPinId?: string
   onPinClick?: (pin: PhotoPin) => void
   height?: string
+  /** 이 숫자가 바뀌면 모든 장소가 보이는 처음 화면으로 되돌려요 ("전체 지도로" 버튼용) */
+  resetKey?: number
 }
 
 export default function PhotoMap({
@@ -37,6 +43,7 @@ export default function PhotoMap({
   selectedPinId,
   onPinClick,
   height = '540px',
+  resetKey = 0,
 }: PhotoMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -192,6 +199,19 @@ export default function PhotoMap({
       map.panTo(new window.kakao.maps.LatLng(target.latitude, target.longitude))
   }, [selectedPinId, mapReady])
 
+  // 5) "전체 지도로" 요청: 모든 장소가 보이게 다시 맞춘다
+  useEffect(() => {
+    const map = mapInstance.current
+    if (!resetKey || !mapReady || !map || pinsRef.current.length === 0) return
+    const kakao = window.kakao
+    const bounds = new kakao.maps.LatLngBounds()
+    pinsRef.current.forEach((p) =>
+      bounds.extend(new kakao.maps.LatLng(p.latitude, p.longitude)),
+    )
+    map.setBounds(bounds, 110, 90, 70, 90)
+    if (pinsRef.current.length === 1) map.setLevel(4)
+  }, [resetKey, mapReady])
+
   return (
     <div className="km-wrap">
       {error && <p className="km-error">{error}</p>}
@@ -227,6 +247,16 @@ function buildPin(
 
   const frame = document.createElement('span')
   frame.className = 'pm-frame'
+  const cols = c.cover.colors
+  if (!multi && cols && cols.length > 1) {
+    const step = 360 / cols.length
+    frame.style.borderColor = 'transparent'
+    frame.style.backgroundOrigin = 'border-box'
+    frame.style.backgroundImage = `conic-gradient(${cols.map((k, i) => `${k} ${i * step}deg ${(i + 1) * step}deg`).join(', ')})`
+  } else if (!multi && c.cover.color) {
+    frame.style.borderColor = c.cover.color
+    frame.style.boxShadow = `0 0 0 2px ${c.cover.color}55, 0 3px 12px rgba(33, 60, 64, 0.3)`
+  }
   if (c.cover.thumb) {
     const img = document.createElement('img')
     img.className = 'pm-img'
@@ -251,6 +281,8 @@ function buildPin(
 
   const tail = document.createElement('span')
   tail.className = 'pm-tail'
+  if (!multi && c.cover.color) tail.style.borderTopColor = c.cover.color
+  if (!multi && cols && cols.length > 1) tail.style.borderTopColor = cols[0]
   el.appendChild(tail)
 
   el.addEventListener('click', (e) => {

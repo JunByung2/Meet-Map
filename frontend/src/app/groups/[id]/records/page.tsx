@@ -5,6 +5,7 @@ import Link from "next/link";
 import PhotoShell from "@/components/PhotoShell";
 import { api, ApiError } from "@/lib/api";
 import { formatMeetDate, type MeetingRecord } from "@/lib/records";
+import MemoryTabs from "@/components/MemoryTabs";
 import "@/components/records.css";
 
 export default function RecordsPage() {
@@ -41,13 +42,7 @@ function RecordList({ groupId, onApiError }: { groupId: string; onApiError: (e: 
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <p className="eyebrow">지난 기록</p>
-          <h1 className="page-title">우리의 약속 기록</h1>
-          <p className="page-sub">확정된 약속이 자동으로 모여요. 날짜 · 장소 · 사진을 한눈에 봐요.</p>
-        </div>
-      </div>
+      <MemoryTabs groupId={groupId} current="records" sub="확정된 약속이 자동으로 모여요. 날짜 · 장소 · 사진을 한눈에 봐요." />
 
       {error && <div className="error">{error}</div>}
       {records === null && (

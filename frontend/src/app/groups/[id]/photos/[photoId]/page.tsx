@@ -9,7 +9,10 @@ import { api } from '@/lib/api'
 import {
   formatDate,
   formatDateTime,
+  formatDayHeading,
+  kstDay,
   placeOf,
+  type DayCover,
   type Photo,
   type PhotoDetail,
   type PlaceValue,
@@ -62,12 +65,14 @@ function DownloadButton({ groupId, photo }: { groupId: string; photo: Photo }) {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-end',
+        flex: 'none', // 제목 쪽이 줄어들어도 버튼은 찌그러지지 않게
         gap: 6,
       }}
     >
       <button
         type="button"
         className="btn secondary"
+        style={{ whiteSpace: 'nowrap' }} // 글씨가 두 줄로 꺾이지 않게
         onClick={download}
         disabled={busy}
       >
@@ -110,6 +115,7 @@ function Detail({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [covers, setCovers] = useState<DayCover[]>([]) // 날짜별 대표 사진 (달력에 보이는 사진)
 
   const load = useCallback(async () => {
     try {
@@ -120,6 +126,8 @@ function Detail({
       setTitle(d.batch.find((p) => p.title?.trim())?.title || '')
       setMemo(d.batch.find((p) => p.memo?.trim())?.memo || '')
       setPlace(d.batch.map(placeOf).find((x) => x !== null) ?? null)
+      // 대표 사진 정보는 부가 기능이라, 못 불러와도 사진은 그대로 보여 준다
+      setCovers(await api<DayCover[]>(`/groups/${groupId}/photos/day-covers`).catch(() => [] as DayCover[]))
     } catch (e) {
       setError(onApiError(e))
     } finally {
@@ -165,6 +173,42 @@ function Detail({
         ),
       )
       setMessage('사진 설명을 저장했어요.')
+    } catch (e) {
+      setError(onApiError(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // 이 사진이 속한 날(한국 시간)과 그날의 대표 사진. 팀원 누구나 바꿀 수 있어요.
+  const day = batch.length > 0 ? kstDay(batch[0].created_at) : ''
+  const coverId = covers.find((c) => c.day === day)?.photo_id
+  const isCover = photo !== null && coverId === photo.id
+
+  async function setCover() {
+    if (!photo) return
+    setBusy(true)
+    setError('')
+    setMessage('')
+    try {
+      const saved = await api<DayCover>(`/groups/${groupId}/photos/${photo.id}/day-cover`, { method: 'PUT' })
+      setCovers((cur) => [...cur.filter((c) => c.day !== saved.day), saved])
+      setMessage('이 사진을 그날의 대표 사진으로 정했어요. 달력에 이 사진이 보여요.')
+    } catch (e) {
+      setError(onApiError(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function resetCover() {
+    setBusy(true)
+    setError('')
+    setMessage('')
+    try {
+      await api(`/groups/${groupId}/photos/day-covers/${day}`, { method: 'DELETE' })
+      setCovers((cur) => cur.filter((c) => c.day !== day))
+      setMessage('대표 사진을 처음 상태(그날 첫 사진)로 되돌렸어요.')
     } catch (e) {
       setError(onApiError(e))
     } finally {
@@ -406,6 +450,27 @@ function Detail({
               <p className="ph-ok" style={{ marginTop: 12, marginBottom: 0 }}>
                 {message}
               </p>
+            )}
+          </section>
+
+          <section className="card ph-cover-card">
+            <h2 className="card-title" style={{ marginBottom: 4 }}>
+              달력의 대표 사진
+            </h2>
+            <p className="meta">
+              {formatDayHeading(day)}에 사진 페이지 달력에 보이는 사진이에요. 정하지 않으면 그날 가장 먼저 올라온 사진이 보여요. 팀원 누구나 바꿀 수 있어요.
+            </p>
+            {isCover ? (
+              <span className="ph-cover-badge">★ 지금 이 사진이 대표 사진이에요</span>
+            ) : (
+              <button type="button" className="btn secondary sm" onClick={setCover} disabled={busy}>
+                이 사진을 대표 사진으로
+              </button>
+            )}
+            {coverId !== undefined && (
+              <button type="button" className="ph-link-btn" onClick={resetCover} disabled={busy} style={{ alignSelf: 'flex-start' }}>
+                처음 상태로 되돌리기
+              </button>
             )}
           </section>
 

@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import PhotoLightbox from '@/components/PhotoLightbox'
 import PhotoMap, { type PhotoPin } from './PhotoMap'
 import PhotoCollage from './PhotoCollage'
 import { api, ApiError } from '@/lib/api'
 import './maps.css'
-import './photos.css'
+import '@/components/photos.css'
 import {
   formatDate,
   groupLabel,
@@ -65,6 +67,8 @@ export default function MemoryMap({
   wantedBatch?: string | null
 }) {
   const [warning, setWarning] = useState('')
+  const [resetKey, setResetKey] = useState(0)
+  const [viewerAt, setViewerAt] = useState<number | null>(null)
   const [photos, setPhotos] = useState<Photo[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -217,6 +221,9 @@ export default function MemoryMap({
 
       <div className="mm-grid">
         <div>
+          <button type="button" className="btn secondary sm" style={{ marginBottom: 10 }} onClick={() => { setSelectedKey(''); setSelectedMemory(''); setResetKey((k) => k + 1) }}>
+            ← 전체 지도로
+          </button>
           <div className="mm-mapbox">
             <PhotoMap
               pins={mapPins}
@@ -226,6 +233,7 @@ export default function MemoryMap({
                 setSelectedMemory('')
               }}
               height="540px"
+              resetKey={resetKey}
             />
             {!loading && allPlaces.length === 0 && !error && (
               <div className="mm-empty">
@@ -252,13 +260,15 @@ export default function MemoryMap({
             <>
               <section className="card" data-testid="memory-card">
                 <span className="chip">선택한 장소 · {place.name}</span>
-                <Link
+                <button
+                  type="button"
                   className="mm-photo mm-photo-link"
-                  href={`${photoBase}/${memory.photos[0].id}`}
-                  aria-label={`${groupLabel(memory)} 사진 자세히 보기`}
+                  style={{ border: 0, background: 'none', padding: 0, width: '100%', cursor: 'zoom-in' }}
+                  onClick={() => setViewerAt(0)}
+                  aria-label={`${groupLabel(memory)} 사진 크게 보기`}
                 >
                   <PhotoCollage group={memory} alt={groupLabel(memory)} />
-                </Link>
+                </button>
                 <h2 className="mm-title">{groupLabel(memory)}</h2>
                 <p className="meta">
                   {formatDate(memory.created_at)} · 사진 {memory.photos.length}
@@ -275,13 +285,15 @@ export default function MemoryMap({
                 </div>
                 <details style={{ marginTop: 16 }}>
                   <summary>이 추억의 사진 모두 보기</summary>
-                  {memory.photos.map((photo) =>
+                  {memory.photos.map((photo, i) =>
                     photo.signed_url ? (
-                      <Link
+                      <button
                         key={photo.id}
-                        href={`${photoBase}/${photo.id}`}
+                        type="button"
                         className="mm-photo-link"
-                        aria-label="이 사진 자세히 보기"
+                        style={{ border: 0, background: 'none', padding: 0, width: '100%', cursor: 'zoom-in' }}
+                        onClick={() => setViewerAt(i)}
+                        aria-label="이 사진 크게 보기"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
@@ -293,7 +305,7 @@ export default function MemoryMap({
                             marginTop: 12,
                           }}
                         />
-                      </Link>
+                      </button>
                     ) : (
                       <p key={photo.id} className="muted">
                         이 사진의 임시 주소를 불러오지 못했어요.
@@ -366,6 +378,14 @@ export default function MemoryMap({
             </section>
           )}
         </aside>
+        {memory && viewerAt !== null && (
+          <PhotoLightbox
+            photos={memory.photos.map((ph) => ({ id: ph.id, url: ph.signed_url ?? null, href: `${photoBase}/${ph.id}` }))}
+            index={viewerAt}
+            onIndex={setViewerAt}
+            onClose={() => setViewerAt(null)}
+          />
+        )}
       </div>
 
       <section className="card mint mm-notice">
@@ -392,5 +412,78 @@ export default function MemoryMap({
         </div>
       </section>
     </>
+  )
+}
+
+/**
+ * 추억 화면에 작게 보여 주는 추억지도.
+ * 누르면 큰 추억지도(/map?view=memory)로 가서 그 장소의 추억을 보여 준다.
+ */
+export function MemoryMapPreview({
+  groupId,
+  height = '320px',
+}: {
+  groupId: string
+  height?: string
+}) {
+  const router = useRouter()
+  const [photos, setPhotos] = useState<Photo[] | null>(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    api<{ photos: Photo[] }>(`/memory/groups/${groupId}/photos`)
+      .then((payload) => !cancelled && setPhotos(payload.photos))
+      .catch((e) => {
+        if (cancelled) return
+        setError(e instanceof ApiError ? e.message : '추억지도를 불러오지 못했어요.')
+        setPhotos([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [groupId])
+
+  const places = useMemo(() => buildPlaces(photos ?? []), [photos])
+  const pins: PhotoPin[] = useMemo(
+    () =>
+      places.map((pl) => {
+        const cover = pl.memories.flatMap((m) => m.photos).find((p) => p.signed_url) ?? null
+        return {
+          id: pl.key,
+          name: pl.name,
+          latitude: pl.lat,
+          longitude: pl.lng,
+          count: pl.memories.reduce((n, m) => n + m.photos.length, 0),
+          time: Date.parse(pl.memories[0].created_at) || 0,
+          thumb: cover?.signed_url ?? null,
+        }
+      }),
+    [places],
+  )
+
+  if (photos === null) return <div className="mh-skel" style={{ height }} aria-busy="true" />
+  if (error) return <p className="muted">{error}</p>
+  if (places.length === 0)
+    return (
+      <div className="mh-empty" style={{ minHeight: height }}>
+        <strong>아직 장소가 있는 추억이 없어요</strong>
+        <span>사진을 올릴 때 장소를 정하면 여기 지도에 모여요.</span>
+      </div>
+    )
+  return (
+    <div className="mm-mapbox">
+      <PhotoMap
+        pins={pins}
+        height={height}
+        onPinClick={(pin) => {
+          const place = places.find((pl) => pl.key === pin.id)
+          const batch = place?.memories[0]?.key
+          router.push(
+            `/groups/${groupId}/map?view=memory${batch ? `&batch=${encodeURIComponent(batch)}` : ''}`,
+          )
+        }}
+      />
+    </div>
   )
 }

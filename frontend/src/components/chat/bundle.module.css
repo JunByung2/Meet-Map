@@ -212,3 +212,10 @@
 .mosaic { display: flex; flex-direction: column; gap: 3px; max-width: 100%; border-radius: 14px; overflow: hidden; }
 .mrow { display: flex; gap: 3px; }
 .mrow > * { flex: 1 1 0; min-width: 0; }
+
+/* 모바일: 사진 묶음이 말풍선 밖으로 잘리지 않게 화면 너비에 맞춘다 */
+@media (max-width: 650px) {
+  .grid { width: min(244px, 68vw); }
+  .cols3 { width: min(300px, 70vw); }
+  .cols4 { width: min(340px, 72vw); }
+}

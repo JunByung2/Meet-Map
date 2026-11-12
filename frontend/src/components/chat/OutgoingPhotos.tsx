@@ -4,7 +4,7 @@ import type { OutGroup } from "@/hooks/useOutgoingPhotos";
 import css from "./outgoing.module.css";
 import { bubbleWidth, rowsOf, splitRows } from "@/lib/bundleLayout";
 
-const SHOW_MAX = 16; // 보내는 말풍선에는 16장까지 보여 준다 (4x4)
+const SHOW_MAX = 9; // 보내는 말풍선에는 9장까지 보여 준다 (3x3)
 
 export default function OutgoingPhotos({
   groups,

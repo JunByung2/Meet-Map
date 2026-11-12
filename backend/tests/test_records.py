@@ -190,29 +190,32 @@ def main():
             photo_api.upload_photos(11, [png("t2.png")], [], "", "", None, None, None, None, None, None, 0, m, u, db)
             check(db.query(Photo).filter_by(record_id=today_rec.id).count() == 1, "오늘 약속이 둘이면 자동 연결하지 않는다")
 
-            # 10) 투표 후보에 카카오 장소 저장 + 확정하면 약속으로 복사
+            # 10) 투표 후보에 카카오 장소 저장 (투표를 종료해도 약속은 자동으로 만들어지지 않는다)
             from app.routers import meetings as meet_api
             cand = meet_api.create_candidate(11, meet_api.CandidateCreate(title="후보", location="성수 카페", meeting_time=today_noon + timedelta(days=5), place_id="k9", place_address="서울 성동구", place_lat=37.54, place_lng=127.05), m, u, db)
             check(cand["place_lat"] == 37.54 and cand["place_id"] == "k9" and cand["location"] == "성수 카페", "투표 후보에 장소(좌표) 저장")
 
-            # 10-2) 시간이 겹치는 약속은 만들 수 없다 (오늘 12:00 약속이 이미 확정돼 있다)
+            # 10-2) 투표는 약속을 만들지 않으므로, 확정된 약속과 시간이 겹쳐도 후보를 만들 수 있다
             naive_noon = today_noon.replace(tzinfo=None)  # SQLite 는 시간대를 저장하지 않아 시계 값 그대로 비교한다
-            check(raises(409, lambda: meet_api.create_candidate(11, meet_api.CandidateCreate(title="겹침", location="x", meeting_time=naive_noon + timedelta(minutes=60)), m, u, db)), "확정된 약속과 1시간 차이면 후보도 못 만든다")
-            ok_c = meet_api.create_candidate(11, meet_api.CandidateCreate(title="안겹침", location="x", meeting_time=naive_noon + timedelta(hours=3)), m, u, db)
-            check(ok_c["id"] is not None, "2시간 이상 떨어지면 만들 수 있다")
-            check(raises(409, lambda: meet_api.create_candidate(11, meet_api.CandidateCreate(title="겹침2", location="x", meeting_time=naive_noon - timedelta(minutes=90)), m, u, db)), "앞쪽으로 겹쳐도 막는다")
+            ok_c = meet_api.create_candidate(11, meet_api.CandidateCreate(title="겹쳐도됨", location="x", meeting_time=naive_noon + timedelta(minutes=60)), m, u, db)
+            check(ok_c["id"] is not None, "확정된 약속과 시간이 겹쳐도 후보를 만들 수 있다")
+            typed = meet_api.create_candidate(11, meet_api.CandidateCreate(title="직접입력", location="  치킨  "), m, u, db)
+            check(typed["location"] == "치킨" and typed["place_id"] is None and typed["place_lat"] is None and typed["meeting_time"], "검색 없이 이름만 적은 항목도 (날짜 없이) 후보가 된다")
 
             # 11) 약속 확정은 방장이 아니라 투표(후보)를 만든 사람만
             db3, u3, m3 = ctx(2, 11)
-            check(raises(403, lambda: meet_api.confirm_candidate(11, 1, False, m3, u3, db3)), "투표를 만든 사람이 아니면 확정 403")
+            check(raises(403, lambda: meet_api.confirm_candidate(11, 1, False, m3, u3, db3)), "투표를 만든 사람이 아니면 종료 403")
+            meetings_before = db.query(Meeting).count()
             res = meet_api.confirm_candidate(11, 1, False, m, u, db)
-            check(res["meeting"]["place_lat"] == 37.55 or res["meeting"]["title"] == "홍대", "투표를 만든 사람은 확정할 수 있다")
-            check(res["meeting"]["id"] is not None, "확정하면 약속이 만들어진다")
+            check(res["candidate"]["chosen"] and res["candidate"]["closed"], "투표를 만든 사람은 투표를 종료할 수 있다")
+            check(db.query(Meeting).count() == meetings_before, "투표를 종료해도 약속은 자동으로 만들어지지 않는다")
             check(raises(409, lambda: meet_api.confirm_candidate(11, 1, False, m, u, db)), "이미 확정된 투표는 다시 확정 못 한다")
             check(raises(409, lambda: meet_api.vote_candidate(11, 1, m3, u3, db3)), "확정된 투표에는 투표 못 한다")
 
             # 11-2) 약속 삭제 권한: 방장 또는 확정한 사람만 (지난 기록은 남는다)
-            mid = res["meeting"]["id"]
+            db.add(Meeting(id=50, group_id=11, title="삭제용", location="x", meeting_time=today_noon + timedelta(days=9), status="confirmed"))
+            db.commit()
+            mid = 50
             meet_api.delete_meeting(11, mid, m3, u3, db3)
             check(db.get(Meeting, mid) is None, "그룹 멤버라면 누구나 확정된 약속을 지울 수 있다")
             check(raises(404, lambda: meet_api.delete_meeting(12, mid, m, u, db)), "다른 그룹 번호로는 지울 수 없다")

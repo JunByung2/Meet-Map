@@ -282,8 +282,8 @@ export default function VoteDialog({
               </>
             ) : (
               <p className={styles.sub}>
-                1위 항목 &lsquo;{leaders[0]?.location}&rsquo; 으로 약속이
-                확정돼요.
+                1위 항목 &lsquo;{leaders[0]?.location}&rsquo; 으로 투표가
+                종료돼요.
               </p>
             )}
             <div className={styles.btnRow} style={{ marginTop: 14 }}>

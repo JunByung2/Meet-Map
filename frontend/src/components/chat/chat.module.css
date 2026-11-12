@@ -1,6 +1,6 @@
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 370px);
+  grid-template-columns: minmax(0, 1fr) 420px;
   gap: 24px;
   align-items: start;
 }
@@ -99,6 +99,10 @@
   font-size: 10px;
 }
 
+.mobileTitle {
+  display: none;
+}
+
 .composer {
   margin-top: 8px;
   padding: 13px;
@@ -126,6 +130,35 @@
 }
 
 .chip:hover {
+  background: var(--mint);
+}
+
+.chipOn {
+  background: var(--mint);
+  color: var(--green, #1f6f68);
+}
+
+/* 첨부를 누르면 나오는 선택: 사진 / 문서·파일 */
+.attachMenu {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.attachMenu button {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #dfe8e5;
+  border-radius: 12px;
+  background: #fff;
+  color: #1f6f68;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.attachMenu button:hover {
   background: var(--mint);
 }
 
@@ -490,7 +523,130 @@
     max-width: 85%;
   }
 
+  /* 내 말과 상대방 말 사이를 조금 더 띄워서 구분하기 쉽게 */
+  .messages {
+    gap: 20px;
+  }
+
+  .mine + .other,
+  .other + .mine {
+    margin-top: 14px;
+  }
+
+  .row {
+    gap: 10px;
+  }
+
   .side {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  /* 카톡처럼: 들어오자마자 입력창이 화면 맨 아래(탭바 바로 위)에 가만히 있게
+     화면 높이에 딱 맞춰 대화창을 늘린다. 스크롤을 움직이는 코드는 쓰지 않는다. */
+  .head {
+    display: none;
+  }
+
+  .chatMain {
+    display: flex;
+    flex-direction: column;
+    /* 위 84px(머리글+여백) + 아래 66px(하단 탭바) 만큼만 빼서, 채팅창 밑에 빈 칸도 없고 더 내려가지도 않게 */
+    height: calc(100vh - 150px);
+    height: calc(100dvh - 150px - env(safe-area-inset-bottom, 0px));
+    min-height: 420px;
+  }
+
+  /* 카톡식 맨 위 그룹 이름 */
+  .mobileTitle {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex: none;
+    padding: 0 2px 8px;
+  }
+  .mobileTitle strong {
+    font-size: 18px;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mobileTitle span {
+    flex: none;
+    font-size: 13px;
+    color: #899896;
+  }
+
+  /* 약속 안내 띠는 얇게 */
+  .chatMain > .banner {
+    flex: none;
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  /* 입력창은 작게: 메시지가 더 많이 보이도록 */
+  .composer {
+    flex: none;
+    margin-top: 6px;
+    padding: 8px;
+    border-radius: 12px;
+  }
+  .tools {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 5px;
+    margin-bottom: 7px;
+    scrollbar-width: none;
+  }
+  .tools::-webkit-scrollbar {
+    display: none;
+  }
+  .chip {
+    flex: none;
+    padding: 5px 9px;
+    font-size: 11px;
+  }
+  .composerBottom {
+    gap: 8px;
+  }
+  .composerBottom :global(.input) {
+    min-height: 0;
+    height: 38px;
+    padding: 0 12px;
+    font-size: 14px;
+  }
+  .send {
+    padding: 0 14px;
+    height: 38px;
+    min-height: 0;
+    font-size: 14px;
+  }
+  .composer > .hint {
+    display: none;
+  }
+  .status {
+    min-height: 0;
+    margin-top: 0;
+  }
+  .status:not(:empty) {
+    margin-top: 6px;
+  }
+
+  .chatMain > .messages {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+  }
+}
+
+/* 채팅 화면은 탭바 바로 위까지만 쓰고 그 아래로 스크롤되지 않게 (모바일) */
+@media (max-width: 650px) {
+  :global(.content):has(.chatMain) { padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* 제목 줄: 왼쪽 제목, 오른쪽 함께 대화 중인 친구 + 바로가기 */
+.head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+@media (max-width: 650px) {
+  .head { display: none; }
 }

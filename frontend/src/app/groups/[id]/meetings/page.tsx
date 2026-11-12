@@ -898,7 +898,7 @@ export default function GroupMeetingsPage() {
                 .filter((m): m is GroupMember => !!m);
 
               return (
-                <article className="card" key={meeting.id}>
+                <article className="card meet-card" key={meeting.id}>
                   {editingId === meeting.id ? (
                     <MeetingEditor
                       groupId={groupId}
@@ -910,7 +910,7 @@ export default function GroupMeetingsPage() {
                     />
                   ) : (
                     <div
-                      className="row-between"
+                      className="row-between meet-row"
                       style={{ gap: 16, flexWrap: "wrap" }}
                     >
                       <div className="row" style={{ alignItems: "flex-start" }}>

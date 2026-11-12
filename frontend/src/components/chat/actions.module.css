@@ -1,0 +1,220 @@
+/* 투표 · 장소 선택 (민영이 디자인을 가져와서, 투표 위 / 장소 아래로 세로 배치) */
+.actionSection,
+.bare {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+.actionSection {
+  background: var(--white);
+  border: 1px solid #e4eae6;
+  border-radius: 22px;
+}
+.sideTitle {
+  margin: 0 0 15px;
+  color: #34464a;
+  font-size: 31px;
+}
+.actionSection {
+  width: 100%;
+  min-width: 0;
+  padding: 22px;
+}
+
+.actionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 17px;
+}
+
+.actionHeader .sideTitle {
+  margin: 0;
+  font-size: 16px;
+}
+
+.actionDescription {
+  color: #8a999a;
+  font-size: 11px;
+}
+
+/* 두 개의 큰 영역 */
+
+.actionGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+  align-items: start;
+}
+
+/* 투표 영역과 장소 영역 */
+
+.actionColumn {
+  width: 100%;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid #e8eeea;
+  border-radius: 15px;
+  background: #f7f9f7;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* 영역 제목 */
+
+.actionTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 0 0 13px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid #e5ebe7;
+  color: #3d5052;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* 개수 표시 */
+
+.itemCount {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  flex: none;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 20px;
+  background: #e5f0eb;
+  color: var(--teal);
+  font-size: 10px;
+  box-sizing: border-box;
+}
+
+/* 항목 목록 */
+
+.actionList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* 개별 투표 카드 */
+
+.actionItem {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e5ebe7;
+  border-radius: 14px;
+  background: var(--white);
+  box-shadow: 0 3px 12px rgba(50, 75, 65, 0.04);
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
+}
+
+/* 개별 장소 추천 카드 */
+
+.placeActionItem {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e5ebe7;
+  border-radius: 14px;
+  background: var(--white);
+  box-shadow: 0 3px 12px rgba(50, 75, 65, 0.04);
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
+}
+
+/* 내부 컴포넌트 */
+
+.actionItem > *,
+.placeActionItem > * {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.actionItem > div,
+.placeActionItem > div {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* 내부 카드가 부모 영역을 벗어나지 않도록 */
+
+.actionItem :global(.card),
+.placeActionItem :global(.card) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* 내부 텍스트 */
+
+.actionItem p,
+.actionItem span,
+.actionItem strong,
+.placeActionItem p,
+.placeActionItem span,
+.placeActionItem strong {
+  overflow-wrap: anywhere;
+}
+
+/* 내부 버튼 */
+
+.actionItem button,
+.placeActionItem button {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* 투표 카드 너비 */
+
+.wideBody {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* 항목 없음 */
+
+.actionEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 125px;
+  padding: 15px 8px;
+  border-radius: 11px;
+  background: var(--white);
+  color: #8a999a;
+  font-size: 11px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+
+/* 칸이 너무 길어지지 않게: 목록은 안에서 스크롤 */
+.actionEmpty { min-height: 64px; }
+@media (max-width: 650px) {
+  .actionSection { padding: 14px; }
+}
+
+/* 카드가 줄어들어 잘리지 않게 (목록 안에서만 스크롤) */
+.actionItem, .placeActionItem { flex: none; }

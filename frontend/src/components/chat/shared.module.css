@@ -1,0 +1,57 @@
+/* 모바일·태블릿 채팅 위 "투표 · 장소 선택" 접이식 한 줄 (PC 오른쪽 칸에서는 숨김) */
+.wrap { display: none; }
+
+@media (max-width: 1050px) {
+  .wrap {
+    display: block;
+    position: relative;
+    flex: none;
+    z-index: 20;
+    margin-bottom: 10px;
+  }
+  .bar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--white);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    text-align: left;
+  }
+  .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .badges { display: flex; gap: 6px; flex: none; }
+  .badge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--mist);
+    color: var(--teal-dark);
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+  .chev { flex: none; color: var(--muted); font-size: 11px; }
+
+  /* 펼치면 채팅 위에 덮는다 (채팅 높이는 그대로) */
+  .panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    max-height: min(54vh, 460px);
+    overflow-y: auto;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--white);
+    box-shadow: 0 10px 28px rgba(33, 60, 64, 0.18);
+    overscroll-behavior: contain;
+  }
+}

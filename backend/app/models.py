@@ -90,7 +90,7 @@ class Invite(Base):
         BigInteger, ForeignKey("users.id", ondelete="SET NULL")
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    max_uses: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    max_uses: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
     used_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

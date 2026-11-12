@@ -1,0 +1,213 @@
+/* 메인 페이지 달력: 모든 그룹의 약속을 그룹 색으로 보여 준다 */
+.wrap {
+  display: grid;
+  gap: 14px;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.month {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.monthLabel {
+  font-size: 18px;
+  font-weight: 800;
+  min-width: 112px;
+  text-align: center;
+}
+.nav {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--ink);
+}
+.nav:hover {
+  background: var(--mint);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--white);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+}
+.who:hover {
+  background: var(--mint);
+}
+.whoOff {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+/* 넓은 화면: 왼쪽 달력 + 오른쪽 약속 패널 / 좁은 화면: 위아래 */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.dow {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 2px 0;
+}
+.sun {
+  color: #c0533f;
+}
+.sat {
+  color: #3b6fc2;
+}
+
+.cell {
+  min-height: 68px;
+  min-width: 0;
+  padding: 5px 5px 6px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--white);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--ink);
+}
+.cell:hover {
+  border-color: var(--teal);
+}
+.out {
+  background: transparent;
+  opacity: 0.5;
+}
+.today {
+  box-shadow: inset 0 0 0 2px var(--teal);
+}
+.selected {
+  border-color: var(--teal-dark);
+  background: var(--mint);
+}
+.num {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* 칸 안의 약속 이름표: 그룹 색 막대 + 제목 한 줄 */
+.chip {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  padding: 0 5px;
+  border-left: 3px solid var(--c);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--c) 16%, var(--white));
+}
+.more {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.panel {
+  border: 1.5px solid var(--line);
+  border-radius: 16px;
+  background: var(--white);
+  padding: 14px 16px;
+  display: grid;
+  gap: 10px;
+}
+.panelHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.panelTitle {
+  font-size: 15px;
+  font-weight: 800;
+}
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 10px;
+}
+.item:hover {
+  background: var(--mint);
+}
+.itemBar {
+  align-self: stretch;
+  width: 5px;
+  border-radius: 3px;
+  background: var(--c);
+  flex: none;
+}
+.itemBody {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+@media (max-width: 560px) {
+  .cell {
+    min-height: 58px;
+    padding: 4px;
+  }
+  .chip {
+    font-size: 10px;
+    padding: 0 3px;
+  }
+}

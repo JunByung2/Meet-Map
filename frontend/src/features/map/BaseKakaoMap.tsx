@@ -45,22 +45,43 @@ declare global {
 
 // 각 멤버에게 고유한 파스텔 색상을 지정
 // 공통 지도에서도 재사용할 수 있도록 컴포넌트 밖에 선언
-const MEMBER_COLORS: Record<number, string> = {
-  1: "#A8DCD1", // 파스텔 민트
-  2: "#AFCBF3", // 파스텔 하늘색
-  3: "#F6D6A8", // 파스텔 살구색
-  4: "#D5C2F1", // 파스텔 라벤더
-  5: "#F3BFD0", // 파스텔 핑크
-};
+const MEMBER_PALETTE = [
+  "#A8DCD1", // 파스텔 민트
+  "#AFCBF3", // 파스텔 하늘색
+  "#F6D6A8", // 파스텔 살구색
+  "#D5C2F1", // 파스텔 라벤더
+  "#F3BFD0", // 파스텔 핑크
+  "#D4E8A5", // 파스텔 연두
+  "#F5B7A8", // 파스텔 코랄
+  "#A5E3EB", // 파스텔 아쿠아
+  "#F2E6A0", // 파스텔 노랑
+  "#C3C8E6", // 파스텔 남보라
+];
 
-// 일반 검색 결과 마커 색상
-export const CONNECTION_COLORS: Record<number, string> = {
-  1: "#167A68",
-  2: "#346DB0",
-  3: "#AA650A",
-  4: "#8051AD",
-  5: "#BC4776",
-};
+// 멤버 번호(1부터)에 맞는 파스텔 색. 인원이 팔레트보다 많으면 처음 색부터 다시 쓴다.
+export function memberColor(memberNumber: number): string {
+  const i = Math.max(0, Math.floor(memberNumber) - 1);
+  return MEMBER_PALETTE[i % MEMBER_PALETTE.length];
+}
+
+// 멤버 출발지 연결선·구분선 색 (위 파스텔 색과 같은 순서의 진한 색)
+const CONNECTION_PALETTE = [
+  "#167A68",
+  "#346DB0",
+  "#AA650A",
+  "#8051AD",
+  "#BC4776",
+  "#5E8A1F",
+  "#B5503A",
+  "#1E8A9A",
+  "#8C7A0E",
+  "#55609E",
+];
+
+export function connectionColor(memberNumber: number): string {
+  const i = Math.max(0, Math.floor(memberNumber) - 1);
+  return CONNECTION_PALETTE[i % CONNECTION_PALETTE.length];
+}
 
 const DEFAULT_MARKER_COLOR = "#8B9695";
 
@@ -325,8 +346,7 @@ export default function BaseKakaoMap({
         );
         bounds.extend(start);
         bounds.extend(end);
-        const color =
-          CONNECTION_COLORS[place.memberNumber!] ?? SELECTED_MARKER_COLOR;
+        const color = connectionColor(place.memberNumber!);
         const outline = new kakao.maps.Polyline({
           map,
           path: [start, end],
@@ -376,9 +396,7 @@ export default function BaseKakaoMap({
       // 멤버 출발지인지 확인
       // =====================================
 
-      const isMemberMarker =
-        place.memberNumber !== undefined &&
-        MEMBER_COLORS[place.memberNumber] !== undefined;
+      const isMemberMarker = place.memberNumber !== undefined;
 
       // =====================================
       // [수정 - 3주차]
@@ -395,7 +413,7 @@ export default function BaseKakaoMap({
       let markerColor = DEFAULT_MARKER_COLOR;
 
       if (isMemberMarker) {
-        markerColor = MEMBER_COLORS[place.memberNumber!];
+        markerColor = memberColor(place.memberNumber!);
       } else if (isSelected) {
         markerColor = SELECTED_MARKER_COLOR;
       } else if (place.color) {

@@ -29,6 +29,7 @@ from app.routers.photos import (
     CONTENT_TYPES as IMAGE_TYPES,
     _extension,
     _looks_like_image,
+    _parse_place,
     _place_columns,
     _require_storage,
     _storage_call,
@@ -120,9 +121,24 @@ def upload_chat_file(
     user: User = Depends(get_current_user),
     db: DbSession = Depends(get_db),
     light: bool = False,  # true 면 응답에 임시 주소를 만들지 않는다 (사진 여러 장 올릴 때 더 빠르다)
+    # 사진에 담긴 촬영 위치 (선택). 있으면 사진 모음/추억지도에 이 장소로 표시된다. (기존 호출 순서가 바뀌지 않도록 맨 뒤에 둔다)
+    place_id: str | None = Form(default=None),
+    place_name: str | None = Form(default=None),
+    place_address: str | None = Form(default=None),
+    place_lat: float | None = Form(default=None),
+    place_lng: float | None = Form(default=None),
 ):
     if kind not in ("image", "file"):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "kind 는 image 또는 file 이어야 합니다.")
+    # 함수를 직접 부르는 곳(테스트 등)에서는 안 넘긴 값이 Form 객체로 남으니, 진짜 값이 아니면 없는 것으로 본다
+    def _real(v):
+        return v if isinstance(v, (str, int, float)) else None
+
+    place = (
+        _parse_place(_real(place_id), _real(place_name), _real(place_address), _real(place_lat), _real(place_lng))
+        if kind == "image"
+        else None
+    )
     if kind == "image":
         _require_storage()  # 사진만 사진 저장소(Supabase)를 쓴다. 문서 파일은 DB 에 저장한다.
     filename = _clean_name(file.filename)
@@ -176,7 +192,7 @@ def upload_chat_file(
                 title="채팅 사진",
                 batch_id=str(uuid.uuid4()),
                 sort_order=0,
-                **_place_columns(None),
+                **_place_columns(place),
             )
             db.add(photo)
         db.commit()

@@ -203,3 +203,13 @@
 .ph-cover-card { display: flex; flex-direction: column; gap: 10px; }
 .ph-cover-card .meta { margin: 0; }
 .ph-cover-badge { display: inline-flex; align-items: center; align-self: flex-start; gap: 6px; padding: 6px 12px; border-radius: 100px; background: var(--mint); color: var(--teal-dark); font-size: 13px; font-weight: 700; }
+
+/* 사진 위치 자동 입력 안내 / 카메라로 찍기 */
+.ph-pickrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.ph-pickrow .btn { flex: 0 0 auto; }
+.ph-loc { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.ph-loc p { margin: 0; font-size: 13px; line-height: 1.5; padding: 9px 12px; border-radius: 12px; background: var(--mint); color: var(--teal); }
+.ph-loc p.warn { background: #fff4e5; color: #8a5a00; }
+.ph-loc p.info { background: #f1f4f3; color: var(--muted); }
+.ph-gpsmark { position: absolute; right: 8px; bottom: 8px; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.92); color: var(--teal); }
+.ph-gpsmark.none { color: var(--muted); }

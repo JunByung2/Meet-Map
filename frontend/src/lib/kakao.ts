@@ -92,3 +92,29 @@ export function searchKeyword(
     });
   });
 }
+
+/** 좌표(위도·경도)를 가까운 주소/건물 이름으로 바꿔요 (사진에 담긴 위치를 장소로 채울 때 사용). 못 찾으면 null */
+export function coordToPlace(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  kakao: any,
+  lat: number,
+  lng: number,
+): Promise<PlaceResult | null> {
+  return new Promise((resolve) => {
+    try {
+      const geocoder = new kakao.maps.services.Geocoder();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      geocoder.coord2Address(lng, lat, (result: any[], status: string) => {
+        if (status !== kakao.maps.services.Status.OK || !result?.length) return resolve(null);
+        const r = result[0];
+        const road = r.road_address;
+        const jibun = r.address;
+        const address: string = road?.address_name || jibun?.address_name || "";
+        const name: string = road?.building_name || address || "사진 위치";
+        resolve({ id: "", name, address, lat, lng });
+      });
+    } catch {
+      resolve(null);
+    }
+  });
+}

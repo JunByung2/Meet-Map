@@ -12,10 +12,13 @@ export default function PlacePicker({
   value,
   onChange,
   disabled = false,
+  note,
 }: {
   value: PlaceValue | null;
   onChange: (place: PlaceValue | null) => void;
   disabled?: boolean;
+  /** 장소 카드 아래에 보여줄 안내 (예: 사진의 위치에서 자동으로 채웠을 때) */
+  note?: string;
 }) {
   const search = usePlaceSearch();
 
@@ -79,6 +82,7 @@ export default function PlacePicker({
           <strong>{value.name}</strong>
           {value.address && <span>{value.address}</span>}
           <em>✓ 추억지도에 표시</em>
+          {note && <small className="pp-note">{note}</small>}
           {!disabled && (
             <button type="button" className="pp-clear" onClick={() => onChange(null)}>
               장소 해제

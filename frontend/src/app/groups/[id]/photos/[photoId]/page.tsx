@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import PlacePicker from '@/components/PlacePicker'
-import PhotoShell from '@/components/PhotoShell'
-import { api } from '@/lib/api'
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams, useSearchParams } from "next/navigation";
+import PlacePicker from "@/components/PlacePicker";
+import PhotoShell from "@/components/PhotoShell";
+import { api } from "@/lib/api";
 import {
   formatDate,
   formatDateTime,
@@ -16,7 +16,7 @@ import {
   type Photo,
   type PhotoDetail,
   type PlaceValue,
-} from '@/lib/photos'
+} from "@/lib/photos";
 
 /**
  * 사진 주소는 다른 사이트(Supabase 저장소)에 있어서 <a download> 만으로는 브라우저가 저장하지 않고 그냥 열어 버려요.
@@ -24,59 +24,59 @@ import {
  * 여기서는 그 응답을 파일로 저장해요. (이동 없이 바로 저장 / 실패하면 화면에 이유를 보여줘요)
  */
 function DownloadButton({ groupId, photo }: { groupId: string; photo: Photo }) {
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const ext = photo.storage_path.split('.').pop()?.toLowerCase() ?? 'jpg'
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const ext = photo.storage_path.split(".").pop()?.toLowerCase() ?? "jpg";
 
   async function download() {
-    setBusy(true)
-    setError('')
+    setBusy(true);
+    setError("");
     try {
       const res = await fetch(
         `/api/groups/${groupId}/photos/${photo.id}/download`,
-        { credentials: 'same-origin' },
-      )
+        { credentials: "same-origin" },
+      );
       if (!res.ok) {
-        const data = await res.json().catch(() => null)
+        const data = await res.json().catch(() => null);
         throw new Error(
-          typeof data?.detail === 'string'
+          typeof data?.detail === "string"
             ? data.detail
-            : '사진을 내려받지 못했어요.',
-        )
+            : "사진을 내려받지 못했어요.",
+        );
       }
-      const url = URL.createObjectURL(await res.blob())
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `meetmap-photo-${photo.id}.${ext}`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      window.setTimeout(() => URL.revokeObjectURL(url), 10_000)
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `meetmap-photo-${photo.id}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
     } catch (e) {
-      setError(e instanceof Error ? e.message : '사진을 내려받지 못했어요.')
+      setError(e instanceof Error ? e.message : "사진을 내려받지 못했어요.");
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
   return (
     <div
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-        flex: 'none', // 제목 쪽이 줄어들어도 버튼은 찌그러지지 않게
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-end",
+        flex: "none", // 제목 쪽이 줄어들어도 버튼은 찌그러지지 않게
         gap: 6,
       }}
     >
       <button
         type="button"
         className="btn secondary"
-        style={{ whiteSpace: 'nowrap' }} // 글씨가 두 줄로 꺾이지 않게
+        style={{ whiteSpace: "nowrap" }} // 글씨가 두 줄로 꺾이지 않게
         onClick={download}
         disabled={busy}
       >
-        {busy ? '내려받는 중…' : '사진 다운로드'}
+        {busy ? "내려받는 중…" : "사진 다운로드"}
       </button>
       {error && (
         <span className="error" role="alert" style={{ fontSize: 12 }}>
@@ -84,7 +84,7 @@ function DownloadButton({ groupId, photo }: { groupId: string; photo: Photo }) {
         </span>
       )}
     </div>
-  )
+  );
 }
 
 export default function PhotoDetailPage() {
@@ -94,139 +94,151 @@ export default function PhotoDetailPage() {
         <Detail groupId={groupId} onApiError={onApiError} />
       )}
     </PhotoShell>
-  )
+  );
 }
 
 function Detail({
   groupId,
   onApiError,
 }: {
-  groupId: string
-  onApiError: (e: unknown) => string
+  groupId: string;
+  onApiError: (e: unknown) => string;
 }) {
-  const { photoId } = useParams<{ photoId: string }>()
-  const [batch, setBatch] = useState<Photo[]>([])
-  const [activeId, setActiveId] = useState<number>(Number(photoId))
-  const [title, setTitle] = useState('')
-  const [memo, setMemo] = useState('')
-  const [caption, setCaption] = useState('')
-  const [place, setPlace] = useState<PlaceValue | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [message, setMessage] = useState('')
-  const [covers, setCovers] = useState<DayCover[]>([]) // 날짜별 대표 사진 (달력에 보이는 사진)
+  const { photoId } = useParams<{ photoId: string }>();
+  const fromAll = useSearchParams().get("from") === "memories"; // 전체 추억에서 들어온 경우
+  const [batch, setBatch] = useState<Photo[]>([]);
+  const [activeId, setActiveId] = useState<number>(Number(photoId));
+  const [title, setTitle] = useState("");
+  const [memo, setMemo] = useState("");
+  const [caption, setCaption] = useState("");
+  const [place, setPlace] = useState<PlaceValue | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [covers, setCovers] = useState<DayCover[]>([]); // 날짜별 대표 사진 (달력에 보이는 사진)
 
   const load = useCallback(async () => {
     try {
-      const d = await api<PhotoDetail>(`/groups/${groupId}/photos/${photoId}`)
-      setBatch(d.batch)
-      setActiveId(d.photo.id)
-      setCaption(d.photo.caption || '')
-      setTitle(d.batch.find((p) => p.title?.trim())?.title || '')
-      setMemo(d.batch.find((p) => p.memo?.trim())?.memo || '')
-      setPlace(d.batch.map(placeOf).find((x) => x !== null) ?? null)
+      const d = await api<PhotoDetail>(`/groups/${groupId}/photos/${photoId}`);
+      setBatch(d.batch);
+      setActiveId(d.photo.id);
+      setCaption(d.photo.caption || "");
+      setTitle(d.batch.find((p) => p.title?.trim())?.title || "");
+      setMemo(d.batch.find((p) => p.memo?.trim())?.memo || "");
+      setPlace(d.batch.map(placeOf).find((x) => x !== null) ?? null);
       // 대표 사진 정보는 부가 기능이라, 못 불러와도 사진은 그대로 보여 준다
-      setCovers(await api<DayCover[]>(`/groups/${groupId}/photos/day-covers`).catch(() => [] as DayCover[]))
+      setCovers(
+        await api<DayCover[]>(`/groups/${groupId}/photos/day-covers`).catch(
+          () => [] as DayCover[],
+        ),
+      );
     } catch (e) {
-      setError(onApiError(e))
+      setError(onApiError(e));
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupId, photoId])
+  }, [groupId, photoId]);
 
   useEffect(() => {
-    load()
-  }, [load])
+    load();
+  }, [load]);
 
   const index = Math.max(
     0,
     batch.findIndex((p) => p.id === activeId),
-  )
-  const photo = batch[index] ?? null
-  const prev = index > 0 ? batch[index - 1] : null
-  const next = index < batch.length - 1 ? batch[index + 1] : null
-  const canEdit = !!photo?.can_edit
-  const back = `/groups/${groupId}/photos`
+  );
+  const photo = batch[index] ?? null;
+  const prev = index > 0 ? batch[index - 1] : null;
+  const next = index < batch.length - 1 ? batch[index + 1] : null;
+  const canEdit = !!photo?.can_edit;
+  const back = fromAll ? "/memories" : `/groups/${groupId}/photos`;
 
   function select(p: Photo) {
-    setActiveId(p.id)
-    setCaption(p.caption || '')
-    setError('')
-    setMessage('')
+    setActiveId(p.id);
+    setCaption(p.caption || "");
+    setError("");
+    setMessage("");
   }
 
   async function saveCaption() {
-    if (!photo) return
-    setBusy(true)
-    setError('')
-    setMessage('')
+    if (!photo) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
     try {
       const updated = await api<Photo>(
         `/groups/${groupId}/photos/${photo.id}`,
-        { method: 'PATCH', body: { caption } },
-      )
+        { method: "PATCH", body: { caption } },
+      );
       setBatch((cur) =>
         cur.map((p) =>
           p.id === updated.id ? { ...p, caption: updated.caption } : p,
         ),
-      )
-      setMessage('사진 설명을 저장했어요.')
+      );
+      setMessage("사진 설명을 저장했어요.");
     } catch (e) {
-      setError(onApiError(e))
+      setError(onApiError(e));
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
   // 이 사진이 속한 날(한국 시간)과 그날의 대표 사진. 팀원 누구나 바꿀 수 있어요.
-  const day = batch.length > 0 ? kstDay(batch[0].created_at) : ''
-  const coverId = covers.find((c) => c.day === day)?.photo_id
-  const isCover = photo !== null && coverId === photo.id
+  const day = batch.length > 0 ? kstDay(batch[0].created_at) : "";
+  const coverId = covers.find((c) => c.day === day)?.photo_id;
+  const isCover = photo !== null && coverId === photo.id;
 
   async function setCover() {
-    if (!photo) return
-    setBusy(true)
-    setError('')
-    setMessage('')
+    if (!photo) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
     try {
-      const saved = await api<DayCover>(`/groups/${groupId}/photos/${photo.id}/day-cover`, { method: 'PUT' })
-      setCovers((cur) => [...cur.filter((c) => c.day !== saved.day), saved])
-      setMessage('이 사진을 그날의 대표 사진으로 정했어요. 달력에 이 사진이 보여요.')
+      const saved = await api<DayCover>(
+        `/groups/${groupId}/photos/${photo.id}/day-cover`,
+        { method: "PUT" },
+      );
+      setCovers((cur) => [...cur.filter((c) => c.day !== saved.day), saved]);
+      setMessage(
+        "이 사진을 그날의 대표 사진으로 정했어요. 달력에 이 사진이 보여요.",
+      );
     } catch (e) {
-      setError(onApiError(e))
+      setError(onApiError(e));
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
   async function resetCover() {
-    setBusy(true)
-    setError('')
-    setMessage('')
+    setBusy(true);
+    setError("");
+    setMessage("");
     try {
-      await api(`/groups/${groupId}/photos/day-covers/${day}`, { method: 'DELETE' })
-      setCovers((cur) => cur.filter((c) => c.day !== day))
-      setMessage('대표 사진을 처음 상태(그날 첫 사진)로 되돌렸어요.')
+      await api(`/groups/${groupId}/photos/day-covers/${day}`, {
+        method: "DELETE",
+      });
+      setCovers((cur) => cur.filter((c) => c.day !== day));
+      setMessage("대표 사진을 처음 상태(그날 첫 사진)로 되돌렸어요.");
     } catch (e) {
-      setError(onApiError(e))
+      setError(onApiError(e));
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
   // 제목·메모는 같은 묶음의 모든 사진에 똑같이 저장돼요
   async function saveRecord() {
-    if (!photo) return
-    setBusy(true)
-    setError('')
-    setMessage('')
+    if (!photo) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
     try {
       const updated = await api<Photo[]>(
         `/groups/${groupId}/photos/batch/${photo.batch_id}`,
         {
-          method: 'PATCH',
+          method: "PATCH",
           body: {
             title,
             memo,
@@ -241,7 +253,7 @@ function Detail({
               : null,
           },
         },
-      )
+      );
       setBatch((cur) =>
         cur.map((p) => ({
           ...p,
@@ -253,37 +265,37 @@ function Detail({
           place_lat: updated[0]?.place_lat ?? null,
           place_lng: updated[0]?.place_lng ?? null,
         })),
-      )
-      setMessage('제목과 메모를 저장했어요.')
+      );
+      setMessage("제목과 메모를 저장했어요.");
     } catch (e) {
-      setError(onApiError(e))
+      setError(onApiError(e));
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
   if (loading)
-    return <div className="card muted">사진을 불러오는 중이에요.</div>
+    return <div className="card muted">사진을 불러오는 중이에요.</div>;
   if (!photo)
     return (
       <>
-        <div className="error">{error || '사진을 찾지 못했어요.'}</div>
+        <div className="error">{error || "사진을 찾지 못했어요."}</div>
         <Link href={back} className="link-arrow">
-          ← 사진 모음으로
+          {fromAll ? "← 전체 추억으로" : "← 사진 모음으로"}
         </Link>
       </>
-    )
+    );
 
-  const savedTitle = batch.find((p) => p.title?.trim())?.title?.trim()
-  const savedMemo = batch.find((p) => p.memo?.trim())?.memo?.trim()
-  const heading = savedTitle || photo.caption?.trim() || '이 순간을 기억해요'
-  const ext = photo.storage_path.split('.').pop()?.toUpperCase()
+  const savedTitle = batch.find((p) => p.title?.trim())?.title?.trim();
+  const savedMemo = batch.find((p) => p.memo?.trim())?.memo?.trim();
+  const heading = savedTitle || photo.caption?.trim() || "이 순간을 기억해요";
+  const ext = photo.storage_path.split(".").pop()?.toUpperCase();
 
   return (
     <>
       <p style={{ marginBottom: 16 }}>
         <Link href={back} className="link-arrow">
-          ← 그룹 사진으로 돌아가기
+          {fromAll ? "← 전체 추억으로 돌아가기" : "← 그룹 사진으로 돌아가기"}
         </Link>
       </p>
       <div className="page-head">
@@ -291,12 +303,12 @@ function Detail({
           <p className="eyebrow">
             {batch.length > 1
               ? `함께 올린 ${batch.length}장의 순간`
-              : '한 장의 순간'}
+              : "한 장의 순간"}
           </p>
           <h1 className="page-title">{heading}</h1>
           <p className="page-sub">
             {savedMemo ||
-              `${formatDate(photo.created_at)} · ${photo.uploader_nickname ?? '알 수 없음'}이(가) 올린 사진`}
+              `${formatDate(photo.created_at)} · ${photo.uploader_nickname ?? "알 수 없음"}이(가) 올린 사진`}
           </p>
         </div>
         {photo.signed_url && <DownloadButton groupId={groupId} photo={photo} />}
@@ -309,7 +321,7 @@ function Detail({
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={photo.signed_url}
-                alt={photo.caption || '업로드한 사진'}
+                alt={photo.caption || "업로드한 사진"}
               />
             )}
             {prev && (
@@ -344,7 +356,7 @@ function Detail({
                 <button
                   type="button"
                   key={p.id}
-                  className={p.id === photo.id ? 'ph-thumb active' : 'ph-thumb'}
+                  className={p.id === photo.id ? "ph-thumb active" : "ph-thumb"}
                   onClick={() => select(p)}
                   aria-label={`${i + 1}번째 사진 보기`}
                 >
@@ -396,7 +408,7 @@ function Detail({
               ) : place ? (
                 <p className="meta">
                   📍 {place.name}
-                  {place.address ? ` · ${place.address}` : ''}
+                  {place.address ? ` · ${place.address}` : ""}
                 </p>
               ) : null}
             </div>
@@ -418,7 +430,7 @@ function Detail({
 
           <section className="card">
             <h2 className="card-title" style={{ marginBottom: 14 }}>
-              {batch.length > 1 ? `${index + 1}번째 사진 설명` : '사진 설명'}
+              {batch.length > 1 ? `${index + 1}번째 사진 설명` : "사진 설명"}
             </h2>
             <textarea
               className="ph-textarea"
@@ -458,26 +470,41 @@ function Detail({
               달력의 대표 사진
             </h2>
             <p className="meta">
-              {formatDayHeading(day)}에 사진 페이지 달력에 보이는 사진이에요. 정하지 않으면 그날 가장 먼저 올라온 사진이 보여요. 팀원 누구나 바꿀 수 있어요.
+              {formatDayHeading(day)}에 사진 페이지 달력에 보이는 사진이에요.
+              정하지 않으면 그날 가장 먼저 올라온 사진이 보여요. 팀원 누구나
+              바꿀 수 있어요.
             </p>
             {isCover ? (
-              <span className="ph-cover-badge">★ 지금 이 사진이 대표 사진이에요</span>
+              <span className="ph-cover-badge">
+                ★ 지금 이 사진이 대표 사진이에요
+              </span>
             ) : (
-              <button type="button" className="btn secondary sm" onClick={setCover} disabled={busy}>
+              <button
+                type="button"
+                className="btn secondary sm"
+                onClick={setCover}
+                disabled={busy}
+              >
                 이 사진을 대표 사진으로
               </button>
             )}
             {coverId !== undefined && (
-              <button type="button" className="ph-link-btn" onClick={resetCover} disabled={busy} style={{ alignSelf: 'flex-start' }}>
+              <button
+                type="button"
+                className="ph-link-btn"
+                onClick={resetCover}
+                disabled={busy}
+                style={{ alignSelf: "flex-start" }}
+              >
                 처음 상태로 되돌리기
               </button>
             )}
           </section>
 
           <section className="card">
-            <strong>{photo.uploader_nickname ?? '알 수 없음'}</strong>
+            <strong>{photo.uploader_nickname ?? "알 수 없음"}</strong>
             <span className="meta">
-              {' '}
+              {" "}
               · {formatDateTime(photo.created_at)} 업로드
             </span>
             {place && (
@@ -504,5 +531,5 @@ function Detail({
         </aside>
       </div>
     </>
-  )
+  );
 }

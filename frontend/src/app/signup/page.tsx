@@ -105,7 +105,9 @@ export default function SignupPage() {
                 minLength={8}
                 required
               />
-              <span className="hint">8자 이상으로 만들어 주세요.</span>
+              <span className="hint">
+                8자 이상, 영문·숫자·특수문자 중 2종류 이상을 섞어 주세요.
+              </span>
             </div>
             <button className="btn block" type="submit" disabled={loading}>
               {loading ? "가입 중…" : "가입하기"}
@@ -114,6 +116,10 @@ export default function SignupPage() {
 
           <p className="meta" style={{ textAlign: "center", marginTop: 18 }}>
             이미 계정이 있나요? <Link href="/login">로그인</Link>
+          </p>
+          <p className="meta" style={{ textAlign: "center", marginTop: 8 }}>
+            가입하면 <Link href="/privacy">개인정보 처리방침</Link>을 확인한
+            것으로 봐요.
           </p>
         </div>
       </div>

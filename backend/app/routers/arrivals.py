@@ -1,7 +1,7 @@
 """
 GET /groups/{group_id}/location/arrivals : Meet Mode 도착 현황
 
-- 지금 시각 기준으로 가까운 확정 약속 하나를 고른다. (약속 3시간 전 ~ 시작 2시간 뒤)
+- 지금 시각 기준으로 가까운 확정 약속 하나를 고른다. (약속 3시간 전 ~ 시작 30분 뒤)
 - 그룹 멤버마다 상태를 돌려준다: arrived(도착) / moving(이동 중) / not_sharing(공유 안 함)
   약속 장소의 좌표를 알 수 없으면 공유 중인 사람은 sharing 으로만 표시한다.
 
@@ -31,7 +31,7 @@ from app.routers.location import LocationShare
 router = APIRouter(prefix="/groups/{group_id}/location", tags=["arrivals"])
 
 MEET_BEFORE_MIN = 180   # 약속 3시간 전부터 Meet Mode 안내
-MEET_AFTER_MIN = 120    # 약속 시작 후 2시간까지
+MEET_AFTER_MIN = 30     # 약속 시작 후 30분까지 (이후에는 Meet Mode 가 닫힌다)
 ARRIVE_METERS = 400     # 장소까지 이 거리 이하면 도착 (위치가 500m 격자라 오차가 있다)
 DISTANCE_STEP = 100     # 거리는 100m 단위로만 알려 준다
 PLACE_OK_TTL = 24 * 3600
@@ -115,7 +115,7 @@ def _aware(value: datetime) -> datetime:
 
 
 def _current_meeting(db: DbSession, group_id: int, now: datetime) -> Meeting | None:
-    """지금 기준 가까운 확정 약속 (약속 3시간 전 ~ 시작 2시간 뒤)."""
+    """지금 기준 가까운 확정 약속 (약속 3시간 전 ~ 시작 30분 뒤)."""
     rows = db.scalars(
         select(Meeting).where(
             Meeting.group_id == group_id,

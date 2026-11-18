@@ -21,10 +21,17 @@ ALLOW_DEV_AUTH = os.getenv("ALLOW_DEV_AUTH", "false").lower() == "true"
 SESSION_COOKIE_NAME = "session_id"
 SESSION_TTL_DAYS = int(os.getenv("SESSION_TTL_DAYS", "7"))
 # https 로 배포할 때는 반드시 true. 로컬(http://localhost)에서는 false 여야 쿠키가 저장된다.
-COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
-
 # 로그인이 끝나면 사용자를 돌려보낼 프론트 주소
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+# 값을 따로 주지 않으면, 프론트 주소가 https 일 때 자동으로 true (https 배포에서 실수로 꺼 두는 일을 막는다)
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "true" if FRONTEND_URL.lower().startswith("https://") else "false").lower() == "true"
+
+# 쓰기 요청(POST 등)을 허용할 추가 사이트 주소 (쉼표로 구분). 프론트 주소는 자동으로 허용된다.
+ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+
+# API 문서(/docs, /redoc, /openapi.json)는 개발할 때만 연다. 배포 환경에서는 API 구조를 숨긴다.
+ENABLE_DOCS = os.getenv("ENABLE_DOCS", "false").lower() == "true"
 
 # --- 카카오 OAuth (값은 .env 에만 넣는다) ---
 KAKAO_CLIENT_ID = os.getenv("KAKAO_CLIENT_ID", "")

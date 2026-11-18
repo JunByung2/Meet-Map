@@ -7,7 +7,8 @@ from fastapi import Depends, FastAPI, Request
 from sqlalchemy import text
 
 from app import models  # noqa: F401 (테이블 정의 등록)
-from app.config import ALLOW_DEV_AUTH
+from app import hardening
+from app.config import ALLOW_DEV_AUTH, ENABLE_DOCS
 from app.db import Base, engine
 from app.deps.auth import get_current_user
 from app.routers import arrivals
@@ -39,7 +40,13 @@ from memory_api.routes import router as memory_router
 
 logger = logging.getLogger("meetmap")
 
-app = FastAPI(title="MeetMap API")
+app = FastAPI(
+    title="MeetMap API",
+    docs_url="/docs" if ENABLE_DOCS else None,
+    redoc_url="/redoc" if ENABLE_DOCS else None,
+    openapi_url="/openapi.json" if ENABLE_DOCS else None,
+)
+hardening.install(app)
 
 
 @app.middleware("http")

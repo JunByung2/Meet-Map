@@ -7,6 +7,15 @@ import { api, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import GroupsMeetingCalendar from "@/features/calendar/GroupsMeetingCalendar";
 
+type CalMeeting = {
+  id: number;
+  group_id: number;
+  title: string;
+  location: string;
+  meeting_time: string;
+  status: string;
+};
+
 type Group = {
   id: number;
   name: string;
@@ -18,6 +27,7 @@ type Group = {
 export default function GroupsPage() {
   const router = useRouter();
   const [groups, setGroups] = useState<Group[]>([]);
+  const [meetings, setMeetings] = useState<CalMeeting[] | undefined>(undefined);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
@@ -26,8 +36,13 @@ export default function GroupsPage() {
 
   const loadGroups = useCallback(async () => {
     try {
-      const data = await api<Group[]>("/groups");
+      // 그룹 목록과 모든 그룹의 약속을 동시에 가져온다 (달력이 그룹마다 따로 부르지 않게)
+      const [data, mine] = await Promise.all([
+        api<Group[]>("/groups"),
+        api<{ meetings: CalMeeting[] }>("/me/meetings").catch(() => null),
+      ]);
       setGroups(data);
+      setMeetings(mine ? mine.meetings : undefined);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         router.push("/login");
@@ -93,13 +108,13 @@ export default function GroupsPage() {
 
       {error && <div className="error">{error}</div>}
 
-      {groups.length > 0 && (
+      {groups.length > 0 && !loading && (
         <section style={{ marginBottom: 32 }}>
           <div className="row-between" style={{ marginBottom: 16 }}>
             <h2 className="section-title">우리 약속 달력</h2>
           </div>
           <div className="card">
-            <GroupsMeetingCalendar groups={groups} />
+            <GroupsMeetingCalendar groups={groups} meetings={meetings} />
           </div>
         </section>
       )}

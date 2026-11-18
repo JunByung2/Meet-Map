@@ -5,20 +5,30 @@ import Link from "next/link";
 import PhotoShell from "@/components/PhotoShell";
 import { api, ApiError } from "@/lib/api";
 import { formatMeetDate, type MeetingRecord } from "@/lib/records";
+import Pager, { PAGE_SIZE, pageCount } from "@/components/Pager";
 import MemoryTabs from "@/components/MemoryTabs";
 import "@/components/records.css";
 
 export default function RecordsPage() {
   return (
     <PhotoShell active="records">
-      {({ groupId, onApiError }) => <RecordList groupId={groupId} onApiError={onApiError} />}
+      {({ groupId, onApiError }) => (
+        <RecordList groupId={groupId} onApiError={onApiError} />
+      )}
     </PhotoShell>
   );
 }
 
-function RecordList({ groupId, onApiError }: { groupId: string; onApiError: (e: unknown) => string }) {
+function RecordList({
+  groupId,
+  onApiError,
+}: {
+  groupId: string;
+  onApiError: (e: unknown) => string;
+}) {
   const [records, setRecords] = useState<MeetingRecord[] | null>(null);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
   useEffect(() => {
     api<MeetingRecord[]>(`/groups/${groupId}/records`)
       .then(setRecords)
@@ -30,7 +40,12 @@ function RecordList({ groupId, onApiError }: { groupId: string; onApiError: (e: 
   }, [groupId]);
 
   async function removeRecord(r: MeetingRecord) {
-    if (!window.confirm(`'${r.title}' 기록을 삭제할까요?\n모든 팀원에게서 지워져요. 약속과 사진은 그대로 남아요.`)) return;
+    if (
+      !window.confirm(
+        `'${r.title}' 기록을 삭제할까요?\n모든 팀원에게서 지워져요. 약속과 사진은 그대로 남아요.`,
+      )
+    )
+      return;
     setError("");
     try {
       await api(`/groups/${groupId}/records/${r.id}`, { method: "DELETE" });
@@ -42,7 +57,11 @@ function RecordList({ groupId, onApiError }: { groupId: string; onApiError: (e: 
 
   return (
     <>
-      <MemoryTabs groupId={groupId} current="records" sub="확정된 약속이 자동으로 모여요. 날짜 · 장소 · 사진을 한눈에 봐요." />
+      <MemoryTabs
+        groupId={groupId}
+        current="records"
+        sub="확정된 약속이 자동으로 모여요. 날짜 · 장소 · 사진을 한눈에 봐요."
+      />
 
       {error && <div className="error">{error}</div>}
       {records === null && (
@@ -52,8 +71,14 @@ function RecordList({ groupId, onApiError }: { groupId: string; onApiError: (e: 
               <div className="rc-cover sk" />
               <div className="rc-body">
                 <span className="sk sk-line" style={{ width: 80 }} />
-                <span className="sk sk-line" style={{ width: "55%", height: 16, marginTop: 6 }} />
-                <span className="sk sk-line" style={{ width: "40%", marginTop: 6 }} />
+                <span
+                  className="sk sk-line"
+                  style={{ width: "55%", height: 16, marginTop: 6 }}
+                />
+                <span
+                  className="sk sk-line"
+                  style={{ width: "40%", marginTop: 6 }}
+                />
               </div>
             </div>
           ))}
@@ -63,7 +88,10 @@ function RecordList({ groupId, onApiError }: { groupId: string; onApiError: (e: 
       {records && records.length === 0 && !error && (
         <div className="card ph-empty">
           <h3>아직 확정된 약속이 없어요</h3>
-          <p>채팅방에서 투표를 만들고 약속이 확정되면, 이곳에 지난 기록이 자동으로 생겨요.</p>
+          <p>
+            채팅방에서 투표를 만들고 약속이 확정되면, 이곳에 지난 기록이
+            자동으로 생겨요.
+          </p>
           <Link className="btn" href={`/groups/${groupId}`}>
             채팅방으로 가기
           </Link>
@@ -71,37 +99,67 @@ function RecordList({ groupId, onApiError }: { groupId: string; onApiError: (e: 
       )}
 
       {records && records.length > 0 && (
-        <div className="rc-list">
-          {records.map((r) => (
-            <div className="rc-wrap" key={r.id}>
-            <Link className="rc-card" href={`/groups/${groupId}/records/${r.id}`}>
-              <div className="rc-cover">
-                {r.cover_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={r.cover_url} alt={`${r.title} 대표 사진`} loading="lazy" decoding="async" />
-                ) : (
-                  <span>사진 없는 기록</span>
-                )}
-              </div>
-              <div className="rc-body">
-                <span className="rc-date">{formatMeetDate(r.meet_date)}</span>
-                <span className="rc-title">{r.title}</span>
-                <span className="rc-line">📍 {r.place_name ?? "장소를 정하지 않았어요"}</span>
-                {r.photo_count > 0 && (
-                  <div className="rc-chips">
-                    <span className="rc-chip">사진 {r.photo_count}장</span>
-                  </div>
-                )}
-              </div>
-            </Link>
-            {r.can_edit && (
-              <button type="button" className="rc-del" onClick={() => void removeRecord(r)}>
-                삭제
-              </button>
-            )}
-            </div>
-          ))}
-        </div>
+        <>
+          <div className="rc-list">
+            {records
+              .slice(
+                (Math.min(page, pageCount(records.length)) - 1) * PAGE_SIZE,
+                Math.min(page, pageCount(records.length)) * PAGE_SIZE,
+              )
+              .map((r) => (
+                <div className="rc-wrap" key={r.id}>
+                  <Link
+                    className="rc-card"
+                    href={`/groups/${groupId}/records/${r.id}`}
+                  >
+                    <div className="rc-cover">
+                      {r.cover_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={r.cover_url}
+                          alt={`${r.title} 대표 사진`}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <span>사진 없는 기록</span>
+                      )}
+                    </div>
+                    <div className="rc-body">
+                      <span className="rc-date">
+                        {formatMeetDate(r.meet_date)}
+                      </span>
+                      <span className="rc-title">{r.title}</span>
+                      <span className="rc-line">
+                        📍 {r.place_name ?? "장소를 정하지 않았어요"}
+                      </span>
+                      {r.photo_count > 0 && (
+                        <div className="rc-chips">
+                          <span className="rc-chip">
+                            사진 {r.photo_count}장
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                  {r.can_edit && (
+                    <button
+                      type="button"
+                      className="rc-del"
+                      onClick={() => void removeRecord(r)}
+                    >
+                      삭제
+                    </button>
+                  )}
+                </div>
+              ))}
+          </div>
+          <Pager
+            page={Math.min(page, pageCount(records.length))}
+            pages={pageCount(records.length)}
+            onChange={setPage}
+          />
+        </>
       )}
     </>
   );

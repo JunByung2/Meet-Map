@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import AppShell, { type ShellGroup } from "@/components/AppShell";
-import { api, ApiError } from "@/lib/api";
+import { watchApi, ApiError } from "@/lib/api";
 import "./photos.css";
 import "./maps.css";
 
@@ -43,12 +43,18 @@ export default function PhotoShell({
   }
 
   useEffect(() => {
-    api<GroupDetail>(`/groups/${groupId}`)
-      .then((g) =>
-        setGroup({ id: g.id, name: g.name, icon: g.icon, memberNicknames: g.members.map((m) => m.nickname) }),
-      )
-      .catch((e) => setBlocked(onApiError(e)))
-      .finally(() => setLoading(false));
+    setGroup(null);
+    setLoading(true);
+    setBlocked("");
+    return watchApi<GroupDetail>(`/groups/${groupId}`, (g) => {
+      setGroup({ id: g.id, name: g.name, icon: g.icon, memberNicknames: g.members.map((m) => m.nickname) });
+      setBlocked("");
+      setLoading(false);
+    }, (e) => {
+      if (e instanceof ApiError && [0, 401, 403].includes(e.status)) setGroup(null);
+      setBlocked(onApiError(e));
+      setLoading(false);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId]);
 
@@ -59,7 +65,7 @@ export default function PhotoShell({
       </AppShell>
     );
   }
-  if (!group) {
+  if (!group || group.id !== Number(groupId)) {
     return (
       <AppShell active={active}>
         <div className="error">{blocked || "그룹을 불러오지 못했어요."}</div>

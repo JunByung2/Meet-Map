@@ -211,3 +211,97 @@
     padding: 0 3px;
   }
 }
+
+/* Mobile: give event titles the full day-column width. */
+@media (max-width: 650px) {
+  :global(.card):has(> .wrap) {
+    padding: 12px 6px;
+    border-radius: 16px;
+  }
+  .wrap {
+    min-width: 0;
+    gap: 12px;
+  }
+  .head {
+    gap: 6px;
+    padding-inline: 4px;
+  }
+  .month {
+    gap: 4px;
+  }
+  .monthLabel {
+    min-width: 0;
+    font-size: 16px;
+  }
+  .nav {
+    width: 36px;
+    height: 40px;
+  }
+  .body {
+    gap: 16px;
+  }
+  .grid {
+    column-gap: 3px;
+    row-gap: 8px;
+  }
+  .cell {
+    min-height: 112px;
+    padding: 4px 0;
+    gap: 4px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+  }
+  .num {
+    align-self: center;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+  }
+  .today {
+    box-shadow: none;
+  }
+  .today .num {
+    border-radius: 50%;
+    background: var(--teal);
+    color: white;
+  }
+  .selected {
+    background: var(--mint);
+    outline: 1px solid var(--teal);
+    outline-offset: -1px;
+  }
+  .cell:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: -2px;
+  }
+  .chip {
+    box-sizing: border-box;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    text-overflow: clip;
+    flex-shrink: 0;
+    padding: 2px;
+    border-left-width: 2px;
+    font-size: 11px;
+    line-height: 1.35;
+    max-height: 34px;
+    text-align: left;
+  }
+  .more {
+    padding-inline: 3px;
+    font-size: 10px;
+  }
+  .panel {
+    padding: 12px;
+  }
+  .itemBody strong {
+    overflow-wrap: anywhere;
+  }
+}

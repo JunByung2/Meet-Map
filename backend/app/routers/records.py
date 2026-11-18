@@ -124,7 +124,7 @@ def _chat_photo_paths_by_day(db: DbSession, group_id: int) -> dict[date, list[st
 
 
 def _to_record_out(
-    db: DbSession, records: list[MeetingRecord], user: User, member: GroupMember, with_cover: bool = True
+    db: DbSession, records: list[MeetingRecord], user: User, member: GroupMember, with_cover: bool = True, release_db: bool = False
 ) -> list[RecordOut]:
     if not records:
         return []
@@ -139,14 +139,7 @@ def _to_record_out(
     by_day = _chat_photo_paths_by_day(db, records[0].group_id)
     counts = {r.id: len(by_day.get(r.meet_date, [])) for r in records}
     cover_path: dict[int, str] = {r.id: by_day[r.meet_date][0] for r in records if by_day.get(r.meet_date)}
-    urls: dict[str, str] = {}
-    if with_cover and cover_path and storage.is_configured():
-        try:
-            urls = storage.signed_urls(list(cover_path.values()))
-        except storage.StorageError:
-            urls = {}  # 대표 사진을 못 불러와도 기록 목록은 보여준다
-
-    return [
+    output = [
         RecordOut(
             id=r.id,
             group_id=r.group_id,
@@ -162,12 +155,24 @@ def _to_record_out(
             created_by=r.created_by,
             creator_nickname=nicknames.get(r.created_by),
             photo_count=counts.get(r.id, 0),
-            cover_url=urls.get(cover_path.get(r.id, "")),
+            cover_url=None,
             created_at=r.created_at,
             can_edit=_can_edit(r, user, member),
         )
         for r in records
     ]
+    # All ORM values are copied before releasing the read transaction.
+    if release_db:
+        db.close()
+    if with_cover and cover_path and storage.is_configured():
+        try:
+            urls = storage.signed_urls(list(cover_path.values()))
+        except storage.StorageError:
+            urls = {}
+        for item in output:
+            item.cover_url = urls.get(cover_path.get(item.id, ""))
+    return output
+
 
 
 def _prepare_files(files: list[UploadFile]) -> list[tuple[str, bytes, str]]:
@@ -235,6 +240,7 @@ def _store_photos(
 @router.get("", response_model=list[RecordOut])
 def list_records(
     group_id: int,
+    with_cover: bool = True,
     member: GroupMember = Depends(require_group_member),
     user: User = Depends(get_current_user),
     db: DbSession = Depends(get_db),
@@ -254,7 +260,7 @@ def list_records(
         .order_by(MeetingRecord.meet_date.desc(), MeetingRecord.id.desc())
         .limit(500)
     ).scalars().all()
-    return _to_record_out(db, list(rows), user, member)
+    return _to_record_out(db, list(rows), user, member, with_cover=with_cover, release_db=True)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=RecordDetailOut)

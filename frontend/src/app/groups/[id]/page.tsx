@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, watchApi } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import { LAST_GROUP_KEY } from "@/components/Sidebar";
 import { ddayLabel } from "@/lib/dday";
@@ -128,7 +128,7 @@ export default function GroupDetailPage() {
         })),
       });
       if (data.my_role === "owner") {
-        await loadInvite();
+        void loadInvite();
       }
     } catch (err) {
       handleError(err);
@@ -139,8 +139,24 @@ export default function GroupDetailPage() {
   }, [groupId, loadInvite]);
 
   useEffect(() => {
-    loadGroup();
-  }, [loadGroup]);
+    setGroup(null);
+    setLoading(true);
+    return watchApi<GroupDetail>(`/groups/${groupId}`, (data) => {
+      const mode = readNameMode();
+      setGroup({ ...data, members: data.members.map((m) => ({ ...m, nickname: pickName(m, mode) })) });
+      setLoading(false);
+      setError("");
+    }, (err) => {
+      if (err instanceof ApiError && [0, 401, 403].includes(err.status)) setGroup(null);
+      handleError(err);
+      setLoading(false);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId]);
+
+  useEffect(() => {
+    if (group?.my_role === "owner") void loadInvite();
+  }, [group?.my_role, loadInvite]);
 
   // 이 그룹의 약속 (실패해도 홈은 그대로 보이게 빈 목록으로 둔다)
   useEffect(() => {

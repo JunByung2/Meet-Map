@@ -29,9 +29,10 @@ export default function SharedBar({
         type="button"
         className={styles.bar}
         aria-expanded={open}
+        aria-label={`투표 ${votes.length}개 · 장소 ${places.length}개 ${open ? '닫기' : '열기'}`}
         onClick={() => setOpen((v) => !v)}
       >
-        <span className={styles.label}>투표 · 장소 선택</span>
+        <span className={styles.label}>투표·장소</span>
         <span className={styles.badges}>
           <span className={styles.badge}>투표 {votes.length}</span>
           <span className={styles.badge}>장소 {places.length}</span>

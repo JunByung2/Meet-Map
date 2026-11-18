@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { api } from "@/lib/api";
+import { watchApi, ApiError } from "@/lib/api";
 import { pickName, readNameMode } from "@/lib/nameMode";
 import Avatar from "./Avatar";
 
@@ -117,10 +117,7 @@ export default function Sidebar({
   const hasGroup = group !== undefined;
   useEffect(() => {
     if (!pathId) return;
-    let cancelled = false;
-    api<GroupDetail>(`/groups/${pathId}`)
-      .then((g) => {
-        if (cancelled) return;
+    return watchApi<GroupDetail>(`/groups/${pathId}`, (g) => {
         const mode = readNameMode();
         setPeopleState({
           groupId: g.id,
@@ -144,11 +141,11 @@ export default function Sidebar({
             memberNicknames: g.members?.map((m) => pickName(m, mode)),
           });
         }
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
+      }, (error) => {
+        if (error instanceof ApiError && [0, 401, 403].includes(error.status)) {
+          setFetched(null); setPeopleState(null);
+        }
+      });
   }, [hasGroup, pathId]);
 
   // 마지막으로 연 그룹 읽기

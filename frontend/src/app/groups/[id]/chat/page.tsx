@@ -4,13 +4,14 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import ChatLoading from "@/components/chat/ChatLoading";
 import ChatPanel from "@/components/chat/ChatPanel";
 import { useGroupContext } from "@/hooks/useGroupContext";
 
 export default function GroupChatPage() {
   // useSearchParams 는 Suspense 안에서 써야 빌드가 통과한다
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<AppShell active="chat"><ChatLoading /></AppShell>}>
       <GroupChat />
     </Suspense>
   );
@@ -25,7 +26,7 @@ function GroupChat() {
   if (loading) {
     return (
       <AppShell active="chat">
-        <div className="card muted">불러오는 중...</div>
+        <ChatLoading />
       </AppShell>
     );
   }

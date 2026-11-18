@@ -170,7 +170,9 @@ export default function MeetModePanel({
   loading,
   locked,
   onQuick,
+  inDialog = false,
 }: {
+  inDialog?: boolean
   meet: Meet
   arrivalState: ArrivalState
   /** 약속 정보를 아직 불러오는 중 */
@@ -219,10 +221,10 @@ export default function MeetModePanel({
   // 모바일: 평소엔 한 줄 막대로 접어 두고(채팅 입력창이 가려지지 않게), 눌러서 펼친다.
   // 위치 공유를 물어보거나 문제가 생겼을 때는 저절로 펼쳐진다.
   const [mobileOpen, setMobileOpen] = useState(false)
-  const expanded = mobileOpen || asking || !!meet.problem
+  const expanded = inDialog || mobileOpen || asking || !!meet.problem
 
   return (
-    <aside className={styles.panel} aria-label="Meet Mode">
+    <aside className={`${styles.panel} ${inDialog ? styles.dialogPanel : ''}`} aria-label="Meet Mode">
       <div className={styles.head}>
         <span className={styles.title}>
           <i className={`${styles.dot} ${open ? '' : styles.dotOff}`} />
@@ -233,14 +235,14 @@ export default function MeetModePanel({
             {open ? '오늘 약속' : '잠김'}
           </span>
         )}
-        <button
+        {!inDialog && <button
           type="button"
           className={styles.mToggle}
           aria-expanded={expanded}
           onClick={() => setMobileOpen((v) => !v)}
         >
           {expanded ? '접기 ▲' : '열기 ▼'}
-        </button>
+        </button>}
       </div>
 
       <div className={`${styles.body} ${expanded ? styles.bodyOpen : ''}`}>

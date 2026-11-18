@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { api, ApiError } from "@/lib/api";
+import { watchApi, ApiError } from "@/lib/api";
 
 export type GroupMember = {
   user_id: number;
@@ -37,38 +37,34 @@ export function useGroupContext() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const [meData, groupData] = await Promise.all([
-          api<Me>("/auth/me"),
-          api<GroupDetail>(`/groups/${groupId}`),
-        ]);
-        if (cancelled) return;
-        setMe(meData);
-        setGroup(groupData);
-      } catch (err) {
-        if (cancelled) return;
-        if (err instanceof ApiError && err.status === 401) {
-          router.push("/login");
-          return;
-        }
-        if (err instanceof ApiError && err.status === 403) {
-          setError("이 그룹에 접근할 수 없습니다.");
-          return;
-        }
-        setError(err instanceof ApiError ? err.message : "오류가 발생했습니다.");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
+    let currentMe: Me | null = null;
+    let currentGroup: GroupDetail | null = null;
+    setLoading(true);
+    setMe(null);
+    setGroup(null);
+    setError("");
+    const publish = () => {
+      if (!currentMe || !currentGroup) return;
+      setMe(currentMe);
+      setGroup(currentGroup);
+      setError("");
+      setLoading(false);
     };
+    const fail = (err: unknown) => {
+      if (err instanceof ApiError && [0, 401, 403].includes(err.status)) {
+        currentMe = null;
+        currentGroup = null;
+        setMe(null);
+        setGroup(null);
+        if (err.status === 401) router.push("/login");
+      }
+      setError(err instanceof ApiError ? err.message : "정보를 갱신하지 못했어요.");
+      setLoading(false);
+    };
+    const stopMe = watchApi<Me>("/auth/me", (value) => { currentMe = value; publish(); }, fail);
+    const stopGroup = watchApi<GroupDetail>(`/groups/${groupId}`, (value) => { currentGroup = value; publish(); }, fail);
+    return () => { stopMe(); stopGroup(); };
   }, [groupId, router]);
 
-  return { groupId, me, group, error, loading };
+  return { groupId, me, group: group?.id === groupId ? group : null, error, loading };
 }

@@ -551,8 +551,6 @@
     display: flex;
     flex-direction: column;
     /* 위 84px(머리글+여백) + 아래 66px(하단 탭바) 만큼만 빼서, 채팅창 밑에 빈 칸도 없고 더 내려가지도 않게 */
-    height: calc(100vh - 150px);
-    height: calc(100dvh - 150px - env(safe-area-inset-bottom, 0px));
     min-height: 0;
   }
 
@@ -637,13 +635,6 @@
     flex: 1 1 auto;
     min-height: 0;
     max-height: none;
-  }
-}
-
-/* 채팅 화면은 탭바 바로 위까지만 쓰고 그 아래로 스크롤되지 않게 (모바일) */
-@media (max-width: 650px) {
-  :global(.content):has(.chatMain) {
-    padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -769,4 +760,293 @@
   .send {
     flex-shrink: 0;
   }
+}
+
+.meetDialog {
+  position: fixed;
+  inset: auto;
+  top: calc(var(--sheet-top, 0px) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 94%;
+  max-width: 640px;
+  max-height: calc(var(--sheet-height, 100dvh) - 24px);
+  margin: 0;
+  padding: 0;
+  border: 1px solid #dce6e3;
+  border-radius: 20px;
+  background: #fff;
+  color: #254347;
+  overflow: hidden;
+}
+.meetDialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.meetDialog::backdrop {
+  background: rgb(16 34 37 / 45%);
+}
+.meetDialogHeader {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e6ebe9;
+}
+.meetDialogHeader h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.meetDialogBody {
+  overflow-y: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.meetLauncher {
+  flex: none;
+  border: 1px solid #dce6e3;
+  border-radius: 12px;
+  background: white;
+  color: #254347;
+  padding: 10px;
+  text-align: left;
+}
+@media (max-width: 650px) {
+  .layout {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+  .chatMain {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .chatMain > * {
+    flex-shrink: 0;
+    min-width: 0;
+  }
+  .chatMain > .messages {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .composer {
+    margin-top: 4px;
+  }
+  .composerBottom {
+    min-width: 0;
+  }
+  .composerBottom :global(.input) {
+    flex: 1;
+    width: 0;
+    min-width: 0;
+    font-size: 16px;
+  }
+  .composerBottom > button {
+    flex: none;
+  }
+  :global(.app-shell[data-keyboard='open']) .mobileTitle,
+  :global(.app-shell[data-keyboard='open']) .meetLauncher {
+    display: none;
+  }
+}
+
+@media (max-width: 650px) {
+  .outgoingArea {
+    flex: 0 1 auto;
+    max-height: 22%;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .selectionHint {
+    max-height: 48px;
+    overflow-y: auto;
+    margin: 4px 0;
+  }
+  .selectionDock {
+    max-height: 35%;
+    overflow-y: auto;
+  }
+}
+
+/* Compact chat controls; messages own the remaining space. */
+.toolsToggle {
+  display: none;
+}
+.compactTop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  margin-bottom: 6px;
+  z-index: 20;
+}
+.compactTop .meetLauncher {
+  min-height: 40px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.status:empty {
+  display: none;
+}
+@media (min-width: 1051px) {
+  .head {
+    margin-bottom: 12px;
+    align-items: center;
+  }
+  .head :global(.page-title) {
+    margin: 0;
+    font-size: 26px;
+  }
+  .head :global(.page-sub) {
+    margin: 4px 0 0;
+  }
+  .head :global(.eyebrow) {
+    margin: 0 0 4px;
+  }
+  .chatMain > .banner {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+  }
+  .rightWrap {
+    min-height: 0;
+  }
+  .composer {
+    padding: 8px 10px;
+  }
+  .composer > .hint {
+    display: none;
+  }
+  .tools {
+    margin-bottom: 6px;
+  }
+  .composerBottom :global(.input) {
+    flex: 1;
+    min-width: 0;
+    width: 0;
+  }
+}
+@media (max-width: 650px) {
+  .compactTop .mobileTitle {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    align-items: center;
+    gap: 4px;
+  }
+  .mobileTitle strong {
+    font-size: 16px;
+  }
+  .mobileTitle span {
+    font-size: 11px;
+  }
+  .tools {
+    display: none;
+  }
+  .tools.toolsOpen {
+    display: flex;
+    flex-wrap: wrap;
+    padding-bottom: 4px;
+  }
+  .toolsToggle {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--mint);
+    color: var(--teal);
+    font-size: 26px;
+    cursor: pointer;
+  }
+  .chip {
+    min-height: 40px;
+  }
+  .composerBottom {
+    gap: 6px;
+  }
+  .composerBottom :global(.input),
+  .send {
+    height: 42px;
+  }
+  .send {
+    padding-inline: 10px;
+  }
+  .messages {
+    gap: 12px;
+    padding-bottom: 10px;
+  }
+  .mine + .other,
+  .other + .mine {
+    margin-top: 0;
+  }
+  .dateBand {
+    margin: 2px 0;
+    padding-block: 3px;
+  }
+  .pendingTray {
+    max-height: min(24dvh, 180px);
+    overflow-y: auto;
+  }
+  .composer > .status:not(:empty) {
+    max-height: 44px;
+    overflow-y: auto;
+  }
+  :global(.app-shell[data-keyboard='open']) .compactTop {
+    display: none;
+  }
+}
+/* 모바일: 로딩 여부와 관계없이 채팅 너비 유지 */
+@media (max-width: 650px) {
+  .layout {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .chatMain {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}
+
+/* Keep loading and empty chat independent of message content width. */
+@media (max-width: 650px) {
+  .layout { align-items: stretch; width: 100%; }
+  .chatMain { width: 100%; min-width: 0; box-sizing: border-box; }
+}
+.loadingShell { display: flex; flex-direction: column; width: 100%; min-width: 0; min-height: 360px; height: calc(100dvh - 180px); }
+.loadingHeading { display: flex; gap: 10px; align-items: center; height: 54px; flex: none; }
+.loadingHeading i { display: block; width: 110px; height: 22px; border-radius: 8px; background: #e3eeea; }
+.loadingHeading i + i { width: 84px; height: 36px; }
+.loadingMain { flex: 1; min-height: 0; overflow: hidden; }
+.loadingMessages { width: 100%; padding: 24px 12px; box-sizing: border-box; color: var(--muted); font-size: 13px; text-align: center; }
+.loadingBubbles { display: flex; flex-direction: column; gap: 18px; margin-top: 28px; }
+.loadingBubbles i { display: block; width: 48%; height: 42px; border-radius: 12px; background: #e7efec; }
+.loadingBubbles i:nth-child(2) { align-self: flex-end; width: 35%; }
+.loadingBubbles i:nth-child(3) { width: 57%; }
+.loadingComposer { display: flex; gap: 8px; padding: 8px; border: 1px solid #eef0ec; border-radius: 12px; background: white; flex: none; margin-top: 4px; }
+.loadingComposer i { display: block; height: 42px; border-radius: 10px; background: #e7efec; }
+.loadingComposer i:first-child { width: 40px; }
+.loadingComposer i:nth-child(2) { flex: 1; }
+.loadingComposer i:last-child { width: 64px; }
+@media (max-width: 650px) {
+  .loadingShell { flex: 1; height: auto; min-height: 0; }
+  .loadingHeading { height: 46px; }
+  .loadingMessages { padding: 20px 8px; }
 }

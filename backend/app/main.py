@@ -49,7 +49,8 @@ async def _measure_time(request: Request, call_next):
     start = time.perf_counter()
     response = await call_next(request)
     ms = (time.perf_counter() - start) * 1000
-    response.headers["Server-Timing"] = f"app;dur={ms:.0f}"
+    timing = response.headers.get("Server-Timing")
+    response.headers["Server-Timing"] = f"{timing}, app;dur={ms:.0f}" if timing else f"app;dur={ms:.0f}"
     if ms >= 1000:
         logger.warning("느린 요청 %s %s %.0fms", request.method, request.url.path, ms)
     return response

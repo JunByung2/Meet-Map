@@ -115,6 +115,12 @@
 .ph-select-bar { position: sticky; bottom: 16px; z-index: 20; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--white); box-shadow: 0 6px 24px rgba(33, 60, 64, 0.15); }
 .ph-select-bar .grow { flex: 1; min-width: 120px; font-weight: 700; font-size: 14px; }
 .ph-select-hint { margin: 0 0 12px; font-size: 13px; color: var(--muted); }
+/* 모바일: 선택 바를 '글자 한 줄 + 버튼 한 줄(전체 선택·취소·삭제)'로 두어 삭제 버튼이 탭바 뒤로 숨지 않게 */
+@media (max-width: 960px) {
+  .ph-select-bar.ph-select-bar { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); gap: 8px; padding: 12px; }
+  .ph-select-bar.ph-select-bar .grow { flex: 1 1 100%; min-width: 0; }
+  .ph-select-bar.ph-select-bar .btn { flex: 1 1 0; min-width: 0; padding-left: 8px; padding-right: 8px; white-space: nowrap; }
+}
 
 /* 업로드 진행률 · 실패 재시도 */
 .ph-state { position: absolute; left: 8px; bottom: 8px; padding: 2px 10px; border-radius: var(--radius-pill); background: var(--white); color: var(--teal); font-size: 12px; font-weight: 700; }

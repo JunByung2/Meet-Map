@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useId, useRef, useState, type ClipboardEvent } from 'react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ClipboardEvent } from 'react'
 import styles from './chat.module.css'
 import tray from './bundle.module.css'
 import { hasAllowedExtension } from '@/lib/photos'
+import { getCurrentGps, markCameraPhoto, type Gps } from '@/lib/photoGps'
 
 const TOOLS = ['MeetMode', '첨부', '장소 선택', '투표'] // 첨부 안에 사진과 문서·파일이 들어 있다
 const MAX_PHOTOS = 27 // 한 번에 보낼 수 있는 사진 수 (9장씩 3묶음)
@@ -51,6 +52,14 @@ export default function MessageComposer({
   const toolsId = useId()
   const imageRef = useRef<HTMLInputElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const camGpsRef = useRef<Promise<Gps | null> | null>(null) // 카메라를 연 순간 폰의 위치
+  // 터치 기기(폰·태블릿)에서만 카메라 버튼을 보여준다
+  const canCamera = useSyncExternalStore(
+    () => () => {},
+    () => typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0,
+    () => false,
+  )
   const [attachOpen, setAttachOpen] = useState(false) // 첨부를 누르면 사진 / 문서·파일 중에 고른다
 
   // 보내기 전 사진 미리보기 (2장 이상 골랐을 때)
@@ -108,6 +117,13 @@ export default function MessageComposer({
     setNote('')
     if (onFiles) void onFiles('image', files, { bundle })
     else files.forEach((f) => void onFile?.('image', f))
+  }
+
+  // 카메라로 찍은 사진: 찍을 때의 폰 위치를 사진에 연결해 둔다 (파일에 위치가 없는 폰도 위치가 저장되게)
+  function pickCamera(input: HTMLInputElement) {
+    const gps = camGpsRef.current
+    if (gps) Array.from(input.files ?? []).forEach((f) => markCameraPhoto(f, gps))
+    pick('image', input)
   }
 
   function pick(kind: 'image' | 'file', input: HTMLInputElement) {
@@ -226,6 +242,18 @@ export default function MessageComposer({
           >
             🖼 사진
           </button>
+          {canCamera && (
+            <button
+              type="button"
+              onClick={() => {
+                setAttachOpen(false)
+                camGpsRef.current = getCurrentGps() // 카메라를 열기 전에 위치를 잡기 시작한다 (위치 권한 창이 먼저 뜬다)
+                cameraRef.current?.click()
+              }}
+            >
+              📷 카메라
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -246,6 +274,14 @@ export default function MessageComposer({
         accept="image/*"
         hidden
         onChange={(e) => pick('image', e.target)}
+      />
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={(e) => pickCamera(e.target)}
       />
       <input
         ref={fileRef}

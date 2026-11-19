@@ -32,7 +32,8 @@ const SAME_SPOT_DEG = 0.0004
 interface PhotoMapProps {
   pins: PhotoPin[]
   selectedPinId?: string
-  onPinClick?: (pin: PhotoPin) => void
+  /** 두 번째 인자: 붙어 있어서 한 말풍선으로 묶인 장소들 (한 곳뿐이면 자기 자신 하나) */
+  onPinClick?: (pin: PhotoPin, near: PhotoPin[]) => void
   height?: string
   /** 이 숫자가 바뀌면 모든 장소가 보이는 처음 화면으로 되돌려요 ("전체 지도로" 버튼용) */
   resetKey?: number
@@ -142,7 +143,7 @@ export default function PhotoMap({
       const map = mapInstance.current
       if (!map) return
       if (c.members.length === 1) {
-        onPinClickRef.current?.(c.members[0])
+        onPinClickRef.current?.(c.members[0], c.members)
         return
       }
       // 여러 장소 묶음: 그 장소들이 모두 보이게 확대. 더 확대해도 안 풀릴 만큼 붙어 있으면 대표 장소를 바로 선택
@@ -152,7 +153,7 @@ export default function PhotoMap({
         Math.max(...lats) - Math.min(...lats) < SAME_SPOT_DEG &&
         Math.max(...lngs) - Math.min(...lngs) < SAME_SPOT_DEG
       if (tiny || map.getLevel() <= 2) {
-        onPinClickRef.current?.(c.cover)
+        onPinClickRef.current?.(c.cover, c.members)
         return
       }
       const kakao = window.kakao

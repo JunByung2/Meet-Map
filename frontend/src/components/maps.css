@@ -424,3 +424,10 @@
     grid-template-columns: 1fr;
   }
 }
+.pp-note {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+  line-height: 1.5;
+}

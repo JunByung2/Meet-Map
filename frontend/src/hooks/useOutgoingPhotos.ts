@@ -3,11 +3,54 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { shrinkImage } from "@/lib/imageShrink";
+import { coordToPlace, loadKakao } from "@/lib/kakao";
+import { cameraGpsOf, estimatePlace, readPhotoGps, type Gps } from "@/lib/photoGps";
 import { postWithProgress } from "@/lib/postWithProgress";
 
 export type OutStatus = "wait" | "up" | "done" | "fail";
 export type OutItem = { id: string; file: File; preview: string; status: OutStatus; progress: number; attId?: number; error?: string };
 export type OutGroup = { key: string; bundle: boolean; items: OutItem[]; working: boolean };
+
+// 사진에 담긴 위치(좌표)를 장소 이름으로 바꾼 결과. 같은 곳에서 찍은 여러 장은 한 번만 찾아요.
+type SavedPlace = { name: string; address: string | null; lat: number; lng: number };
+const placeCache = new Map<string, Promise<SavedPlace>>();
+
+function placeOfGps(gps: Gps): Promise<SavedPlace> {
+  const key = `${gps.lat.toFixed(4)},${gps.lng.toFixed(4)}`;
+  let hit = placeCache.get(key);
+  if (!hit) {
+    hit = (async () => {
+      try {
+        const kakao = await loadKakao();
+        const p = await coordToPlace(kakao, gps.lat, gps.lng);
+        if (p) return { name: p.name.slice(0, 100), address: p.address ? p.address.slice(0, 200) : null, lat: gps.lat, lng: gps.lng };
+      } catch {
+        // 카카오 지도를 못 불러와도 좌표는 저장할 수 있어요
+      }
+      return { name: "사진에 담긴 위치", address: null, lat: gps.lat, lng: gps.lng };
+    })();
+    placeCache.set(key, hit);
+  }
+  return hit;
+}
+
+/** 원본 사진 파일에서 찍은 위치를 찾아요 (사진을 줄이기 전에 읽어야 해요). 앱 카메라로 찍은 사진은 찍을 때의 폰 위치를 대신 써요. 없으면 null */
+async function findPlace(file: File, groupId: number): Promise<SavedPlace | null> {
+  try {
+    let gps = await readPhotoGps(file);
+    if (!gps) {
+      const fallback = cameraGpsOf(file);
+      if (fallback) gps = await fallback;
+    }
+    if (gps) return await placeOfGps(gps);
+    // 폰이 위치를 지우고 넘긴 사진: 방금 찍은 사진이면 지금 위치로 채우고, 옛날 사진은 비워 둬요
+    const est = await estimatePlace(file, groupId);
+    if (!est) return null;
+    return await placeOfGps(est.gps);
+  } catch {
+    return null;
+  }
+}
 
 const PARALLEL = 5; // 동시에 올리는 장수
 export const BUNDLE_MAX = 9; // 한 말풍선에 묶이는 최대 장수 (3x3). 더 많으면 9장씩 나눠 여러 말풍선으로 보낸다 (한 번에 최대 27장)
@@ -59,13 +102,36 @@ export function useOutgoingPhotos(groupId: number, send: (text: string) => Promi
       if (!item) return;
       patchItem(key, id, { status: "up", progress: 0, error: undefined });
       try {
+        const where = await findPlace(item.file, groupId); // 줄이기 전의 원본에서 위치를 읽어요 (줄이면 위치 정보가 지워져요)
         const small = await shrinkImage(item.file);
-        const form = new FormData();
-        form.append("file", small);
-        form.append("kind", "image");
-        const att = await postWithProgress<{ id: number }>(`/groups/${groupId}/chat-files?light=1`, form, (p) =>
-          patchItem(key, id, { progress: p }),
-        );
+        const build = (withPlace: boolean) => {
+          const form = new FormData();
+          form.append("file", small);
+          form.append("kind", "image");
+          if (withPlace && where) {
+            // 찍은 위치를 사진과 함께 저장 → 사진 모음과 추억지도에 이 장소로 표시돼요
+            form.append("place_name", where.name);
+            if (where.address) form.append("place_address", where.address);
+            form.append("place_lat", String(where.lat));
+            form.append("place_lng", String(where.lng));
+          }
+          return form;
+        };
+        let att: { id: number };
+        try {
+          att = await postWithProgress<{ id: number }>(`/groups/${groupId}/chat-files?light=1`, build(true), (p) =>
+            patchItem(key, id, { progress: p }),
+          );
+        } catch (e) {
+          // 위치 값 때문에 거절당했다면 위치 없이 다시 보내요 (사진이 안 가는 것보다 낫도록)
+          if (where && e instanceof ApiError && e.status === 422) {
+            att = await postWithProgress<{ id: number }>(`/groups/${groupId}/chat-files?light=1`, build(false), (p) =>
+              patchItem(key, id, { progress: p }),
+            );
+          } else {
+            throw e;
+          }
+        }
         patchItem(key, id, { status: "done", progress: 100, attId: att.id });
       } catch (e) {
         patchItem(key, id, { status: "fail", error: e instanceof ApiError ? e.message : "올리지 못했어요." });

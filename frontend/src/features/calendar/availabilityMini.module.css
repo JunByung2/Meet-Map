@@ -21,7 +21,7 @@
 /* 작은 달력 */
 .box {
   border: 1.5px solid var(--line);
-  border-radius: 16px;
+  border-radius: 10px;
   background: var(--white);
   padding: 16px;
   display: grid;
@@ -66,7 +66,7 @@
   width: 100%;
   padding: 10px;
   border: 1.5px dashed var(--line);
-  border-radius: 12px;
+  border-radius: 8px;
   background: transparent;
   font-family: inherit;
   color: var(--ink);
@@ -120,7 +120,7 @@
   background: #f59e0b;
 }
 .all .dot {
-  background: #fff;
+  background: var(--white);
 }
 .hint {
   font-size: 12px;

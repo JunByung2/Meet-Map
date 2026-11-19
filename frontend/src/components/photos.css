@@ -137,24 +137,24 @@
 .ph-cal-btn.on { background: var(--mint); border-color: var(--teal); color: var(--teal-dark); }
 .ph-day-chip { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid var(--teal); border-radius: 100px; background: var(--mint); color: var(--teal-dark); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .ph-day-records { display: flex; flex-wrap: wrap; gap: 8px; margin: -8px 0 16px; }
-.ph-day-records a { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 12px; background: var(--peach); color: var(--ink); font-size: 13px; font-weight: 600; }
+.ph-day-records a { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; background: var(--peach); color: var(--ink); font-size: 13px; font-weight: 600; }
 .ph-day-records a:hover { text-decoration: none; filter: brightness(0.97); }
 
 .pc-back { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15, 25, 27, 0.45); }
-.pc-sheet { width: 100%; max-width: 380px; max-height: 92vh; overflow-y: auto; padding: 16px 18px 18px; border-radius: 24px; background: var(--white); color: var(--ink); box-shadow: 0 16px 48px rgba(33, 60, 64, 0.3); }
+.pc-sheet { width: 100%; max-width: 380px; max-height: 92vh; overflow-y: auto; padding: 16px 18px 18px; border-radius: 10px; background: var(--white); color: var(--ink); box-shadow: 0 16px 48px rgba(33, 60, 64, 0.3); }
 .pc-top { position: relative; display: flex; align-items: center; justify-content: center; height: 28px; margin-bottom: 4px; }
 .pc-grab { display: none; width: 44px; height: 4px; border-radius: 4px; background: var(--line); }
 .pc-x { position: absolute; right: -4px; top: -2px; width: 32px; height: 32px; border: 0; border-radius: 100px; background: none; color: var(--muted); font-size: 16px; cursor: pointer; }
 .pc-x:hover { background: var(--mist); color: var(--ink); }
 .pc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .pc-head strong { font-size: 17px; }
-.pc-title { padding: 8px 12px; border: 0; border-radius: 12px; background: none; color: var(--ink); font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; }
+.pc-title { padding: 8px 12px; border: 0; border-radius: 8px; background: none; color: var(--ink); font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; }
 .pc-title:hover { background: var(--mist); }
 .pc-title span { font-size: 12px; color: var(--muted); }
-.pc-jump { height: 40px; min-width: 0; padding: 0 12px; border: 1px solid var(--teal); border-radius: 12px; background: var(--white); color: var(--ink); font: inherit; font-size: 15px; }
+.pc-jump { height: 40px; min-width: 0; padding: 0 12px; border: 1px solid var(--teal); border-radius: 8px; background: var(--white); color: var(--ink); font: inherit; font-size: 15px; }
 .pc-nav { width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 100px; background: var(--white); color: var(--ink); font-size: 20px; line-height: 1; cursor: pointer; }
 .pc-nav:hover { border-color: var(--teal); }
-.pc-stats { display: flex; justify-content: space-around; margin-bottom: 14px; padding: 10px 0; border-radius: 16px; background: var(--mist); }
+.pc-stats { display: flex; justify-content: space-around; margin-bottom: 14px; padding: 10px 0; border-radius: 10px; background: var(--mist); }
 .pc-stats div { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .pc-stats b { font-size: 18px; color: var(--teal-dark); }
 .pc-stats span { font-size: 12px; color: var(--muted); }
@@ -162,7 +162,7 @@
 .pc-week span { padding: 4px 0; text-align: center; font-size: 12px; color: var(--muted); }
 
 /* 날짜 칸: 사진이 있는 날은 대표 사진이 칸을 채운다 */
-.pc-day { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; aspect-ratio: 1; min-height: 44px; padding: 0; overflow: hidden; border: 2px solid transparent; border-radius: 12px; background: none; color: var(--muted); font: inherit; font-size: 14px; cursor: default; }
+.pc-day { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; aspect-ratio: 1; min-height: 44px; padding: 0; overflow: hidden; border: 2px solid transparent; border-radius: 8px; background: none; color: var(--muted); font: inherit; font-size: 14px; cursor: default; }
 .pc-day.has { color: var(--ink); font-weight: 700; background: var(--mint); cursor: pointer; }
 .pc-day.has:hover { border-color: var(--teal); }
 .pc-day.rec:not(.has) { background: var(--peach); color: var(--ink); font-weight: 700; cursor: pointer; }
@@ -184,8 +184,8 @@
 .pc-foot .btn:disabled { opacity: 0.45; cursor: default; }
 
 /* 고른 날의 정보 칸 (높이 고정: 날짜를 눌러도 달력과 버튼 자리가 바뀌지 않는다) */
-.pc-detail { display: flex; align-items: stretch; gap: 12px; height: 108px; margin-top: 12px; padding: 10px 12px; overflow: hidden; border-radius: 16px; background: var(--mist); }
-.pc-cover { flex: none; width: 88px; height: 88px; border-radius: 12px; overflow: hidden; background: var(--line); }
+.pc-detail { display: flex; align-items: stretch; gap: 12px; height: 108px; margin-top: 12px; padding: 10px 12px; overflow: hidden; border-radius: 10px; background: var(--mist); }
+.pc-cover { flex: none; width: 88px; height: 88px; border-radius: 8px; overflow: hidden; background: var(--line); }
 .pc-cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .pc-noimg { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 24px; }
 .pc-info { display: flex; flex: 1; flex-direction: column; min-width: 0; }
@@ -201,7 +201,7 @@
 
 @media (max-width: 600px) {
   .pc-back { align-items: flex-end; padding: 0; }
-  .pc-sheet { max-width: none; border-radius: 24px 24px 0 0; padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
+  .pc-sheet { max-width: none; border-radius: 10px 24px 0 0; padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
   .pc-grab { display: block; }
 }
 
@@ -214,7 +214,7 @@
 .ph-pickrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .ph-pickrow .btn { flex: 0 0 auto; }
 .ph-loc { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
-.ph-loc p { margin: 0; font-size: 13px; line-height: 1.5; padding: 9px 12px; border-radius: 12px; background: var(--mint); color: var(--teal); }
+.ph-loc p { margin: 0; font-size: 13px; line-height: 1.5; padding: 9px 12px; border-radius: 8px; background: var(--mint); color: var(--teal); }
 .ph-loc p.warn { background: #fff4e5; color: #8a5a00; }
 .ph-loc p.info { background: #f1f4f3; color: var(--muted); }
 .ph-gpsmark { position: absolute; right: 8px; bottom: 8px; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.92); color: var(--teal); }

@@ -1,0 +1,256 @@
+.board {
+  display: grid;
+  grid-template-columns: minmax(0, 1.42fr) minmax(0, 0.95fr) minmax(0, 0.68fr);
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 24px;
+}
+.middle,
+.right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.calendar {
+  min-width: 0;
+}
+
+/* 다음 약속 티켓 */
+.ticket {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid var(--brown);
+  border-radius: 8px;
+  background: var(--paper);
+}
+.ticket::before,
+.ticket::after {
+  content: '';
+  position: absolute;
+  top: 58%;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--brown);
+  border-radius: 50%;
+  background: var(--sky);
+  z-index: 2;
+}
+.ticket::before {
+  left: -9px;
+}
+.ticket::after {
+  right: -9px;
+}
+.ticketTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 37px;
+  padding: 0 14px;
+  background: var(--brown);
+  color: var(--cream);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+.ticketContent {
+  display: flex;
+  gap: 15px;
+  padding: 14px 14px 10px;
+}
+.ticketDate {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-right: 14px;
+  border-right: 1px solid var(--line);
+}
+.ticketDate b {
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 400;
+  line-height: 0.8;
+}
+.ticketDate span {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.ticketCopy {
+  min-width: 0;
+}
+.ticketCopy h3 {
+  margin: 2px 0 5px;
+  font-size: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ticketCopy p {
+  margin-top: 2px;
+  font-size: 12px;
+}
+.ticketPeople {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 14px;
+  padding: 10px 0;
+  border-top: 1px dashed var(--brown);
+  font-size: 12px;
+}
+.stack {
+  display: flex;
+  align-items: center;
+}
+.stack > * + * {
+  margin-left: -7px;
+}
+.ticketActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-top: 1px dashed var(--brown);
+}
+.ticketEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.burst {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 48px;
+  margin-left: auto;
+  background: var(--brown);
+  color: var(--cream);
+  font-family: var(--font-display);
+  font-size: 13px;
+  text-decoration: none;
+  clip-path: polygon(50% 0, 61% 16%, 78% 6%, 82% 25%, 100% 25%, 91% 43%, 100% 58%, 80% 63%, 80% 84%, 61% 78%, 50% 100%, 39% 80%, 21% 91%, 20% 69%, 0 65%, 10% 48%, 0 32%, 20% 28%, 20% 7%, 39% 17%);
+}
+.burst:hover {
+  text-decoration: none;
+  background: #5d413a;
+}
+
+/* 빠른 실행 */
+.quickGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+  border: 1px solid var(--brown);
+  border-radius: 5px;
+}
+.quickGrid a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.quickGrid a:hover {
+  background: var(--cream);
+}
+.quickGrid a:nth-child(odd) {
+  border-right: 1px solid var(--brown);
+}
+.quickGrid a:nth-child(-n + 2) {
+  border-bottom: 1px solid var(--brown);
+}
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.status strong {
+  margin-left: auto;
+}
+.pill {
+  padding: 3px 7px;
+  border-radius: 3px;
+  background: var(--sky);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* 최근 추억 */
+.photoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+.photoGrid a {
+  display: block;
+  text-decoration: none;
+}
+.photoGrid figure {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  aspect-ratio: 1.25;
+  border: 1px solid var(--brown);
+  border-radius: 4px;
+  background: var(--cream);
+}
+.photoGrid img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.7) sepia(0.1);
+}
+.photoGrid figcaption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 14px 6px 4px;
+  background: linear-gradient(transparent, rgba(70, 48, 43, 0.85));
+  color: var(--cream);
+  font-size: 11px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.empty {
+  margin: 0;
+  padding: 14px 0;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+.chatText {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 1180px) {
+  .board {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .calendar {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 760px) {
+  .board {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -5,7 +5,7 @@
   margin: 10px 0 4px;
   padding: 10px;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 10px;
   background: var(--mist);
 }
 
@@ -105,7 +105,7 @@
   gap: 3px;
   width: 244px;
   max-width: 100%;
-  border-radius: 14px;
+  border-radius: 10px;
   overflow: hidden;
 }
 
@@ -209,7 +209,7 @@
 .pickOff { opacity: 0.35; }
 
 /* 줄마다 칸 수가 다른 배치 (카톡처럼). 한 줄 안의 칸은 같은 너비의 정사각형 */
-.mosaic { display: flex; flex-direction: column; gap: 3px; max-width: 100%; border-radius: 14px; overflow: hidden; }
+.mosaic { display: flex; flex-direction: column; gap: 3px; max-width: 100%; border-radius: 10px; overflow: hidden; }
 .mrow { display: flex; gap: 3px; }
 .mrow > * { flex: 1 1 0; min-width: 0; }
 

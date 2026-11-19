@@ -140,6 +140,9 @@ export default function SettingsPage() {
           <form onSubmit={onSave}>
             <div className="field">
               <label htmlFor="nickname">닉네임</label>
+              <p className="meta" style={{ marginBottom: 6 }}>
+                현재 닉네임: <strong>{me.nickname}</strong>
+              </p>
               <input
                 id="nickname"
                 className="input"

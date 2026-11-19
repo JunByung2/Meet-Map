@@ -114,7 +114,11 @@ export default function GroupsPage() {
             <h2 className="section-title">우리 약속 달력</h2>
           </div>
           <div className="card">
-            <GroupsMeetingCalendar groups={groups} meetings={meetings} />
+            <GroupsMeetingCalendar
+              groups={groups}
+              meetings={meetings}
+              listHref="/meetings"
+            />
           </div>
         </section>
       )}

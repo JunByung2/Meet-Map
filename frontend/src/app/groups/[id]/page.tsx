@@ -145,7 +145,7 @@ export default function GroupDetailPage() {
   // 이 그룹의 약속 (실패해도 홈은 그대로 보이게 빈 목록으로 둔다)
   useEffect(() => {
     let cancelled = false;
-    api<MeetingLite[]>(`/groups/${groupId}/meetings`)
+    api<MeetingLite[]>(`/groups/${groupId}/meetings?mine=true`) // 내가 참여하는 약속만
       .then((list) => {
         if (!cancelled) setMeetings(list);
       })

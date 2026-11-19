@@ -52,6 +52,8 @@ class AvailabilitySet(BaseModel):
     """내가 표시하는 날짜들. status=unknown 이면 표시를 지운다."""
     days: list[date] = Field(min_length=1, max_length=62)
     status: Literal["available", "unavailable", "unknown"]
+    # 되는 날의 시간대: all(종일) / am(오전만) / pm(오후만). 되는 날이 아니면 무시한다.
+    period: Literal["all", "am", "pm"] = "all"
 
 
 class CandidateCreate(BaseModel):
@@ -85,7 +87,7 @@ class MeetingUpdate(BaseModel):
 
 # 확정된 약속끼리 겹치지 않게 하는 기준: 약속 하나가 이 시간(분) 동안 이어진다고 보고,
 # 이 간격 안에 시작하는 다른 확정 약속이 있으면 "겹친다"고 본다. (약속 길이를 따로 받지 않으므로 고정값)
-MEETING_BLOCK_MINUTES = 120
+MEETING_BLOCK_MINUTES = 60
 
 
 def _aware(value: datetime) -> datetime:
@@ -224,7 +226,10 @@ def poll_candidates(
 @router.get("/groups/{group_id}/meetings")
 def list_meetings(
     group_id: int,
+    # mine=true 면 내가 참여하는 약속만 (참여자를 따로 고르지 않은 약속은 모두에게 보인다). 홈 달력에서 쓴다.
+    mine: bool = False,
     member=Depends(require_group_member),
+    user: User = Depends(get_current_user),
     db: DbSession = Depends(get_db),
 ):
     meetings = db.scalars(
@@ -234,6 +239,8 @@ def list_meetings(
     ).all()
 
     people = participants_by_meeting(db, [meeting.id for meeting in meetings])
+    if mine:
+        meetings = [m for m in meetings if not people.get(m.id) or user.id in people[m.id]]
     return [meeting_to_dict(meeting, people.get(meeting.id)) for meeting in meetings]
 
 
@@ -431,7 +438,10 @@ def list_availability(
         )
         .order_by(MemberAvailability.day, MemberAvailability.user_id)
     ).all()
-    return [{"user_id": r.user_id, "day": r.day.isoformat(), "status": r.status} for r in rows]
+    return [
+        {"user_id": r.user_id, "day": r.day.isoformat(), "status": r.status, "period": r.period or "all"}
+        for r in rows
+    ]
 
 
 @router.put("/groups/{group_id}/availability")
@@ -457,13 +467,17 @@ def set_my_availability(
             MemberAvailability.day.in_(days),
         )
     )
+    period = body.period if body.status == "available" and body.period != "all" else None
     if body.status != "unknown":
         db.add_all(
-            MemberAvailability(group_id=group_id, user_id=user.id, day=d, status=body.status)
+            MemberAvailability(group_id=group_id, user_id=user.id, day=d, status=body.status, period=period)
             for d in days
         )
     db.commit()
-    return [{"user_id": user.id, "day": d.isoformat(), "status": body.status} for d in days]
+    return [
+        {"user_id": user.id, "day": d.isoformat(), "status": body.status, "period": period or "all"}
+        for d in days
+    ]
 
 # --------------------
 # 후보 등록 및 조회

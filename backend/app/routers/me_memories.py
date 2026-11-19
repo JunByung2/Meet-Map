@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session as DbSession
 from app import storage
 from app.db import get_db
 from app.deps.auth import get_current_user
-from app.models import Group, GroupMember, Meeting, MeetingRecord, Photo, User
+from app.models import Group, GroupMember, Meeting, MeetingParticipant, MeetingRecord, Photo, User
 from app.records_sync import KST, sync_group_records
 from app.routers.records import _to_record_out
 
@@ -165,11 +165,20 @@ def my_meetings(response: Response, user: User = Depends(get_current_user), db: 
     ).scalars())
     if not groups:
         return MyMeetingsOut(groups=[], meetings=[])
-    rows = db.execute(
+    rows = list(db.execute(
         select(Meeting)
         .where(Meeting.group_id.in_([g.id for g in groups]), Meeting.status == "confirmed")
         .order_by(Meeting.meeting_time.asc())
-    ).scalars()
+    ).scalars())
+    # 참여자를 따로 고른 약속은 참여자에게만 보인다 (고르지 않은 약속은 그룹 모두에게 보인다)
+    people: dict[int, set[int]] = {}
+    if rows:
+        for mid, uid in db.execute(
+            select(MeetingParticipant.meeting_id, MeetingParticipant.user_id)
+            .where(MeetingParticipant.meeting_id.in_([m.id for m in rows]))
+        ).all():
+            people.setdefault(mid, set()).add(uid)
+    rows = [m for m in rows if not people.get(m.id) or user.id in people[m.id]]
     return MyMeetingsOut(
         groups=[MemGroup(id=g.id, name=g.name, icon=g.icon) for g in groups],
         meetings=[

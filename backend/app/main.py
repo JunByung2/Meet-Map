@@ -125,6 +125,9 @@ _EXTRA_COLUMNS = [
     "ALTER TABLE IF EXISTS meeting_candidates ADD COLUMN IF NOT EXISTS poll_id VARCHAR(40)",
     "ALTER TABLE IF EXISTS meeting_candidates ADD COLUMN IF NOT EXISTS closed BOOLEAN NOT NULL DEFAULT FALSE",
     "ALTER TABLE IF EXISTS meeting_candidates ADD COLUMN IF NOT EXISTS chosen BOOLEAN NOT NULL DEFAULT FALSE",
+
+    # 달력: 되는 날의 시간대 (오전만 / 오후만)
+    "ALTER TABLE IF EXISTS member_availability ADD COLUMN IF NOT EXISTS period VARCHAR(8)",
 ]
 
 # 위치 공유: 브라우저 직접 접근에 RLS 적용 (이미 켜져 있으면 건드리지 않는다)

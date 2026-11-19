@@ -310,6 +310,21 @@ export default function GroupSettingsPage() {
             이 그룹 친구들에게만 이 별명으로 보여요. 비워 두면 원래 닉네임이
             보여요.
           </p>
+          {(() => {
+            // 지금 이 그룹에서 내가 어떤 이름으로 보이는지 (저장된 값 기준)
+            const mine = group?.members.find((m) => m.is_me);
+            const saved = mine?.group_nickname?.trim();
+            const account = mine?.account_nickname ?? mine?.nickname;
+            return (
+              <p className="meta" style={{ marginBottom: 10 }}>
+                현재 이 그룹에서 보이는 이름:{" "}
+                <strong>{saved || account}</strong>
+                {saved
+                  ? ` (별명 · 원래 닉네임 ${account})`
+                  : " (별명 없음, 원래 닉네임)"}
+              </p>
+            );
+          })()}
           <form onSubmit={onSaveAlias}>
             <div className="field">
               <label htmlFor="alias">별명</label>

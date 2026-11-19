@@ -8,7 +8,7 @@ GET /me/memories : 내가 속한 그룹들의 사진 · 장소 있는 사진 · 
 """
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel
 from sqlalchemy import and_, exists, select
 from sqlalchemy.orm import Session as DbSession
@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session as DbSession
 from app import storage
 from app.db import get_db
 from app.deps.auth import get_current_user
-from app.models import Group, GroupMember, MeetingRecord, Photo, User
+from app.models import Group, GroupMember, Meeting, MeetingParticipant, MeetingRecord, Photo, User
 from app.records_sync import KST, sync_group_records
 from app.routers.records import _to_record_out
 
@@ -73,7 +73,13 @@ def _mem_photo(p: Photo, urls: dict[str, str]) -> MemPhoto:
 
 
 @router.get("/memories", response_model=MemoriesOut)
-def my_memories(response: Response, user: User = Depends(get_current_user), db: DbSession = Depends(get_db)):
+def my_memories(
+    response: Response,
+    # places=0 이면 추억지도용 '장소 있는 사진'을 빼고 돌려준다 (사진 · 기록 화면은 쓰지 않으므로 더 빠르다)
+    places: bool = Query(True),
+    user: User = Depends(get_current_user),
+    db: DbSession = Depends(get_db),
+):
     response.headers["Cache-Control"] = "private, no-store"
     rows = db.execute(
         select(Group, GroupMember)
@@ -90,7 +96,7 @@ def my_memories(response: Response, user: User = Depends(get_current_user), db: 
     recent = list(db.execute(
         select(Photo).where(Photo.group_id.in_(group_ids)).order_by(Photo.created_at.desc(), Photo.id.desc()).limit(PHOTO_LIMIT)
     ).scalars())
-    placed = list(db.execute(
+    placed = [] if not places else list(db.execute(
         select(Photo)
         .where(Photo.group_id.in_(group_ids), Photo.place_lat.is_not(None), Photo.place_lng.is_not(None), Photo.place_name.is_not(None))
         .order_by(Photo.created_at.desc(), Photo.id.desc()).limit(PLACE_LIMIT)
@@ -132,4 +138,52 @@ def my_memories(response: Response, user: User = Depends(get_current_user), db: 
         photos=[_mem_photo(p, urls) for p in recent],
         place_photos=[_mem_photo(p, urls) for p in placed],
         records=records,
+    )
+
+
+class MyMeeting(BaseModel):
+    id: int
+    group_id: int
+    title: str
+    location: str
+    meeting_time: datetime
+    status: str
+
+
+class MyMeetingsOut(BaseModel):
+    groups: list[MemGroup]
+    meetings: list[MyMeeting]
+
+
+@router.get("/meetings", response_model=MyMeetingsOut)
+def my_meetings(response: Response, user: User = Depends(get_current_user), db: DbSession = Depends(get_db)):
+    """내가 속한 모든 그룹의 확정된 약속을 한 번에 (그룹마다 따로 부르던 요청을 한 번으로 줄인다). 읽기 전용."""
+    response.headers["Cache-Control"] = "private, no-store"
+    groups = list(db.execute(
+        select(Group).join(GroupMember, GroupMember.group_id == Group.id)
+        .where(GroupMember.user_id == user.id).order_by(Group.id)
+    ).scalars())
+    if not groups:
+        return MyMeetingsOut(groups=[], meetings=[])
+    rows = list(db.execute(
+        select(Meeting)
+        .where(Meeting.group_id.in_([g.id for g in groups]), Meeting.status == "confirmed")
+        .order_by(Meeting.meeting_time.asc())
+    ).scalars())
+    # 참여자를 따로 고른 약속은 참여자에게만 보인다 (고르지 않은 약속은 그룹 모두에게 보인다)
+    people: dict[int, set[int]] = {}
+    if rows:
+        for mid, uid in db.execute(
+            select(MeetingParticipant.meeting_id, MeetingParticipant.user_id)
+            .where(MeetingParticipant.meeting_id.in_([m.id for m in rows]))
+        ).all():
+            people.setdefault(mid, set()).add(uid)
+    rows = [m for m in rows if not people.get(m.id) or user.id in people[m.id]]
+    return MyMeetingsOut(
+        groups=[MemGroup(id=g.id, name=g.name, icon=g.icon) for g in groups],
+        meetings=[
+            MyMeeting(id=m.id, group_id=m.group_id, title=m.title, location=m.location,
+                      meeting_time=m.meeting_time, status=m.status)
+            for m in rows
+        ],
     )

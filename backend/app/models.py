@@ -252,6 +252,8 @@ class MemberAvailability(Base):
     )
     day: Mapped[date] = mapped_column(Date, primary_key=True)
     status: Mapped[str] = mapped_column(String(12), nullable=False)  # 'available' | 'unavailable'
+    # 되는 날일 때 가능한 시간대: NULL(종일) / 'am'(오전만) / 'pm'(오후만). 안 되는 날은 항상 NULL.
+    period: Mapped[str | None] = mapped_column(String(8))
 
     __table_args__ = (CheckConstraint("status IN ('available','unavailable')", name="ck_member_availability_status"),)
 

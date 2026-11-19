@@ -56,10 +56,13 @@ function timeLabel(iso: string) {
 export default function GroupsMeetingCalendar({
   groups,
   meetings: given,
+  listHref,
 }: {
   groups: GroupLite[]
   /** 이미 불러온 약속이 있으면 넘겨 준다 (그러면 다시 불러오지 않는다) */
-  meetings?: MeetingLite[]
+  meetings?: MeetingLite[];
+  /** 약속을 눌렀을 때 갈 전체 약속 목록 주소 (없으면 그 약속이 속한 그룹의 약속 목록) */
+  listHref?: string;
 }) {
   const todayKey = ymd(new Date())
   const [month, setMonth] = useState(() => {
@@ -161,14 +164,14 @@ export default function GroupsMeetingCalendar({
     <Link
       key={m.id}
       href={
-        new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(
-          new Date(m.meeting_time),
-        ) <
-        new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(
-          new Date(),
-        )
+        new Intl.DateTimeFormat("sv-SE", {
+          timeZone: "Asia/Seoul",
+        }).format(new Date(m.meeting_time)) <
+        new Intl.DateTimeFormat("sv-SE", {
+          timeZone: "Asia/Seoul",
+        }).format(new Date())
           ? `/groups/${m.group_id}/meeting-record/${m.id}`
-          : `/groups/${m.group_id}/meetings`
+          : (listHref ?? `/groups/${m.group_id}/meetings`)
       }
       className={css.item}
       style={{ ['--c' as string]: colorOf(m.group_id) }}
@@ -296,6 +299,17 @@ export default function GroupsMeetingCalendar({
                 ))}
                 {list.length > MAX_CHIPS && (
                   <span className={css.more}>+{list.length - MAX_CHIPS}</span>
+                )}
+                {/* 좁은 화면에서는 제목 대신 그룹 색 점만 (칸이 작아져도 넘치지 않게) */}
+                {list.length > 0 && (
+                  <span className={css.dots} aria-hidden>
+                    {list.slice(0, 4).map((m) => (
+                      <i
+                        key={m.id}
+                        style={{ background: colorOf(m.group_id) }}
+                      />
+                    ))}
+                  </span>
                 )}
               </button>
             )

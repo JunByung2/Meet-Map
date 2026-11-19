@@ -161,6 +161,25 @@
   border-color: #1fa58a;
   background: #e8f7f2;
 }
+/* 한 명이라도 안 되는 날은 흐리게 */
+.blocked {
+  opacity: 0.45;
+  background: var(--mist);
+}
+.blocked:hover {
+  opacity: 0.8;
+}
+/* 끌어서 선택하는 중인 날짜 */
+.inDrag {
+  border-color: var(--teal-dark);
+  background: var(--mint);
+  opacity: 1;
+}
+/* 도구를 고른 동안에는 날짜 위에서 끌어도 화면이 스크롤되지 않게 */
+.painting {
+  touch-action: none;
+  user-select: none;
+}
 .num {
   font-size: 13px;
   font-weight: 700;
@@ -181,6 +200,15 @@
   display: block;
   height: 5px;
   border-radius: 3px;
+  background: var(--c);
+}
+/* 오전만 = 왼쪽 절반, 오후만 = 오른쪽 절반 */
+.barAm {
+  width: 50%;
+}
+.barPm {
+  width: 50%;
+  margin-left: auto;
 }
 /* 안 되는 날: 같은 멤버 색의 빗금 막대 */
 .barOff {
@@ -303,6 +331,18 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
+  }
+  /* 모바일: 오전만 = 왼쪽 반이 찬 점, 오후만 = 오른쪽 반이 찬 점 */
+  .barAm,
+  .barPm {
+    width: 6px;
+    margin-left: 0;
+    border: 1.5px solid var(--c);
+    box-sizing: border-box;
+    background: linear-gradient(90deg, var(--c) 50%, transparent 50%);
+  }
+  .barPm {
+    background: linear-gradient(90deg, transparent 50%, var(--c) 50%);
   }
   .barOff {
     width: 6px;

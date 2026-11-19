@@ -147,7 +147,6 @@ export default function GroupDetailPage() {
   // 이 그룹의 약속
   useEffect(() => {
     let cancelled = false;
-
     api<MeetingLite[]>(`/groups/${groupId}/meetings`)
       .then((list) => {
         if (!cancelled) setMeetings(list);

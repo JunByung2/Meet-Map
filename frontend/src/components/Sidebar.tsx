@@ -14,7 +14,15 @@ export type ShellGroup = {
   memberNicknames?: string[];
 };
 
-export type ActiveMenu = "home" | "chat" | "meetings" | "photos" | "map" | "records" | "memories" | "settings";
+export type ActiveMenu =
+  | "home"
+  | "chat"
+  | "meetings"
+  | "photos"
+  | "map"
+  | "records"
+  | "memories"
+  | "settings";
 
 type GroupDetail = {
   id: number;
@@ -80,7 +88,26 @@ const NAV: NavItem[] = [
   { label: "지도", icon: ICONS.map, key: "map", path: "map?view=transit" },
   // 지난 기록 · 추억지도 · 사진은 "추억" 한 화면에 모아 두고, 자세히 볼 때만 각 화면으로 간다
   { label: "추억", icon: ICONS.photo, key: "memories", path: "memories" },
-  { label: "그룹 설정", icon: ICONS.settings, key: "settings", path: "settings" },
+  {
+    label: "그룹 설정",
+    icon: ICONS.settings,
+    key: "settings",
+    path: "settings",
+  },
+];
+
+const GLOBAL_PATH: Record<string, string> = {
+  meetings: "/meetings",
+  map: "/map",
+  memories: "/memories",
+  settings: "/group-settings",
+};
+const GLOBAL_PAGES = [
+  "/groups",
+  "/meetings",
+  "/memories",
+  "/map",
+  "/group-settings",
 ];
 
 function hrefFor(
@@ -90,7 +117,9 @@ function hrefFor(
 ): string | null {
   if (!item.key) return null;
   if (item.key === "home") return homeId ? `/groups/${homeId}` : "/groups";
-  return navId ? `/groups/${navId}/${item.path}` : null;
+  if (navId) return `/groups/${navId}/${item.path}`;
+  // 그룹을 열지 않은 상태: 약속 · 지도 · 추억은 내 모든 그룹을 모아 보는 화면으로 간다 (채팅만 그룹이 있어야 해서 막힘. 그룹 설정은 그룹을 고르는 화면으로 간다)
+  return GLOBAL_PATH[item.key] ?? null;
 }
 
 export default function Sidebar({
@@ -183,35 +212,44 @@ export default function Sidebar({
   }, [infoId, infoName, infoIcon]);
 
   const homeId = info?.id ?? pathId;
-  // 그룹을 고르기 전(내 그룹 목록 화면)에는 메뉴를 막는다. 그룹을 열어야 채팅·약속·사진 등을 쓸 수 있다.
-  const isGroupListPage = pathname === "/groups";
-  const navId = isGroupListPage ? null : (homeId ?? lastGroup?.id ?? null);
+  // 그룹을 열지 않은 화면(내 그룹 목록, 전체 약속·지도·추억)에서는 그룹 전용 메뉴(채팅 등)를 막는다.
+  const isGlobalPage = GLOBAL_PAGES.includes(pathname);
+  const navId = isGlobalPage ? null : (homeId ?? lastGroup?.id ?? null);
 
   const isMapPage =
     pathname === "/map" || /^\/groups\/[^/]+\/map(?:\/|$)/.test(pathname);
-  const isMemoriesPage = /^\/groups\/[^/]+\/memories(?:\/|$)/.test(pathname);
+  const isMemoriesPage =
+    pathname === "/memories" ||
+    /^\/groups\/[^/]+\/memories(?:\/|$)/.test(pathname);
   const isPhotosPage = /^\/groups\/[^/]+\/photos(?:\/|$)/.test(pathname);
   const isRecordsPage = /^\/groups\/[^/]+\/records(?:\/|$)/.test(pathname);
-  const isMeetingsPage = /^\/groups\/[^/]+\/meetings(?:\/|$)/.test(pathname);
+  const isMeetingsPage =
+    pathname === "/meetings" ||
+    /^\/groups\/[^/]+\/meetings(?:\/|$)/.test(pathname);
   const isChatPage = /^\/groups\/[^/]+\/chat(?:\/|$)/.test(pathname);
-  const isSettingsPage = /^\/groups\/[^/]+\/settings(?:\/|$)/.test(pathname);
+  const isSettingsPage =
+    pathname === "/group-settings" ||
+    /^\/groups\/[^/]+\/settings(?:\/|$)/.test(pathname);
   const derived: ActiveMenu = isMapPage
     ? "map"
     : isMemoriesPage
       ? "memories"
       : isPhotosPage
-      ? "photos"
-      : isRecordsPage
-        ? "records"
-        : isMeetingsPage
-          ? "meetings"
-          : isChatPage
-            ? "chat"
-            : isSettingsPage
-              ? "settings"
-              : "home";
+        ? "photos"
+        : isRecordsPage
+          ? "records"
+          : isMeetingsPage
+            ? "meetings"
+            : isChatPage
+              ? "chat"
+              : isSettingsPage
+                ? "settings"
+                : "home";
   const picked: ActiveMenu = active ?? derived;
-  const current: ActiveMenu = picked === "photos" || picked === "records" || picked === "memories" ? "memories" : picked;
+  const current: ActiveMenu =
+    picked === "photos" || picked === "records" || picked === "memories"
+      ? "memories"
+      : picked;
 
   const nicknames = info?.memberNicknames;
   const people =

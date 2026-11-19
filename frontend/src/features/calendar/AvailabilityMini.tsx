@@ -9,6 +9,7 @@ type Row = {
   user_id: number;
   day: string;
   status: "available" | "unavailable";
+  period?: "all" | "am" | "pm";
 };
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
@@ -37,7 +38,10 @@ export default function AvailabilityMini({
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), 1);
   });
-  const [availableBy, setAvailableBy] = useState<Record<string, number[]>>({});
+  // 날짜 → 오전 / 오후에 되는 사람 수 (종일 가능은 둘 다에 포함)
+  const [availableBy, setAvailableBy] = useState<
+    Record<string, { am: number; pm: number }>
+  >({});
 
   const year = month.getFullYear();
   const monthIdx = month.getMonth();
@@ -57,10 +61,12 @@ export default function AvailabilityMini({
     )
       .then((rows) => {
         if (cancelled) return;
-        const next: Record<string, number[]> = {};
+        const next: Record<string, { am: number; pm: number }> = {};
         for (const r of rows) {
           if (r.status !== "available") continue;
-          next[r.day] = [...(next[r.day] ?? []), r.user_id];
+          const c = (next[r.day] ??= { am: 0, pm: 0 });
+          if (r.period !== "pm") c.am += 1;
+          if (r.period !== "am") c.pm += 1;
         }
         setAvailableBy(next);
       })
@@ -112,8 +118,9 @@ export default function AvailabilityMini({
             </span>
           ))}
           {cells.map(({ key, date, inMonth }) => {
-            const n = availableBy[key]?.length ?? 0;
-            const all = total > 0 && n >= total;
+            const c = availableBy[key];
+            const n = c ? Math.max(c.am, c.pm) : 0;
+            const all = total > 0 && n >= total; // 오전이나 오후 중 한 시간대에 모두 가능
             const cls = [
               css.cell,
               inMonth ? "" : css.out,

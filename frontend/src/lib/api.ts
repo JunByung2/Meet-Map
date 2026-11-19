@@ -34,8 +34,14 @@ async function performRequest<T = unknown>(
 
   if (!res.ok) {
     const detail = data?.detail;
+    // 입력 검사에 걸리면 서버가 항목별 목록으로 알려 준다. 첫 번째 안내 문구를 그대로 보여 준다.
+    const first = Array.isArray(detail) ? detail[0]?.msg : undefined;
     const message =
-      typeof detail === "string" ? detail : "요청에 실패했습니다.";
+      typeof detail === "string"
+        ? detail
+        : typeof first === "string"
+          ? first.replace(/^Value error, /, "")
+          : "요청에 실패했습니다.";
     throw new ApiError(res.status, message);
   }
 

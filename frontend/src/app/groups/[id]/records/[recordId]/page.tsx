@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import PhotoShell from "@/components/PhotoShell";
 import { api } from "@/lib/api";
 import { formatMeetDate, type RecordDetail } from "@/lib/records";
@@ -11,14 +11,23 @@ import "@/components/records.css";
 export default function RecordDetailPage() {
   return (
     <PhotoShell active="records">
-      {({ groupId, onApiError }) => <Detail groupId={groupId} onApiError={onApiError} />}
+      {({ groupId, onApiError }) => (
+        <Detail groupId={groupId} onApiError={onApiError} />
+      )}
     </PhotoShell>
   );
 }
 
-function Detail({ groupId, onApiError }: { groupId: string; onApiError: (e: unknown) => string }) {
+function Detail({
+  groupId,
+  onApiError,
+}: {
+  groupId: string;
+  onApiError: (e: unknown) => string;
+}) {
   const router = useRouter();
   const { recordId } = useParams<{ recordId: string }>();
+  const fromAll = useSearchParams().get("from") === "memories"; // 전체 추억에서 들어온 경우
   const [data, setData] = useState<RecordDetail | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -56,7 +65,12 @@ function Detail({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
   }
 
   async function remove() {
-    if (!window.confirm("이 기록을 삭제할까요?\n모든 팀원에게서 지워져요. 확정된 약속과 사진은 그대로 남아요.")) return;
+    if (
+      !window.confirm(
+        "이 기록을 삭제할까요?\n모든 팀원에게서 지워져요. 확정된 약속과 사진은 그대로 남아요.",
+      )
+    )
+      return;
     setBusy(true);
     try {
       await api(`/groups/${groupId}/records/${recordId}`, { method: "DELETE" });
@@ -67,14 +81,20 @@ function Detail({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
     }
   }
 
-  const back = `/groups/${groupId}/records`;
+  const back = fromAll ? "/memories" : `/groups/${groupId}/records`;
   if (!data) {
     return (
       <>
         <p style={{ marginBottom: 16 }}>
-          <Link href={back} className="link-arrow">← 지난 기록으로</Link>
+          <Link href={back} className="link-arrow">
+            {fromAll ? "← 전체 추억으로" : "← 지난 기록으로"}
+          </Link>
         </p>
-        {error ? <div className="error">{error}</div> : <div className="card muted">불러오는 중...</div>}
+        {error ? (
+          <div className="error">{error}</div>
+        ) : (
+          <div className="card muted">불러오는 중...</div>
+        )}
       </>
     );
   }
@@ -83,7 +103,9 @@ function Detail({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
   return (
     <>
       <p style={{ marginBottom: 16 }}>
-        <Link href={back} className="link-arrow">← 지난 기록으로</Link>
+        <Link href={back} className="link-arrow">
+          {fromAll ? "← 전체 추억으로" : "← 지난 기록으로"}
+        </Link>
       </p>
       <div className="page-head rc-head">
         <div className="rc-main">
@@ -96,30 +118,60 @@ function Detail({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
         </div>
         {r.can_edit && (
           <div className="rc-actions">
-            <button className="btn secondary" onClick={() => setEditing((v) => !v)} disabled={busy}>
+            <button
+              className="btn secondary"
+              onClick={() => setEditing((v) => !v)}
+              disabled={busy}
+            >
               {editing ? "수정 취소" : "수정"}
             </button>
-            <button className="btn secondary" onClick={remove} disabled={busy}>삭제</button>
+            <button className="btn secondary" onClick={remove} disabled={busy}>
+              삭제
+            </button>
           </div>
         )}
       </div>
 
-      {error && <div className="error" style={{ marginBottom: 16 }}>{error}</div>}
+      {error && (
+        <div className="error" style={{ marginBottom: 16 }}>
+          {error}
+        </div>
+      )}
 
       <div className="stack">
         {editing && (
           <section className="card">
             <div className="field">
               <label htmlFor="e-title">약속 이름</label>
-              <input id="e-title" className="input" value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} />
+              <input
+                id="e-title"
+                className="input"
+                value={title}
+                maxLength={60}
+                onChange={(e) => setTitle(e.target.value)}
+              />
             </div>
-            <button className="btn" onClick={saveEdit} disabled={busy}>수정 저장</button>
+            <button className="btn" onClick={saveEdit} disabled={busy}>
+              수정 저장
+            </button>
           </section>
         )}
 
         <section className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <h2 className="card-title">사진 {photos.length > 0 ? `${photos.length}장` : ""} <span className="muted" style={{ fontSize: 12, fontWeight: 400 }}>· 그날 채팅으로 보낸 사진이 모여요</span></h2>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 14,
+            }}
+          >
+            <h2 className="card-title">
+              사진 {photos.length > 0 ? `${photos.length}장` : ""}{" "}
+              <span className="muted" style={{ fontSize: 12, fontWeight: 400 }}>
+                · 그날 채팅으로 보낸 사진이 모여요
+              </span>
+            </h2>
           </div>
           {photos.length === 0 ? (
             <div className="rc-empty-photo">
@@ -132,7 +184,12 @@ function Detail({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
                 <Link key={p.id} href={`/groups/${groupId}/photos/${p.id}`}>
                   {p.signed_url && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.signed_url} alt={p.title ?? "기록 사진"} loading="lazy" decoding="async" />
+                    <img
+                      src={p.signed_url}
+                      alt={p.title ?? "기록 사진"}
+                      loading="lazy"
+                      decoding="async"
+                    />
                   )}
                 </Link>
               ))}
@@ -141,9 +198,18 @@ function Detail({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
         </section>
 
         <section className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <h2 className="card-title">그날의 대화</h2>
-            <Link className="btn secondary sm" href={`/groups/${groupId}/chat?date=${r.meet_date}`}>
+            <Link
+              className="btn secondary sm"
+              href={`/groups/${groupId}/chat?date=${r.meet_date}`}
+            >
               채팅 기록 열기 →
             </Link>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
@@ -139,6 +140,9 @@ export default function SettingsPage() {
           <form onSubmit={onSave}>
             <div className="field">
               <label htmlFor="nickname">닉네임</label>
+              <p className="meta" style={{ marginBottom: 6 }}>
+                현재 닉네임: <strong>{me.nickname}</strong>
+              </p>
               <input
                 id="nickname"
                 className="input"
@@ -172,7 +176,8 @@ export default function SettingsPage() {
           <p className="muted" style={{ marginBottom: 12 }}>
             탈퇴하면 로그인할 수 없고, 이메일·이름·프로필 같은 개인정보가
             삭제돼요. 지난 채팅은 &quot;탈퇴한 사용자&quot;로 남아요. 방장이던
-            그룹은 남은 멤버 중 먼저 들어온 사람에게 넘어가요.
+            그룹은 남은 멤버 중 먼저 들어온 사람에게 넘어가요.{" "}
+            <Link href="/privacy">개인정보 처리방침 보기</Link>
           </p>
           {withdrawError && <div className="error">{withdrawError}</div>}
           <form onSubmit={onWithdraw}>

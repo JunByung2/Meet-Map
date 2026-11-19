@@ -201,14 +201,50 @@
   flex: 1;
 }
 
+.dots {
+  display: none;
+}
+
+/* 모바일: 달력을 작게. 칸은 정사각형에 가깝게 하고, 제목 대신 그룹 색 점으로 표시한다 */
 @media (max-width: 560px) {
-  .cell {
-    min-height: 58px;
-    padding: 4px;
+  .wrap {
+    gap: 10px;
   }
-  .chip {
-    font-size: 10px;
-    padding: 0 3px;
+  .monthLabel {
+    min-width: 92px;
+    font-size: 16px;
+  }
+  .nav {
+    width: 30px;
+    height: 30px;
+  }
+  .grid {
+    gap: 3px;
+  }
+  .cell {
+    min-height: 0;
+    aspect-ratio: 1 / 1;
+    padding: 3px;
+    gap: 2px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .num {
+    font-size: 12px;
+  }
+  .chip,
+  .more {
+    display: none;
+  }
+  .dots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+  .dots i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
   }
 }
 

@@ -1,15 +1,16 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { api, ApiError } from "@/lib/api";
-import AppShell from "@/components/AppShell";
-import { LAST_GROUP_KEY } from "@/components/Sidebar";
-import { ddayLabel } from "@/lib/dday";
-import { pickName, readNameMode } from "@/lib/nameMode";
-import Avatar from "@/components/Avatar";
-import GroupsMeetingCalendar from "@/features/calendar/GroupsMeetingCalendar";
+import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { api, ApiError } from '@/lib/api';
+import AppShell from '@/components/AppShell';
+import { LAST_GROUP_KEY } from '@/components/Sidebar';
+import { ddayLabel } from '@/lib/dday';
+import { pickName, readNameMode } from '@/lib/nameMode';
+import Avatar from '@/components/Avatar';
+import GroupsMeetingCalendar from '@/features/calendar/GroupsMeetingCalendar';
+import { QRCodeSVG } from 'qrcode.react';
 
 type Member = {
   user_id: number;
@@ -52,34 +53,33 @@ type MeetingLite = {
   status: string;
 };
 
-const DOW = ["일", "월", "화", "수", "목", "금", "토"];
+const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 
 function startOfToday() {
   const n = new Date();
   return new Date(n.getFullYear(), n.getMonth(), n.getDate());
 }
 
-// 약속 날짜가 오늘이면 "오늘", 아니면 "D-3"
 function dLabel(iso: string) {
   const d = new Date(iso);
   const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diff = Math.round(
     (day.getTime() - startOfToday().getTime()) / 86400000,
   );
-  return diff <= 0 ? "오늘" : `D-${diff}`;
+  return diff <= 0 ? '오늘' : `D-${diff}`;
 }
 
 function whenLabel(iso: string) {
   const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
   return `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]}) ${hh}:${mm}`;
 }
 
-const AVATAR_TONES = ["", "peach", "lavender"];
+const AVATAR_TONES = ['', 'peach', 'lavender'];
 
 function formatTime(iso: string | null) {
-  return iso ? new Date(iso).toLocaleString("ko-KR") : "-";
+  return iso ? new Date(iso).toLocaleString('ko-KR') : '-';
 }
 
 export default function GroupDetailPage() {
@@ -90,21 +90,21 @@ export default function GroupDetailPage() {
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [invite, setInvite] = useState<InviteStatus | null>(null);
   const [issued, setIssued] = useState<InviteIssued | null>(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [meetings, setMeetings] = useState<MeetingLite[] | null>(null); // null = 불러오는 중
+  const [meetings, setMeetings] = useState<MeetingLite[] | null>(null);
 
   function handleError(err: unknown) {
     if (err instanceof ApiError && err.status === 401) {
-      router.push("/login");
+      router.push('/login');
       return;
     }
     if (err instanceof ApiError && err.status === 403) {
-      setError("이 그룹에 접근할 수 없습니다.");
+      setError('이 그룹에 접근할 수 없습니다.');
       return;
     }
-    setError(err instanceof ApiError ? err.message : "오류가 발생했습니다.");
+    setError(err instanceof ApiError ? err.message : '오류가 발생했습니다.');
   }
 
   const loadInvite = useCallback(async () => {
@@ -120,6 +120,7 @@ export default function GroupDetailPage() {
     try {
       const data = await api<GroupDetail>(`/groups/${groupId}`);
       const mode = readNameMode();
+
       setGroup({
         ...data,
         members: data.members.map((m) => ({
@@ -127,7 +128,8 @@ export default function GroupDetailPage() {
           nickname: pickName(m, mode),
         })),
       });
-      if (data.my_role === "owner") {
+
+      if (data.my_role === 'owner') {
         await loadInvite();
       }
     } catch (err) {
@@ -142,30 +144,31 @@ export default function GroupDetailPage() {
     loadGroup();
   }, [loadGroup]);
 
-  // 이 그룹의 약속 (실패해도 홈은 그대로 보이게 빈 목록으로 둔다)
+  // 이 그룹의 약속
   useEffect(() => {
     let cancelled = false;
-    api<MeetingLite[]>(`/groups/${groupId}/meetings?mine=true`) // 내가 참여하는 약속만
+    api<MeetingLite[]>(`/groups/${groupId}/meetings`)
       .then((list) => {
         if (!cancelled) setMeetings(list);
       })
       .catch(() => {
         if (!cancelled) setMeetings([]);
       });
+
     return () => {
       cancelled = true;
     };
   }, [groupId]);
 
   async function onIssue() {
-    setError("");
+    setError('');
     setCopied(false);
+
     try {
-      setIssued(
-        await api<InviteIssued>(`/groups/${groupId}/invite`, {
-          method: "POST",
-        }),
-      );
+      const result = await api<InviteIssued>(`/groups/${groupId}/invite`, {
+        method: 'POST',
+      });
+      setIssued(result);
       await loadInvite();
     } catch (err) {
       handleError(err);
@@ -173,9 +176,10 @@ export default function GroupDetailPage() {
   }
 
   async function onRevoke() {
-    setError("");
+    setError('');
+
     try {
-      await api(`/groups/${groupId}/invite`, { method: "DELETE" });
+      await api(`/groups/${groupId}/invite`, { method: 'DELETE' });
       setIssued(null);
       await loadInvite();
     } catch (err) {
@@ -185,6 +189,7 @@ export default function GroupDetailPage() {
 
   async function onCopy() {
     if (!issued) return;
+
     try {
       await navigator.clipboard.writeText(issued.invite_url);
       setCopied(true);
@@ -196,10 +201,12 @@ export default function GroupDetailPage() {
   // 방장이 멤버를 내보낸다
   async function onKick(m: Member) {
     if (!window.confirm(`${m.nickname}님을 이 그룹에서 내보낼까요?`)) return;
-    setError("");
+
+    setError('');
+
     try {
       await api(`/groups/${groupId}/members/${m.user_id}`, {
-        method: "DELETE",
+        method: 'DELETE',
       });
       await loadGroup();
     } catch (err) {
@@ -209,24 +216,29 @@ export default function GroupDetailPage() {
 
   // 멤버가 스스로 그룹을 나간다
   async function onLeave() {
-    const wasOwner = group?.my_role === "owner";
+    const wasOwner = group?.my_role === 'owner';
     const lastOne = (group?.members.length ?? 0) <= 1;
+
     const msg = lastOne
-      ? "마지막 멤버예요. 나가면 아무도 이 그룹에 들어올 수 없게 돼요. 그래도 나갈까요?"
+      ? '마지막 멤버예요. 나가면 아무도 이 그룹에 들어올 수 없게 돼요. 그래도 나갈까요?'
       : wasOwner
-        ? "방장이 나가면 먼저 들어온 멤버가 방장이 돼요. 나갈까요?"
-        : "이 그룹에서 나갈까요? 공유 중인 내 위치도 함께 사라져요.";
+        ? '방장이 나가면 먼저 들어온 멤버가 방장이 돼요. 나갈까요?'
+        : '이 그룹에서 나갈까요? 공유 중인 내 위치도 함께 사라져요.';
+
     if (!window.confirm(msg)) return;
-    setError("");
+
+    setError('');
+
     try {
-      await api(`/groups/${groupId}/members/me`, { method: "DELETE" });
+      await api(`/groups/${groupId}/members/me`, { method: 'DELETE' });
+
       try {
-        // 나간 그룹이 '마지막으로 연 그룹'으로 남지 않게 지운다
         localStorage.removeItem(LAST_GROUP_KEY);
       } catch {
         /* 무시 */
       }
-      router.push("/groups");
+
+      router.push('/groups');
     } catch (err) {
       handleError(err);
     }
@@ -243,7 +255,7 @@ export default function GroupDetailPage() {
   if (!group) {
     return (
       <AppShell>
-        <div className="error">{error || "그룹을 불러오지 못했습니다."}</div>
+        <div className="error">{error || '그룹을 불러오지 못했습니다.'}</div>
         <Link href="/groups" className="link-arrow">
           ← 내 그룹으로
         </Link>
@@ -251,14 +263,14 @@ export default function GroupDetailPage() {
     );
   }
 
-  const isOwner = group.my_role === "owner";
+  const isOwner = group.my_role === 'owner';
   const hasLink = invite !== null && invite.max_uses !== null;
 
   // 오늘 이후 확정 약속 중 가장 가까운 것
   const nextMeeting = (meetings ?? [])
     .filter(
       (m) =>
-        m.status?.toLowerCase() === "confirmed" &&
+        m.status?.toLowerCase() === 'confirmed' &&
         new Date(m.meeting_time).getTime() >= startOfToday().getTime(),
     )
     .sort(
@@ -284,35 +296,40 @@ export default function GroupDetailPage() {
       <div className="page-head">
         <div>
           <p className="eyebrow">
-            {isOwner ? "내가 만든 그룹" : "함께하는 그룹"}
+            {isOwner ? '내가 만든 그룹' : '함께하는 그룹'}
           </p>
+
           <h1 className="page-title">
-            {group.icon ? `${group.icon} ` : ""}
+            {group.icon ? `${group.icon} ` : ''}
             {group.name}
           </h1>
+
           {group.description && <p className="page-sub">{group.description}</p>}
+
           {ddayLabel(group.started_on) && (
             <p className="meta" style={{ marginTop: 6 }}>
               🗓 {ddayLabel(group.started_on)}
             </p>
           )}
         </div>
-        <span className="chip">{isOwner ? "방장" : "멤버"}</span>
+
+        <span className="chip">{isOwner ? '방장' : '멤버'}</span>
       </div>
 
       {error && <div className="error">{error}</div>}
 
-      {/* 다음 약속: 들어오자마자 가장 궁금한 것 */}
+      {/* 다음 약속 */}
       <section className="card mint" style={{ marginBottom: 16 }}>
         <p className="meta" style={{ marginBottom: 6 }}>
           다음 약속
         </p>
+
         {meetings === null ? (
           <p className="muted">불러오는 중…</p>
         ) : nextMeeting ? (
           <div
             className="row-between"
-            style={{ gap: 16, flexWrap: "wrap", alignItems: "center" }}
+            style={{ gap: 16, flexWrap: 'wrap', alignItems: 'center' }}
           >
             <div>
               <h2 className="card-title">
@@ -321,23 +338,26 @@ export default function GroupDetailPage() {
                 </span>
                 {nextMeeting.title}
               </h2>
+
               <p className="muted" style={{ marginTop: 6 }}>
                 {whenLabel(nextMeeting.meeting_time)}
-                {nextMeeting.location ? ` · 📍 ${nextMeeting.location}` : ""}
+                {nextMeeting.location ? ` · 📍 ${nextMeeting.location}` : ''}
               </p>
             </div>
+
             <div className="row" style={{ gap: 8 }}>
               <Link
                 href={`/groups/${group.id}/meetings`}
                 className="btn sm"
-                style={{ textDecoration: "none" }}
+                style={{ textDecoration: 'none' }}
               >
                 약속 보기
               </Link>
+
               <Link
                 href={`/groups/${group.id}/chat`}
                 className="btn secondary sm"
-                style={{ textDecoration: "none" }}
+                style={{ textDecoration: 'none' }}
               >
                 채팅방으로
               </Link>
@@ -346,13 +366,14 @@ export default function GroupDetailPage() {
         ) : (
           <div
             className="row-between"
-            style={{ gap: 16, flexWrap: "wrap", alignItems: "center" }}
+            style={{ gap: 16, flexWrap: 'wrap', alignItems: 'center' }}
           >
             <p className="muted">아직 예정된 약속이 없어요.</p>
+
             <Link
               href={`/groups/${group.id}/meetings`}
               className="btn sm"
-              style={{ textDecoration: "none" }}
+              style={{ textDecoration: 'none' }}
             >
               + 약속 만들기
             </Link>
@@ -365,6 +386,7 @@ export default function GroupDetailPage() {
         <div className="row-between" style={{ marginBottom: 16 }}>
           <h2 className="section-title">약속 달력</h2>
         </div>
+
         <div className="card">
           <GroupsMeetingCalendar
             groups={[{ id: group.id, name: group.name, icon: group.icon }]}
@@ -379,12 +401,13 @@ export default function GroupDetailPage() {
             <h2 className="card-title">함께하는 친구들</h2>
             <span className="meta">{group.members.length}명</span>
           </div>
+
           <div>
             {group.members.map((m, i) => (
               <div
                 className="row-between"
                 key={m.user_id}
-                style={{ padding: "10px 0" }}
+                style={{ padding: '10px 0' }}
               >
                 <div className="row">
                   <Avatar
@@ -396,13 +419,15 @@ export default function GroupDetailPage() {
                   />
                   <strong>{m.nickname}</strong>
                 </div>
+
                 <div className="row">
-                  {m.role === "owner" ? (
+                  {m.role === 'owner' ? (
                     <span className="chip">방장</span>
                   ) : (
                     <span className="chip outline">멤버</span>
                   )}
-                  {isOwner && m.role !== "owner" && (
+
+                  {isOwner && m.role !== 'owner' && (
                     <button
                       className="btn secondary sm"
                       onClick={() => onKick(m)}
@@ -421,6 +446,7 @@ export default function GroupDetailPage() {
             <h2 className="card-title" style={{ marginBottom: 4 }}>
               친구 초대하기
             </h2>
+
             <p className="muted" style={{ marginBottom: 16 }}>
               링크를 받은 친구가 참여하면 이 그룹의 이야기를 함께 이어갈 수
               있어요.
@@ -431,26 +457,29 @@ export default function GroupDetailPage() {
                 <p className="meta" style={{ marginBottom: 4 }}>
                   현재 링크
                 </p>
+
                 <p>
                   {!hasLink
-                    ? "아직 만든 링크가 없어요."
+                    ? '아직 만든 링크가 없어요.'
                     : invite.active
                       ? `사용 가능 · ${invite.used_count}/${invite.max_uses}회 사용 · ${formatTime(invite.expires_at)}까지`
-                      : "만료되었거나 모두 사용됐어요."}
+                      : '만료되었거나 모두 사용됐어요.'}
                 </p>
               </div>
             )}
 
-            <div className="row" style={{ flexWrap: "wrap" }}>
+            <div className="row" style={{ flexWrap: 'wrap' }}>
               <button className="btn" onClick={onIssue}>
-                {hasLink ? "새 링크 만들기" : "초대 링크 만들기"}
+                {hasLink ? '새 링크 만들기' : '초대 링크 만들기'}
               </button>
+
               {hasLink && (
                 <button className="btn secondary" onClick={onRevoke}>
                   링크 회수
                 </button>
               )}
             </div>
+
             {hasLink && (
               <p className="meta" style={{ marginTop: 10 }}>
                 새 링크를 만들면 기존 링크는 사라져요.
@@ -462,20 +491,61 @@ export default function GroupDetailPage() {
                 <p className="meta" style={{ marginBottom: 8 }}>
                   이 주소는 지금 한 번만 보여요. 복사해서 친구에게 보내 주세요.
                 </p>
+
                 <input
                   className="input"
                   type="text"
                   readOnly
                   value={issued.invite_url}
                 />
+
                 <div className="row-between" style={{ marginTop: 12 }}>
                   <span className="meta">
                     {formatTime(issued.expires_at)}까지 · 최대 {issued.max_uses}
                     명
                   </span>
+
                   <button className="btn secondary sm" onClick={onCopy}>
-                    {copied ? "복사됨 ✓" : "링크 복사"}
+                    {copied ? '복사됨 ✓' : '링크 복사'}
                   </button>
+                </div>
+
+                {/* QR 코드 */}
+                <div
+                  style={{
+                    marginTop: 20,
+                    paddingTop: 18,
+                    borderTop: '1px solid var(--border, #e5e7eb)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 10,
+                  }}
+                >
+                  <strong>QR코드로도 초대할 수 있어요</strong>
+
+                  <div
+                    style={{
+                      background: '#fff',
+                      padding: 12,
+                      borderRadius: 12,
+                      border: '1px solid #e5e7eb',
+                    }}
+                  >
+                    <QRCodeSVG
+                      value={issued.invite_url}
+                      size={180}
+                      level="M"
+                      includeMargin={false}
+                    />
+                  </div>
+
+                  <p
+                    className="meta"
+                    style={{ textAlign: 'center', margin: 0 }}
+                  >
+                    QR코드를 스캔하면 초대 링크로 이동해요.
+                  </p>
                 </div>
               </div>
             )}
@@ -485,6 +555,7 @@ export default function GroupDetailPage() {
             <h2 className="card-title" style={{ marginBottom: 4 }}>
               초대는 방장이 해요
             </h2>
+
             <p className="muted">
               친구를 더 부르고 싶다면 방장에게 초대 링크를 부탁해 보세요.
             </p>
@@ -494,13 +565,14 @@ export default function GroupDetailPage() {
 
       <section
         className="row-between"
-        style={{ marginTop: 28, gap: 12, flexWrap: "wrap" }}
+        style={{ marginTop: 28, gap: 12, flexWrap: 'wrap' }}
       >
         <p className="meta">
           나가면 이 그룹의 채팅과 사진을 볼 수 없어요. 다시 들어오려면 초대
           링크가 필요해요.
-          {isOwner && " 방장이 나가면 먼저 들어온 멤버가 방장이 돼요."}
+          {isOwner && ' 방장이 나가면 먼저 들어온 멤버가 방장이 돼요.'}
         </p>
+
         <button className="btn secondary sm" onClick={onLeave}>
           그룹 나가기
         </button>

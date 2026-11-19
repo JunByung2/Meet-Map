@@ -55,3 +55,14 @@
     overscroll-behavior: contain;
   }
 }
+
+/* Panel is anchored to the entire compact header, not the small button. */
+@media (max-width: 1050px) {
+  .wrap { position: static; margin: 0; flex: none; }
+  .bar { min-height: 40px; padding: 6px 10px; font-size: 12px; gap: 4px; }
+  .badges { display: none; }
+  .panel { top: calc(100% + 4px); max-height: min(54dvh, 460px); }
+}
+@media (max-width: 650px) {
+  :global(.app-shell[data-keyboard="open"]) .wrap { display: none; }
+}

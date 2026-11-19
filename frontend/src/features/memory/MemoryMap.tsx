@@ -56,7 +56,48 @@ function buildPlaces(photos: Photo[]): MemoryPlace[] {
         memories: [g],
       })
   }
-  return Array.from(map.values())
+  return mergeNearbyPlaces(Array.from(map.values()))
+}
+
+/** 이 거리(m) 안에 있는 "직접 고르지 않은 장소"(사진 위치에서 자동으로 정해진 주소)는 같은 장소로 합쳐요.
+ *  같은 방에서 여러 번 찍어도 폰 GPS 오차로 좌표가 조금씩 달라서, 그대로 두면 장소가 여러 곳으로 갈라져요. */
+const SAME_PLACE_METERS = 60
+
+function metersBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const dy = (a.lat - b.lat) * 111_320
+  const dx = (a.lng - b.lng) * 111_320 * Math.cos(((a.lat + b.lat) / 2) * (Math.PI / 180))
+  return Math.hypot(dx, dy)
+}
+
+function mergeNearbyPlaces(places: MemoryPlace[]): MemoryPlace[] {
+  // 카카오 장소 id 로 고른 장소(이름이 있는 장소)는 그대로 두고, 좌표로만 만들어진 장소끼리 합쳐요
+  const auto = places.filter((p) => p.key.includes(','))
+  const named = places.filter((p) => !p.key.includes(','))
+  const latest = (p: MemoryPlace) => Date.parse(p.memories[0].created_at) || 0
+  const sorted = [...auto].sort((a, b) => latest(b) - latest(a))
+  const used = new Set<string>()
+  const merged: MemoryPlace[] = []
+  for (const anchor of sorted) {
+    if (used.has(anchor.key)) continue
+    used.add(anchor.key)
+    const members = [anchor]
+    for (const other of sorted) {
+      if (used.has(other.key)) continue
+      if (metersBetween(anchor, other) <= SAME_PLACE_METERS) {
+        used.add(other.key)
+        members.push(other)
+      }
+    }
+    if (members.length === 1) {
+      merged.push(anchor)
+      continue
+    }
+    const memories = members
+      .flatMap((m) => m.memories)
+      .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
+    merged.push({ ...anchor, memories })
+  }
+  return [...named, ...merged]
 }
 
 export default function MemoryMap({
@@ -75,6 +116,7 @@ export default function MemoryMap({
   const [search, setSearch] = useState('')
   const [region, setRegion] = useState('전체')
   const [selectedKey, setSelectedKey] = useState('')
+  const [nearKeys, setNearKeys] = useState<string[]>([]) // 붙어 있는 여러 장소를 한 번에 눌렀을 때 함께 보여줄 장소들
   const [selectedMemory, setSelectedMemory] = useState('')
 
   useEffect(() => {
@@ -169,7 +211,16 @@ export default function MemoryMap({
     [visible],
   )
 
-  const place = visible.find((pl) => pl.key === selectedKey) ?? null
+  const place = useMemo(() => {
+    const main = visible.find((pl) => pl.key === selectedKey) ?? null
+    if (!main || nearKeys.length < 2) return main
+    const group = visible.filter((pl) => nearKeys.includes(pl.key))
+    if (group.length < 2) return main
+    const memories = group
+      .flatMap((pl) => pl.memories)
+      .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
+    return { ...main, name: `${main.name} 외 ${group.length - 1}곳`, memories }
+  }, [visible, selectedKey, nearKeys])
   const memory = place
     ? (place.memories.find((m) => m.key === selectedMemory) ??
       place.memories[0])
@@ -189,23 +240,25 @@ export default function MemoryMap({
           placeholder="장소 또는 추억 검색"
           aria-label="장소 또는 추억 검색"
         />
-        <button
-          type="button"
-          className={region === '전체' ? 'mm-chip active' : 'mm-chip'}
-          onClick={() => setRegion('전체')}
-        >
-          전체 {allPlaces.reduce((n, pl) => n + pl.memories.length, 0)}
-        </button>
-        {regions.map(([name, n]) => (
+        <div className="mm-chips" role="group" aria-label="지역별로 보기">
           <button
-            key={name}
             type="button"
-            className={region === name ? 'mm-chip active' : 'mm-chip'}
-            onClick={() => setRegion(name)}
+            className={region === '전체' ? 'mm-chip active' : 'mm-chip'}
+            onClick={() => setRegion('전체')}
           >
-            {name} {n}
+            전체 {allPlaces.reduce((n, pl) => n + pl.memories.length, 0)}
           </button>
-        ))}
+          {regions.map(([name, n]) => (
+            <button
+              key={name}
+              type="button"
+              className={region === name ? 'mm-chip active' : 'mm-chip'}
+              onClick={() => setRegion(name)}
+            >
+              {name} {n}
+            </button>
+          ))}
+        </div>
       </div>
 
       {error && (
@@ -221,15 +274,16 @@ export default function MemoryMap({
 
       <div className="mm-grid">
         <div>
-          <button type="button" className="btn secondary sm" style={{ marginBottom: 10 }} onClick={() => { setSelectedKey(''); setSelectedMemory(''); setResetKey((k) => k + 1) }}>
+          <button type="button" className="btn secondary sm" style={{ marginBottom: 10 }} onClick={() => { setSelectedKey(''); setNearKeys([]); setSelectedMemory(''); setResetKey((k) => k + 1) }}>
             ← 전체 지도로
           </button>
           <div className="mm-mapbox">
             <PhotoMap
               pins={mapPins}
               selectedPinId={selectedKey}
-              onPinClick={(p) => {
+              onPinClick={(p, near) => {
                 setSelectedKey(p.id)
+                setNearKeys(near.length > 1 ? near.map((n) => n.id) : [])
                 setSelectedMemory('')
               }}
               height="540px"

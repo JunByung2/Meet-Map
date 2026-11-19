@@ -1,32 +1,33 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import type { GroupDetail, Me } from "@/hooks/useGroupContext";
-import { useGroupMessages } from "@/hooks/useGroupMessages";
+import Link from 'next/link'
+import type { GroupDetail, Me } from '@/hooks/useGroupContext'
+import { useGroupMessages } from '@/hooks/useGroupMessages'
 
-import { useEffect, useState, useRef } from "react";
-import { pickName, useNameMode } from "@/lib/nameMode";
-import { api, ApiError } from "@/lib/api";
-import { useStartPlacePlan } from "@/features/recommendation/useStartPlacePlan";
-import MessageList from "./MessageList";
-import { formatDateBand } from "@/lib/records";
-import MessageComposer from "./MessageComposer";
-import OutgoingPhotos from "./OutgoingPhotos";
-import PhotoViewerWindow from "./PhotoViewerWindow";
-import { useOutgoingPhotos } from "@/hooks/useOutgoingPhotos";
+import { useEffect, useLayoutEffect, useState, useRef } from 'react'
+import { pickName, useNameMode } from '@/lib/nameMode'
+import { api, ApiError } from '@/lib/api'
+import { useStartPlacePlan } from '@/features/recommendation/useStartPlacePlan'
+import MessageList from './MessageList'
+import { formatDateBand } from '@/lib/records'
+import MessageComposer from './MessageComposer'
+import OutgoingPhotos from './OutgoingPhotos'
+import PhotoViewerWindow from './PhotoViewerWindow'
+import { useOutgoingPhotos } from '@/hooks/useOutgoingPhotos'
 
-import ChatSidebar from "./ChatSidebar";
-import { useArrivals } from "@/hooks/useArrivals";
-import styles from "./chat.module.css";
-import sel from "./chatSelect.module.css";
-import { useLocationShare } from "@/hooks/useLocationShare";
-import MeetModePanel from "./MeetModePanel";
-import VoteCreateModal from "./VoteCreateModal";
-import SharedBar from "./SharedBar";
-import ActionPanel from "./ActionPanel";
-import { takeVotePicks } from "@/lib/votePicks";
-import type { PlaceValue } from "@/lib/photos";
-import CalIcon from "@/components/CalIcon";
+import ChatSidebar from './ChatSidebar'
+import { useArrivals } from '@/hooks/useArrivals'
+import styles from './chat.module.css'
+import sel from './chatSelect.module.css'
+import { useLocationShare } from '@/hooks/useLocationShare'
+import MeetModePanel from './MeetModePanel'
+import MobileMeetDialog from './MobileMeetDialog'
+import VoteCreateModal from './VoteCreateModal'
+import SharedBar from './SharedBar'
+import ActionPanel from './ActionPanel'
+import { takeVotePicks } from '@/lib/votePicks'
+import type { PlaceValue } from '@/lib/photos'
+import CalIcon from '@/components/CalIcon'
 
 export default function ChatPanel({
   group,
@@ -67,10 +68,11 @@ export default function ChatPanel({
   const locked = !arrivalsLoading && !arrivalState.arrivals?.meeting;
 
   // 좁은 화면(태블릿·모바일)에서는 Meet Mode 를 오른쪽 칸이 아니라 채팅 위에 둔다
-  const [narrow, setNarrow] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 1050px)");
-    const sync = () => setNarrow(mq.matches);
+  const [meetDialogOpen, setMeetDialogOpen] = useState(false)
+  const [narrow, setNarrow] = useState(false)
+  useLayoutEffect(() => {
+    const mq = window.matchMedia('(max-width: 1050px)')
+    const sync = () => setNarrow(mq.matches)
     // eslint-disable-next-line react-hooks/set-state-in-effect
     sync();
     mq.addEventListener("change", sync);
@@ -345,73 +347,16 @@ export default function ChatPanel({
         setStatus("예정된 약속이 없어 Meet Mode는 잠겨 있어요.");
         return;
       }
-      meet.openAsk();
-      return;
+      if (narrow) setMeetDialogOpen(true)
+      meet.openAsk()
+      return
     }
 
     setStatus(`${tool} 기능은 다음 단계에서 연결할 예정이에요.`);
   };
 
-  // 모바일: 채팅창 아래 끝을 하단 탭바 바로 위에 딱 맞춘다.
-  // 폰마다 탭바 높이가 달라서 CSS 숫자만으로는 밑에 빈 칸이 남을 수 있어, 화면 크기가 바뀔 때만 한 번 재서 맞춘다
-  // (스크롤할 때는 아무것도 하지 않으므로 렉이 없다).
-  const mainRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = mainRef.current;
-    if (!el) return;
-    const host = el.closest(".content") as HTMLElement | null;
-    const mq = window.matchMedia("(max-width: 650px)");
-    // 하단 탭바: <nav> 자신이나 그 부모 중 화면에 고정(fixed)된 것
-    const navEl = document.querySelector("nav");
-    let nav: HTMLElement | null = navEl;
-    while (nav && getComputedStyle(nav).position !== "fixed")
-      nav = nav.parentElement;
-    const fit = () => {
-      if (!mq.matches || !nav) {
-        el.style.removeProperty("height");
-        host?.style.removeProperty("padding-bottom");
-        return;
-      }
-      const viewport = window.visualViewport;
-      const visibleBottom = viewport
-        ? viewport.offsetTop + viewport.height
-        : window.innerHeight;
-
-      const navTop = nav.getBoundingClientRect().top;
-      const top = el.getBoundingClientRect().top;
-      const bottom = Math.min(navTop, visibleBottom);
-      const gap = 6;
-
-      el.style.setProperty(
-        "height",
-        `${Math.max(0, Math.floor(bottom - top - gap))}px`,
-        "important",
-      );
-    };
-    fit();
-    // 폰에서는 주소창이 접히거나 글꼴이 늦게 뜨면서 높이가 한참 뒤에 안정되기도 해서, 처음 몇 번 더 맞춘다
-    const timers = [60, 300, 900, 2000].map((ms) => window.setTimeout(fit, ms));
-    window.addEventListener("resize", fit);
-    window.addEventListener("orientationchange", fit);
-    window.visualViewport?.addEventListener("resize", fit);
-    const ro =
-      typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
-    if (nav) ro?.observe(nav);
-    ro?.observe(document.body);
-    return () => {
-      timers.forEach((t) => window.clearTimeout(t));
-      window.removeEventListener("resize", fit);
-      window.removeEventListener("orientationchange", fit);
-      window.visualViewport?.removeEventListener("resize", fit);
-      ro?.disconnect();
-      el.style.removeProperty("height");
-      host?.style.removeProperty("padding-bottom");
-    };
-  }, []);
-
-  // PC: 채팅방이 화면 아래에서 잘리지 않게 높이를 화면에 맞춘다.
-  // 페이지 전체는 스크롤되지 않고, 왼쪽 대화 목록과 오른쪽 칸(투표/장소/Meet Mode)이 각자 안에서만 스크롤된다.
-  const layoutRef = useRef<HTMLDivElement>(null);
+  // PC right panel height; mobile sizing belongs to AppShell.
+  const layoutRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const el = layoutRef.current;
     if (!el) return;
@@ -421,17 +366,16 @@ export default function ChatPanel({
         el.style.removeProperty("height");
         return;
       }
-      const top = el.getBoundingClientRect().top + window.scrollY;
-      const h = Math.max(480, Math.round(window.innerHeight - top - 24));
-      el.style.setProperty("height", `${h}px`, "important");
-    };
-    fit();
-    const timers = [60, 300, 900].map((ms) => window.setTimeout(fit, ms));
-    window.addEventListener("resize", fit);
-    mq.addEventListener("change", fit);
-    const ro =
-      typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
-    ro?.observe(document.body);
+      const top = el.getBoundingClientRect().top + window.scrollY
+      const h = Math.max(280, Math.round(window.innerHeight - top - 12))
+      el.style.setProperty('height', `${h}px`, 'important')
+    }
+    fit()
+    const timers = [60, 300, 900].map((ms) => window.setTimeout(fit, ms))
+    window.addEventListener('resize', fit)
+    mq.addEventListener('change', fit)
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null
+    ro?.observe(document.body)
     return () => {
       timers.forEach((t) => window.clearTimeout(t));
       window.removeEventListener("resize", fit);
@@ -443,6 +387,7 @@ export default function ChatPanel({
 
   const meetPanel = (
     <MeetModePanel
+      inDialog={narrow}
       meet={meet}
       arrivalState={arrivalState}
       loading={arrivalsLoading}
@@ -461,12 +406,26 @@ export default function ChatPanel({
       </div>
 
       <div className={styles.layout} ref={layoutRef}>
-        <div className={styles.chatMain} ref={mainRef}>
+        <div className={styles.chatMain}>
           {/* 모바일에서만: 카톡처럼 어떤 그룹 채팅방인지 맨 위에 보여 준다 */}
-          <div className={styles.mobileTitle}>
-            <strong>{group.name}</strong>
-            <span>{group.members.length}명</span>
+          {narrow && (
+            <div className={styles.compactTop}>
+              <div className={styles.mobileTitle}>
+                <strong>{group.name}</strong><span>{group.members.length}명</span>
+              </div>
+              <button type="button" className={styles.meetLauncher}
+                aria-label="MeetMode 위치 공유 및 도착 현황 열기"
+                onClick={() => setMeetDialogOpen(true)}>MeetMode</button>
+              <SharedBar messages={messages} groupId={group.id} myUserId={me.id} onPost={send} />
+            </div>
+          )}
+          <div className={`${styles.banner} ${styles.bannerMeet}`}>
+            <span>함께 정한 약속을 이곳에서 확인해 보세요.</span>
+            <Link href={`/groups/${group.id}/meetings`} className="link-arrow">
+              약속 보기 →
+            </Link>
           </div>
+
           {focusDate && (
             <div className={styles.banner}>
               <span>
@@ -478,19 +437,8 @@ export default function ChatPanel({
             </div>
           )}
 
-          {narrow && meetPanel}
-
-          {narrow && (
-            <SharedBar
-              messages={messages}
-              groupId={group.id}
-              myUserId={me.id}
-              onPost={send}
-            />
-          )}
-
           {selectMode && (
-            <p className={sel.hint}>
+            <p className={`${sel.hint} ${styles.selectionHint}`}>
               지울 메시지를 눌러서 고르세요. 묶어 보낸 사진은 사진을 하나씩
               눌러서 그 사진만 고를 수도 있어요. 그만하려면 아래의 “취소하고
               채팅으로 돌아가기”(또는 Esc)를 누르세요. 내가 보낸 메시지만 고를
@@ -519,15 +467,17 @@ export default function ChatPanel({
             onTogglePhoto={togglePhoto}
           />
 
+          <div className={styles.outgoingArea}>
           <OutgoingPhotos
             groups={outgoing.groups}
             onRetry={outgoing.retry}
             onDiscard={outgoing.discard}
             onSendDone={outgoing.sendDoneOnly}
           />
+          </div>
 
           {selectMode ? (
-            <section className={sel.dock} aria-label="선택한 메시지 삭제">
+            <section className={`${sel.dock} ${styles.selectionDock}`} aria-label="선택한 메시지 삭제">
               <div className={sel.dockRow}>
                 <span className={sel.count}>
                   {selected.size > 0 || photoCount === 0
@@ -604,6 +554,11 @@ export default function ChatPanel({
         )}
       </div>
 
+      {narrow && meetDialogOpen && (
+        <MobileMeetDialog open onClose={() => setMeetDialogOpen(false)}>
+          {meetPanel}
+        </MobileMeetDialog>
+      )}
       <PhotoViewerWindow />
 
       {voteOpen && (

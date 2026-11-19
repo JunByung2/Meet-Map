@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState, type ClipboardEvent } from 'react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ClipboardEvent } from 'react'
 import styles from './chat.module.css'
 import tray from './bundle.module.css'
 import { hasAllowedExtension } from '@/lib/photos'
+import { getCurrentGps, markCameraPhoto, type Gps } from '@/lib/photoGps'
 
 const TOOLS = ['MeetMode', '첨부', '장소 선택', '투표'] // 첨부 안에 사진과 문서·파일이 들어 있다
 const MAX_PHOTOS = 27 // 한 번에 보낼 수 있는 사진 수 (9장씩 3묶음)
@@ -47,8 +48,18 @@ export default function MessageComposer({
   canSelect?: boolean
 }) {
   const [text, setText] = useState('')
+  const [toolsOpen, setToolsOpen] = useState(false)
+  const toolsId = useId()
   const imageRef = useRef<HTMLInputElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const camGpsRef = useRef<Promise<Gps | null> | null>(null) // 카메라를 연 순간 폰의 위치
+  // 터치 기기(폰·태블릿)에서만 카메라 버튼을 보여준다
+  const canCamera = useSyncExternalStore(
+    () => () => {},
+    () => typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0,
+    () => false,
+  )
   const [attachOpen, setAttachOpen] = useState(false) // 첨부를 누르면 사진 / 문서·파일 중에 고른다
 
   // 보내기 전 사진 미리보기 (2장 이상 골랐을 때)
@@ -106,6 +117,13 @@ export default function MessageComposer({
     setNote('')
     if (onFiles) void onFiles('image', files, { bundle })
     else files.forEach((f) => void onFile?.('image', f))
+  }
+
+  // 카메라로 찍은 사진: 찍을 때의 폰 위치를 사진에 연결해 둔다 (파일에 위치가 없는 폰도 위치가 저장되게)
+  function pickCamera(input: HTMLInputElement) {
+    const gps = camGpsRef.current
+    if (gps) Array.from(input.files ?? []).forEach((f) => markCameraPhoto(f, gps))
+    pick('image', input)
   }
 
   function pick(kind: 'image' | 'file', input: HTMLInputElement) {
@@ -185,7 +203,7 @@ export default function MessageComposer({
 
   return (
     <section className={styles.composer} onPaste={onPaste}>
-      <div className={styles.tools}>
+      <div id={toolsId} className={`${styles.tools} ${toolsOpen ? styles.toolsOpen : ''}`}>
         {TOOLS.map((tool) => (
           <button
             key={tool}
@@ -197,6 +215,7 @@ export default function MessageComposer({
               if (tool === '첨부') setAttachOpen((v) => !v)
               else {
                 setAttachOpen(false)
+                setToolsOpen(false)
                 onTool(tool)
               }
             }}
@@ -205,7 +224,7 @@ export default function MessageComposer({
           </button>
         ))}
         {onSelectMode && (
-          <button type="button" className={styles.chip} disabled={!canSelect} onClick={onSelectMode}>
+          <button type="button" className={styles.chip} disabled={!canSelect} onClick={() => { setToolsOpen(false); onSelectMode() }}>
             ☑ 선택 삭제
           </button>
         )}
@@ -217,15 +236,29 @@ export default function MessageComposer({
             type="button"
             onClick={() => {
               setAttachOpen(false)
+              setToolsOpen(false)
               imageRef.current?.click()
             }}
           >
             🖼 사진
           </button>
+          {canCamera && (
+            <button
+              type="button"
+              onClick={() => {
+                setAttachOpen(false)
+                camGpsRef.current = getCurrentGps() // 카메라를 열기 전에 위치를 잡기 시작한다 (위치 권한 창이 먼저 뜬다)
+                cameraRef.current?.click()
+              }}
+            >
+              📷 카메라
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
               setAttachOpen(false)
+              setToolsOpen(false)
               fileRef.current?.click()
             }}
           >
@@ -243,6 +276,14 @@ export default function MessageComposer({
         onChange={(e) => pick('image', e.target)}
       />
       <input
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={(e) => pickCamera(e.target)}
+      />
+      <input
         ref={fileRef}
         type="file"
         accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.txt,.csv,.md,.zip"
@@ -251,7 +292,7 @@ export default function MessageComposer({
       />
 
       {pending.length > 0 && (
-        <div className={tray.tray} aria-label="보낼 사진 미리보기">
+        <div className={`${tray.tray} ${styles.pendingTray}`} aria-label="보낼 사진 미리보기">
           <div className={tray.thumbs}>
             {pending.map((p) => (
               <div key={p.id} className={tray.thumb}>
@@ -303,6 +344,12 @@ export default function MessageComposer({
       )}
 
       <div className={styles.composerBottom}>
+        <button type="button" className={styles.toolsToggle}
+          aria-label={toolsOpen ? '채팅 도구 닫기' : '채팅 도구 열기'}
+          aria-expanded={toolsOpen} aria-controls={toolsId}
+          onClick={() => { setToolsOpen((v) => !v); setAttachOpen(false) }}>
+          {toolsOpen ? '×' : '+'}
+        </button>
         <input
           className="input ime-ko"
           lang="ko"
@@ -314,6 +361,7 @@ export default function MessageComposer({
               : '친구들에게 메시지 보내기'
           }
           autoComplete="off"
+          onFocus={() => { setToolsOpen(false); setAttachOpen(false) }}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.nativeEvent.isComposing) {

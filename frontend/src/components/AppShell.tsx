@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, watchApi, ApiError } from "@/lib/api";
 import Avatar from "./Avatar";
+import { useChatViewport } from "@/hooks/useChatViewport";
 import Sidebar, {
   LAST_GROUP_KEY,
   type ActiveMenu,
@@ -26,18 +27,21 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const shellRef = useChatViewport(active === "chat");
   const [nickname, setNickname] = useState("");
   const [meId, setMeId] = useState<number | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
 
   useEffect(() => {
-    api<Me>("/auth/me")
-      .then((me) => {
-        setNickname(me?.nickname ?? "");
-        setMeId(me?.id ?? null);
-        setPhoto(me?.profile_image ?? null);
-      })
-      .catch(() => {});
+    return watchApi<Me>("/auth/me", (me) => {
+      setNickname(me?.nickname ?? "");
+      setMeId(me?.id ?? null);
+      setPhoto(me?.profile_image ?? null);
+    }, (error) => {
+      if (error instanceof ApiError && [0, 401, 403].includes(error.status)) {
+        setNickname(""); setMeId(null); setPhoto(null);
+      }
+    });
   }, []);
 
   async function logout() {
@@ -57,7 +61,7 @@ export default function AppShell({
   const initial = nickname ? nickname.slice(0, 1) : "나";
 
   return (
-    <>
+    <div ref={shellRef} className="app-shell" data-layout={active === "chat" ? "chat" : "page"}>
       <header className="shell-header">
         <Link href="/groups" className="brand">
           <span className="brand-logo">
@@ -100,6 +104,6 @@ export default function AppShell({
         <Sidebar group={group} active={active} />
         <main className="content">{children}</main>
       </div>
-    </>
+    </div>
   );
 }

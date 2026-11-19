@@ -640,3 +640,21 @@ p {
     .meet-actions .btn { width: 100%; min-width: 0; }
   }
 }
+
+/* Shared mobile chat frame: header, scrollable conversation, bottom navigation. */
+@media (max-width: 650px) {
+  .app-shell { min-width: 0; }
+  .app-shell input, .app-shell textarea, .app-shell select { font-size: 16px; }
+  .app-shell[data-layout="chat"] {
+    position: fixed; inset: auto 0; top: var(--chat-viewport-top, 0px);
+    height: var(--chat-viewport-height, 100dvh);
+    display: flex; flex-direction: column; overflow: hidden;
+    background: var(--bg, #f3f7f5);
+  }
+  .app-shell[data-layout="chat"] > .shell-header { flex: none; position: static; padding-left: 12px; padding-right: 12px; }
+  .app-shell[data-layout="chat"] > .shell-body { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow: hidden; }
+  .app-shell[data-layout="chat"] .content { order: 0; flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; width: 100%; max-width: none; margin: 0; padding: 8px 10px; overflow: hidden; }
+  .app-shell[data-layout="chat"] .sidebar { order: 1; flex: none; position: static; width: 100%; min-width: 0; }
+  .app-shell[data-layout="chat"][data-keyboard="open"] > .shell-header,
+  .app-shell[data-layout="chat"][data-keyboard="open"] .sidebar { display: none; }
+}

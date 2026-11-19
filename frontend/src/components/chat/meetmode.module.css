@@ -285,3 +285,5 @@
   .title { flex: 1; min-width: 0; }
   .state { margin-left: auto; }
 }
+
+.dialogPanel { position: static; max-height: none; overflow: visible; margin: 0; border: 0; padding: 16px; }

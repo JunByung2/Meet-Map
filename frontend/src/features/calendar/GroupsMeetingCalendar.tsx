@@ -1,52 +1,52 @@
-"use client";
+'use client'
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { api } from "@/lib/api";
-import css from "./groupsCalendar.module.css";
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { api } from '@/lib/api'
+import css from './groupsCalendar.module.css'
 
-type GroupLite = { id: number; name: string; icon: string | null };
+type GroupLite = { id: number; name: string; icon: string | null }
 
 type MeetingLite = {
-  id: number;
-  group_id: number;
-  title: string;
-  location: string;
-  meeting_time: string;
-  status: string;
-};
+  id: number
+  group_id: number
+  title: string
+  location: string
+  meeting_time: string
+  status: string
+}
 
 // 그룹마다 다른 색 (내 그룹 순서대로 배정, 넘치면 처음부터 다시)
 const COLORS = [
-  "#1FA58A",
-  "#3B82F6",
-  "#F59E0B",
-  "#8B5CF6",
-  "#EC4899",
-  "#F97316",
-  "#84CC16",
-  "#64748B",
-];
-const DOW = ["일", "월", "화", "수", "목", "금", "토"];
-const MAX_CHIPS = 2; // 칸 하나에 제목을 보여 줄 최대 개수 (나머지는 +N)
+  '#1FA58A',
+  '#3B82F6',
+  '#F59E0B',
+  '#8B5CF6',
+  '#EC4899',
+  '#F97316',
+  '#84CC16',
+  '#64748B',
+]
+const DOW = ['일', '월', '화', '수', '목', '금', '토']
+const MAX_CHIPS = 2 // 칸 하나에 제목을 보여 줄 최대 개수 (나머지는 +N)
 
-const pad = (n: number) => String(n).padStart(2, "0");
+const pad = (n: number) => String(n).padStart(2, '0')
 const ymd = (d: Date) =>
-  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
 function parseDay(day: string) {
-  const [y, m, d] = day.split("-").map(Number);
-  return new Date(y, m - 1, d);
+  const [y, m, d] = day.split('-').map(Number)
+  return new Date(y, m - 1, d)
 }
 
 function dayLabel(day: string) {
-  const d = parseDay(day);
-  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]})`;
+  const d = parseDay(day)
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]})`
 }
 
 function timeLabel(iso: string) {
-  const d = new Date(iso);
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const d = new Date(iso)
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 /**
@@ -58,128 +58,136 @@ export default function GroupsMeetingCalendar({
   meetings: given,
   listHref,
 }: {
-  groups: GroupLite[];
+  groups: GroupLite[]
   /** 이미 불러온 약속이 있으면 넘겨 준다 (그러면 다시 불러오지 않는다) */
   meetings?: MeetingLite[];
   /** 약속을 눌렀을 때 갈 전체 약속 목록 주소 (없으면 그 약속이 속한 그룹의 약속 목록) */
   listHref?: string;
 }) {
-  const todayKey = ymd(new Date());
+  const todayKey = ymd(new Date())
   const [month, setMonth] = useState(() => {
-    const n = new Date();
-    return new Date(n.getFullYear(), n.getMonth(), 1);
-  });
-  const [fetched, setFetched] = useState<MeetingLite[]>([]);
-  const [loadingOwn, setLoadingOwn] = useState(true);
-  const [failed, setFailed] = useState(0); // 불러오지 못한 그룹 수
-  const [hidden, setHidden] = useState<number[]>([]); // 숨긴 그룹
-  const [selected, setSelected] = useState<string | null>(null); // null 이면 다가오는 약속을 보여 준다
+    const n = new Date()
+    return new Date(n.getFullYear(), n.getMonth(), 1)
+  })
+  const [fetched, setFetched] = useState<MeetingLite[]>([])
+  const [loadingOwn, setLoadingOwn] = useState(true)
+  const [failed, setFailed] = useState(0) // 불러오지 못한 그룹 수
+  const [hidden, setHidden] = useState<number[]>([]) // 숨긴 그룹
+  const [selected, setSelected] = useState<string | null>(null) // null 이면 다가오는 약속을 보여 준다
 
   // 그룹 목록이 바뀔 때만 다시 불러온다 (그룹마다 약속 목록을 한 번씩 조회)
-  const groupKey = groups.map((g) => g.id).join(",");
-  const meetings = given ?? fetched;
-  const loading = given ? false : loadingOwn;
+  const groupKey = groups.map((g) => g.id).join(',')
+  const meetings = given ?? fetched
+  const loading = given ? false : loadingOwn
   useEffect(() => {
-    if (given) return;
-    let cancelled = false;
+    if (given) return
+    let cancelled = false
     Promise.allSettled(
       groups.map((g) => api<MeetingLite[]>(`/groups/${g.id}/meetings`)),
     ).then((results) => {
-      if (cancelled) return;
-      const all: MeetingLite[] = [];
-      let bad = 0;
+      if (cancelled) return
+      const all: MeetingLite[] = []
+      let bad = 0
       for (const r of results) {
-        if (r.status === "fulfilled") all.push(...r.value);
-        else bad += 1;
+        if (r.status === 'fulfilled') all.push(...r.value)
+        else bad += 1
       }
-      setFetched(all);
-      setFailed(bad);
-      setLoadingOwn(false);
-    });
+      setFetched(all)
+      setFailed(bad)
+      setLoadingOwn(false)
+    })
     return () => {
-      cancelled = true;
-    };
+      cancelled = true
+    }
     // groups 배열 자체는 매 렌더 새로 만들어질 수 있어서 id 목록으로 비교한다
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupKey, given]);
+  }, [groupKey, given])
 
   const colorOf = (groupId: number) => {
-    const idx = groups.findIndex((g) => g.id === groupId);
-    return COLORS[(idx < 0 ? 0 : idx) % COLORS.length];
-  };
+    const idx = groups.findIndex((g) => g.id === groupId)
+    return COLORS[(idx < 0 ? 0 : idx) % COLORS.length]
+  }
   const nameOf = (groupId: number) =>
-    groups.find((g) => g.id === groupId)?.name ?? "";
+    groups.find((g) => g.id === groupId)?.name ?? ''
 
   // 날짜별로 묶기 (확정된 약속만, 숨긴 그룹 제외)
   const byDay = useMemo(() => {
-    const map = new Map<string, MeetingLite[]>();
+    const map = new Map<string, MeetingLite[]>()
     for (const m of meetings) {
-      if (m.status?.toLowerCase() !== "confirmed") continue;
-      if (hidden.includes(m.group_id)) continue;
-      const d = new Date(m.meeting_time);
-      if (Number.isNaN(d.getTime())) continue;
-      const k = ymd(d);
-      map.set(k, [...(map.get(k) ?? []), m]);
+      if (m.status?.toLowerCase() !== 'confirmed') continue
+      if (hidden.includes(m.group_id)) continue
+      const d = new Date(m.meeting_time)
+      if (Number.isNaN(d.getTime())) continue
+      const k = ymd(d)
+      map.set(k, [...(map.get(k) ?? []), m])
     }
     for (const list of map.values()) {
       list.sort(
         (a, b) =>
           new Date(a.meeting_time).getTime() -
           new Date(b.meeting_time).getTime(),
-      );
+      )
     }
-    return map;
-  }, [meetings, hidden]);
+    return map
+  }, [meetings, hidden])
 
   // 이번 달 칸 42개 (앞뒤 달 일부 포함)
-  const year = month.getFullYear();
-  const monthIdx = month.getMonth();
-  const startOffset = new Date(year, monthIdx, 1).getDay();
+  const year = month.getFullYear()
+  const monthIdx = month.getMonth()
+  const startOffset = new Date(year, monthIdx, 1).getDay()
   const cells = Array.from({ length: 42 }, (_, i) => {
-    const d = new Date(year, monthIdx, 1 - startOffset + i);
-    return { key: ymd(d), date: d, inMonth: d.getMonth() === monthIdx };
-  });
+    const d = new Date(year, monthIdx, 1 - startOffset + i)
+    return { key: ymd(d), date: d, inMonth: d.getMonth() === monthIdx }
+  })
 
-  const shift = (delta: number) =>
-    setMonth(new Date(year, monthIdx + delta, 1));
+  const shift = (delta: number) => setMonth(new Date(year, monthIdx + delta, 1))
   const goToday = () => {
-    const n = new Date();
-    setMonth(new Date(n.getFullYear(), n.getMonth(), 1));
-    setSelected(null);
-  };
+    const n = new Date()
+    setMonth(new Date(n.getFullYear(), n.getMonth(), 1))
+    setSelected(null)
+  }
 
-  const selList = selected ? (byDay.get(selected) ?? []) : [];
+  const selList = selected ? (byDay.get(selected) ?? []) : []
 
   // 오늘 이후 약속 중 가까운 5개
   const upcoming = useMemo(() => {
-    const list: MeetingLite[] = [];
-    for (const [k, items] of byDay) if (k >= todayKey) list.push(...items);
+    const list: MeetingLite[] = []
+    for (const [k, items] of byDay) if (k >= todayKey) list.push(...items)
     list.sort(
       (a, b) =>
         new Date(a.meeting_time).getTime() - new Date(b.meeting_time).getTime(),
-    );
-    return list.slice(0, 5);
-  }, [byDay, todayKey]);
+    )
+    return list.slice(0, 5)
+  }, [byDay, todayKey])
 
   const item = (m: MeetingLite, withDate: boolean) => (
     <Link
       key={m.id}
-      href={listHref ?? `/groups/${m.group_id}/meetings`}
+      href={
+        new Intl.DateTimeFormat("sv-SE", {
+          timeZone: "Asia/Seoul",
+        }).format(new Date(m.meeting_time)) <
+        new Intl.DateTimeFormat("sv-SE", {
+          timeZone: "Asia/Seoul",
+        }).format(new Date())
+          ? `/groups/${m.group_id}/meeting-record/${m.id}`
+          : (listHref ?? `/groups/${m.group_id}/meetings`)
+      }
       className={css.item}
-      style={{ ["--c" as string]: colorOf(m.group_id) }}
+      style={{ ['--c' as string]: colorOf(m.group_id) }}
     >
       <span className={css.itemBar} />
       <span className={css.itemBody}>
         <strong>{m.title}</strong>
         <span className="muted">
-          {withDate ? `${dayLabel(ymd(new Date(m.meeting_time)))} ` : ""}
+          {withDate ? `${dayLabel(ymd(new Date(m.meeting_time)))} ` : ''}
           {timeLabel(m.meeting_time)} · {nameOf(m.group_id)}
-          {m.location ? ` · 📍 ${m.location}` : ""}
+          {m.location ? ` · 📍 ${m.location}` : ''}
         </span>
       </span>
       <span className="link-arrow">→</span>
     </Link>
-  );
+  )
 
   return (
     <div className={css.wrap}>
@@ -214,12 +222,12 @@ export default function GroupsMeetingCalendar({
       {groups.length > 1 && (
         <div className={css.legend}>
           {groups.map((g) => {
-            const off = hidden.includes(g.id);
+            const off = hidden.includes(g.id)
             return (
               <button
                 key={g.id}
                 type="button"
-                className={`${css.who} ${off ? css.whoOff : ""}`}
+                className={`${css.who} ${off ? css.whoOff : ''}`}
                 aria-pressed={!off}
                 onClick={() =>
                   setHidden((cur) =>
@@ -232,7 +240,7 @@ export default function GroupsMeetingCalendar({
                 <i className={css.dot} style={{ background: colorOf(g.id) }} />
                 {g.name}
               </button>
-            );
+            )
           })}
         </div>
       )}
@@ -248,27 +256,27 @@ export default function GroupsMeetingCalendar({
           {DOW.map((d, i) => (
             <div
               key={d}
-              className={`${css.dow} ${i === 0 ? css.sun : ""} ${i === 6 ? css.sat : ""}`}
+              className={`${css.dow} ${i === 0 ? css.sun : ''} ${i === 6 ? css.sat : ''}`}
             >
               {d}
             </div>
           ))}
 
           {cells.map(({ key, date, inMonth }) => {
-            const list = byDay.get(key) ?? [];
+            const list = byDay.get(key) ?? []
             const classes = [
               css.cell,
-              inMonth ? "" : css.out,
-              key === todayKey ? css.today : "",
-              key === selected ? css.selected : "",
+              inMonth ? '' : css.out,
+              key === todayKey ? css.today : '',
+              key === selected ? css.selected : '',
             ]
               .filter(Boolean)
-              .join(" ");
+              .join(' ')
             const summary = `${date.getMonth() + 1}월 ${date.getDate()}일${
               list.length
-                ? `, 약속 ${list.map((m) => `${nameOf(m.group_id)} ${m.title}`).join(", ")}`
-                : ", 약속 없음"
-            }`;
+                ? `, 약속 ${list.map((m) => `${nameOf(m.group_id)} ${m.title}`).join(', ')}`
+                : ', 약속 없음'
+            }`
 
             return (
               <button
@@ -284,7 +292,7 @@ export default function GroupsMeetingCalendar({
                   <span
                     key={m.id}
                     className={css.chip}
-                    style={{ ["--c" as string]: colorOf(m.group_id) }}
+                    style={{ ['--c' as string]: colorOf(m.group_id) }}
                   >
                     {m.title}
                   </span>
@@ -304,7 +312,7 @@ export default function GroupsMeetingCalendar({
                   </span>
                 )}
               </button>
-            );
+            )
           })}
         </div>
 
@@ -345,5 +353,5 @@ export default function GroupsMeetingCalendar({
         </div>
       </div>
     </div>
-  );
+  )
 }

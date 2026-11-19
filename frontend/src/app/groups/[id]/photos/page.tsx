@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import PhotoShell from "@/components/PhotoShell";
 import PhotoCollage from "@/components/PhotoCollage";
@@ -35,29 +35,33 @@ function Gallery({ groupId, onApiError }: { groupId: string; onApiError: (e: unk
   const [calOpen, setCalOpen] = useState(false); // 달력 시트
   const [dayFilter, setDayFilter] = useState<string | null>(null); // 달력에서 고른 날짜 (YYYY-MM-DD)
 
+  const loadVersion = useRef(0);
   const load = useCallback(async () => {
+    const version = ++loadVersion.current;
     setLoading(true);
     setError("");
     try {
       // 약속 기록은 달력 표시용이라, 못 불러와도 사진 목록은 그대로 보여 준다
-      const [list, recs, cov] = await Promise.all([
-        api<Photo[]>(`/groups/${groupId}/photos`),
-        api<MeetingRecord[]>(`/groups/${groupId}/records`).catch(() => [] as MeetingRecord[]),
-        api<DayCover[]>(`/groups/${groupId}/photos/day-covers`).catch(() => [] as DayCover[]),
-      ]);
-      setPhotos(list);
-      setRecords(recs);
-      setCovers(cov);
+      // Calendar metadata loads independently; photos can render as soon as they arrive.
+      void api<MeetingRecord[]>(`/groups/${groupId}/records?with_cover=false`)
+        .then((data) => { if (version === loadVersion.current) setRecords(data); })
+        .catch(() => { if (version === loadVersion.current) setRecords([]); });
+      void api<DayCover[]>(`/groups/${groupId}/photos/day-covers`)
+        .then((data) => { if (version === loadVersion.current) setCovers(data); })
+        .catch(() => { if (version === loadVersion.current) setCovers([]); });
+      const list = await api<Photo[]>(`/groups/${groupId}/photos`);
+      if (version === loadVersion.current) setPhotos(list);
     } catch (e) {
-      setError(onApiError(e));
+      if (version === loadVersion.current) setError(onApiError(e));
     } finally {
-      setLoading(false);
+      if (version === loadVersion.current) setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId]);
 
   useEffect(() => {
-    load();
+    void load();
+    return () => { loadVersion.current += 1; };
   }, [load]);
 
   // 추억 화면의 달력에서 "이 날 사진 보기"로 넘어오면 그 날짜만 보이게 한다 (?day=YYYY-MM-DD)

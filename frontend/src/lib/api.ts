@@ -48,8 +48,38 @@ async function performRequest<T = unknown>(
   return data as T;
 }
 
-// 진행 중인 GET만 공유한다. 응답 완료 후 보관하지 않으며 서버에서는 공유하지 않는다.
+// Only navigation metadata is reused briefly. Live chat, votes and locations stay uncached.
 const pendingReads = new Map<string, Promise<unknown>>();
+const metadata = new Map<string, { value: unknown; expires: number; staleUntil: number }>();
+let generation = 0;
+let writes = 0;
+type Watcher = { refresh: () => void; reset: (error: ApiError) => void };
+const watchers = new Set<Watcher>();
+function refreshWatchers() { if (!writes) watchers.forEach((w) => w.refresh()); }
+function resetWatchers(error: ApiError) { watchers.forEach((w) => w.reset(error)); }
+const INVALIDATE_KEY = "meetmap:invalidate-metadata";
+function clearReads() {
+  generation += 1;
+  pendingReads.clear();
+  metadata.clear();
+}
+function broadcastClear() {
+  clearReads();
+  try { localStorage.setItem(INVALIDATE_KEY, `${Date.now()}:${Math.random()}`); } catch { /* optional */ }
+}
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (event) => {
+    if (event.key === INVALIDATE_KEY || event.key === null) {
+      clearReads();
+      resetWatchers(new ApiError(0, "계정 또는 그룹 정보가 변경되어 확인 중입니다."));
+      refreshWatchers();
+    }
+  });
+  window.addEventListener("focus", refreshWatchers);
+}
+function metadataTtl(path: string) {
+  return path === "/auth/me" || /^\/groups\/\d+$/.test(path) ? 15_000 : 0;
+}
 export function api<T = unknown>(
   path: string,
   options: { method?: string; body?: unknown } = {},
@@ -57,15 +87,64 @@ export function api<T = unknown>(
   const method = (options.method ?? "GET").toUpperCase();
   if (typeof window === "undefined") return performRequest<T>(path, options);
   if (method !== "GET" || options.body !== undefined) {
-    // 로그인·로그아웃과 수정 이후의 조회는 이전 요청에 합치지 않는다.
-    pendingReads.clear();
-    return performRequest<T>(path, options).finally(() => pendingReads.clear());
+    writes += 1;
+    broadcastClear();
+    if (path.startsWith("/auth/")) resetWatchers(new ApiError(0, "계정 정보를 확인 중입니다."));
+    return performRequest<T>(path, options).finally(() => {
+      writes -= 1;
+      broadcastClear();
+      refreshWatchers();
+    });
   }
+  const hit = metadata.get(path);
+  if (!writes && hit && hit.expires > Date.now()) return Promise.resolve(hit.value as T);
+  if (hit && hit.staleUntil <= Date.now()) metadata.delete(path);
   const existing = pendingReads.get(path);
   if (existing) return existing as Promise<T>;
-  const request = performRequest<T>(path, options).finally(() => {
+  const started = generation;
+  const request = performRequest<T>(path, options).then((value) => {
+    const ttl = metadataTtl(path);
+    if (ttl && !writes && started === generation) {
+      if (metadata.size >= 30) metadata.delete(metadata.keys().next().value!);
+      metadata.set(path, { value, expires: Date.now() + ttl, staleUntil: Date.now() + 300_000 });
+    }
+    return value;
+  }).catch((error) => {
+    if (started === generation && error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+      clearReads();
+      resetWatchers(error);
+    }
+    throw error;
+  }).finally(() => {
     if (pendingReads.get(path) === request) pendingReads.delete(path);
   });
   pendingReads.set(path, request);
   return request;
+}
+
+/** Opt-in stale-while-revalidate for read-only navigation metadata, never edit forms. */
+export function watchApi<T>(path: string, onValue: (value: T) => void, onError: (error: unknown) => void) {
+  let active = true;
+  let sequence = 0;
+  const hit = metadata.get(path);
+  if (!writes && hit && hit.staleUntil > Date.now()) onValue(hit.value as T);
+  const watcher: Watcher = {
+    refresh() {
+      if (!active || writes) return;
+      const current = ++sequence;
+      const epoch = generation;
+      void api<T>(path).then((value) => {
+        if (active && current === sequence && epoch === generation) onValue(value);
+      }).catch((error) => {
+        if (active && current === sequence && epoch === generation) onError(error);
+      });
+    },
+    reset(error) {
+      sequence += 1;
+      if (active) onError(error);
+    },
+  };
+  watchers.add(watcher);
+  watcher.refresh();
+  return () => { active = false; sequence += 1; watchers.delete(watcher); };
 }

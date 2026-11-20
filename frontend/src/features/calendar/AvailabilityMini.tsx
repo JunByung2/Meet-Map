@@ -27,11 +27,14 @@ export default function AvailabilityMini({
   members,
   meetings,
   onOpen,
+  boardStyle = false,
 }: {
   groupId: number;
   members: GroupMember[];
   meetings: { id: number; meeting_time: string }[];
   onOpen: () => void;
+  /** 약속 페이지 2단 카드 안에서 원래 달력을 그대로 표시 */
+  boardStyle?: boolean;
 }) {
   const todayKey = ymd(new Date());
   const [month, setMonth] = useState(() => {
@@ -89,9 +92,9 @@ export default function AvailabilityMini({
     setMonth(new Date(year, monthIdx + delta, 1));
 
   return (
-    <div className={css.box}>
-      <div className={css.head}>
-        <strong className={css.title}>함께 가능한 날</strong>
+    <div className={`${css.box}${boardStyle ? ` ${css.boardBox}` : ""}`}>
+      <div className={`${css.head}${boardStyle ? ` ${css.boardHead}` : ""}`}>
+        {!boardStyle && <strong className={css.title}>함께 가능한 날</strong>}
         <div className={css.nav}>
           <button type="button" onClick={() => shift(-1)} aria-label="이전 달">
             ‹

@@ -7,6 +7,7 @@ import type { Photo } from '@/lib/photos'
 import Avatar from '@/components/Avatar'
 import Panel from '@/components/Panel'
 import GroupsMeetingCalendar from '@/features/calendar/GroupsMeetingCalendar'
+import GroupChatPreview from './GroupChatPreview'
 import css from './homeBoard.module.css'
 
 type Meeting = {
@@ -16,6 +17,7 @@ type Meeting = {
   location: string
   meeting_time: string
   status: string
+  participant_ids?: number[]
 }
 
 type Member = {
@@ -24,7 +26,26 @@ type Member = {
   profile_image: string | null
 }
 
-const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+type Me = {
+  id: number
+  nickname: string
+}
+
+const MONTHS = [
+  'JAN',
+  'FEB',
+  'MAR',
+  'APR',
+  'MAY',
+  'JUN',
+  'JUL',
+  'AUG',
+  'SEP',
+  'OCT',
+  'NOV',
+  'DEC',
+]
+
 const WEEK = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
 const TONES = ['', 'peach', 'lavender']
 
@@ -44,7 +65,12 @@ function timeText(iso: string) {
 }
 
 /**
- * 그룹 홈 맨 위 3열: 약속 달력 / 다음 약속 티켓 + 빠른 실행 / 최근 추억 + 채팅 바로가기
+ * 그룹 홈 대시보드
+ * - 약속 달력
+ * - NEXT MEETING
+ * - 빠른 실행
+ * - 최근 추억
+ * - 그룹 채팅 미리보기
  */
 export default function HomeBoard({
   group,
@@ -58,10 +84,14 @@ export default function HomeBoard({
   nextMeeting: Meeting | undefined
 }) {
   const base = `/groups/${group.id}`
-  const [photos, setPhotos] = useState<Photo[] | null>(null)
 
+  const [photos, setPhotos] = useState<Photo[] | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+
+  // 최근 사진 불러오기
   useEffect(() => {
     let active = true
+
     api<Photo[]>(`${base}/photos`)
       .then((list) => {
         if (active) setPhotos(list)
@@ -69,23 +99,78 @@ export default function HomeBoard({
       .catch(() => {
         if (active) setPhotos([])
       })
+
     return () => {
       active = false
     }
   }, [base])
 
+  // 현재 로그인한 사용자 확인
+  useEffect(() => {
+    let active = true
+
+    api<Me>('/auth/me')
+      .then((user) => {
+        if (active) setCurrentUserId(user.id)
+      })
+      .catch(() => {
+        if (active) setCurrentUserId(null)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  // 최근 사진 4장
   const recent = [...(photos ?? [])]
     .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id)
     .slice(0, 4)
+
+  // 다가오는 약속 개수
   const upcomingCount = (meetings ?? []).filter(
     (m) => m.status !== 'cancelled' && dayDiff(m.meeting_time) >= 0,
   ).length
 
   const when = nextMeeting ? new Date(nextMeeting.meeting_time) : null
+
   const diff = nextMeeting ? dayDiff(nextMeeting.meeting_time) : 0
+
+  // ==========================================
+  // NEXT MEETING 참석자 계산
+  // ==========================================
+
+  // 해당 약속에 지정된 참여자 ID
+  const participantIds = new Set(nextMeeting?.participant_ids ?? [])
+
+  // 그룹 멤버 중 해당 약속에 참여하는 사람
+  const attendingMembers = members.filter((member) =>
+    participantIds.has(member.user_id),
+  )
+
+  // 참석 인원
+  const attendingCount = attendingMembers.length
+
+  // 참석자로 지정되지 않은 인원
+  const undecidedCount = Math.max(0, members.length - attendingCount)
+
+  // 현재 로그인한 사용자의 참여 여부
+  const isAttending =
+    currentUserId !== null && participantIds.has(currentUserId)
+
+  // 개인별 참석 상태 문구
+  const attendanceLabel =
+    currentUserId === null || participantIds.size === 0
+      ? '미정이에요'
+      : isAttending
+        ? '참석할게!'
+        : '불참할게!'
 
   return (
     <div className={css.board}>
+      {/* ======================================
+          1. 약속 달력
+      ====================================== */}
       <Panel
         title="약속 달력"
         kicker="SCHEDULE"
@@ -97,12 +182,24 @@ export default function HomeBoard({
         }
       >
         <GroupsMeetingCalendar
-          groups={[{ id: group.id, name: group.name, icon: group.icon }]}
+          groups={[
+            {
+              id: group.id,
+              name: group.name,
+              icon: group.icon,
+            },
+          ]}
           meetings={meetings ?? []}
+          selectionOnly
+          dashboard
         />
       </Panel>
 
+      {/* ======================================
+          2. 중앙 영역
+      ====================================== */}
       <div className={css.middle}>
+        {/* NEXT MEETING */}
         <article className={css.ticket}>
           <div className={css.ticketTop}>
             <span>NEXT MEETING</span>
@@ -110,10 +207,12 @@ export default function HomeBoard({
               {nextMeeting ? (diff <= 0 ? 'TODAY' : `D-${diff}`) : '—'}
             </small>
           </div>
+
           {meetings === null ? (
             <p className={css.ticketEmpty}>불러오는 중…</p>
           ) : nextMeeting && when ? (
             <>
+              {/* 약속 날짜와 기본 정보 */}
               <div className={css.ticketContent}>
                 <div className={css.ticketDate}>
                   <b>{when.getDate()}</b>
@@ -123,16 +222,20 @@ export default function HomeBoard({
                     {WEEK[when.getDay()]}
                   </span>
                 </div>
+
                 <div className={css.ticketCopy}>
-                  <span className="eyebrow">{group.name}</span>
                   <h3>{nextMeeting.title}</h3>
+
                   <p>🕒 {timeText(nextMeeting.meeting_time)}</p>
+
                   {nextMeeting.location && <p>📍 {nextMeeting.location}</p>}
                 </div>
               </div>
+
+              {/* 참석자 프로필 및 인원 */}
               <div className={css.ticketPeople}>
                 <div className={css.stack}>
-                  {members.slice(0, 5).map((m, i) => (
+                  {attendingMembers.slice(0, 5).map((m, i) => (
                     <Avatar
                       key={m.user_id}
                       userId={m.user_id}
@@ -143,25 +246,37 @@ export default function HomeBoard({
                     />
                   ))}
                 </div>
+
                 <span>
-                  <b>{members.length}명</b> 함께해요
+                  <b>{attendingCount}명 참석</b>
+                  {' · '}
+                  <b>{undecidedCount}명 미정</b>
                 </span>
               </div>
+
+              {/* 약속 관련 버튼 */}
               <div className={css.ticketActions}>
                 <Link className="btn secondary sm" href={`${base}/meetings`}>
                   약속 보기
                 </Link>
-                <Link className="btn secondary sm" href={`${base}/map?view=transit`}>
+
+                <Link
+                  className="btn secondary sm"
+                  href={`${base}/map?view=transit`}
+                >
                   경로 보기
                 </Link>
-                <Link className={css.burst} href={`${base}/chat`}>
-                  채팅 가기
+
+                {/* 내 참석 상태 */}
+                <Link className={css.burst} href={`${base}/meetings`}>
+                  {attendanceLabel}
                 </Link>
               </div>
             </>
           ) : (
             <div className={css.ticketEmpty}>
               <p>아직 예정된 약속이 없어요.</p>
+
               <Link className="btn sm" href={`${base}/meetings`}>
                 + 약속 만들기
               </Link>
@@ -169,13 +284,21 @@ export default function HomeBoard({
           )}
         </article>
 
+        {/* ======================================
+            3. 빠른 실행
+        ====================================== */}
         <Panel title="빠른 실행" kicker="QUICK ACTION" className={css.quick}>
           <div className={css.quickGrid}>
             <Link href={`${base}/meetings`}>📅 약속 만들기</Link>
+
             <Link href={`${base}/map?view=transit`}>📍 장소 찾기</Link>
+
             <Link href={`${base}/photos/upload`}>📷 사진 올리기</Link>
+
             <Link href={`${base}/chat`}>💬 대화하기</Link>
           </div>
+
+          {/* 다가오는 약속 개수 유지 */}
           <div className={css.status}>
             <span className={css.pill}>예정</span>
             <b>다가오는 약속</b>
@@ -184,7 +307,11 @@ export default function HomeBoard({
         </Panel>
       </div>
 
+      {/* ======================================
+          4. 오른쪽 영역
+      ====================================== */}
       <div className={css.right}>
+        {/* 최근 추억 */}
         <Panel
           title="최근 추억"
           kicker="OUR MEMORIES"
@@ -207,25 +334,35 @@ export default function HomeBoard({
                       loading="lazy"
                       decoding="async"
                     />
-                    <figcaption>{p.title || p.caption || '함께한 순간'}</figcaption>
+
+                    <figcaption>
+                      {p.title || p.caption || '함께한 순간'}
+                    </figcaption>
                   </figure>
                 </Link>
               ))}
             </div>
           ) : (
             <p className={css.empty}>
-              {photos === null ? '불러오는 중…' : '아직 사진이 없어요. 첫 사진을 남겨 보세요.'}
+              {photos === null
+                ? '불러오는 중…'
+                : '아직 사진이 없어요. 첫 사진을 남겨 보세요.'}
             </p>
           )}
         </Panel>
 
-        <Panel title="그룹 채팅" kicker="LOBBY TALK" className={css.chat}>
-          <p className={css.chatText}>
-            만날 장소와 시간을 친구들과 함께 정해 보세요.
-          </p>
-          <Link className="btn sm block" href={`${base}/chat`}>
-            채팅 열기
-          </Link>
+        {/* 그룹 채팅 미리보기 */}
+        <Panel
+          title="그룹 채팅"
+          kicker="LOBBY TALK"
+          className={css.chat}
+          action={
+            <Link className="panel-action" href={`${base}/chat`}>
+              전체 보기 →
+            </Link>
+          }
+        >
+          <GroupChatPreview groupId={group.id} />
         </Panel>
       </div>
     </div>

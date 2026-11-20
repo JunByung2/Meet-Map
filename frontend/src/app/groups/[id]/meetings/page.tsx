@@ -9,7 +9,7 @@ import Avatar from "@/components/Avatar";
 import DateTimePicker from "@/components/chat/DateTimePicker";
 import AvailabilityCalendar from "@/features/calendar/AvailabilityCalendar";
 import AvailabilityMini from "@/features/calendar/AvailabilityMini";
-import mini from "@/features/calendar/availabilityMini.module.css";
+import board from "./meetingsBoard.module.css";
 import { useGroupContext, type GroupMember } from "@/hooks/useGroupContext";
 import { pickName, useNameMode, type NameMode } from "@/lib/nameMode";
 import type { PlaceValue } from "@/lib/photos";
@@ -661,6 +661,7 @@ export default function GroupMeetingsPage() {
 
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [listPage, setListPage] = useState(1);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -791,6 +792,7 @@ export default function GroupMeetingsPage() {
       ),
     );
     setEditingId(null);
+    setExpandedId(null);
     setNotice(
       moved
         ? "약속을 수정했어요. 날짜가 지나서 지난 기록으로 옮겨졌어요."
@@ -799,243 +801,187 @@ export default function GroupMeetingsPage() {
   }
 
   return (
-    <AppShell active="meetings">
-      <div className="page-head">
-        <div>
-          <p className="eyebrow">우리의 일정</p>
-          <h1 className="page-title">확정된 약속</h1>
-          <p className="page-sub">
-            친구들이 가능한 날을 달력에 표시하고, 약속을 직접 만들어요.
-            날짜·시간과 장소를 고치고 함께한 멤버도 기록할 수 있어요. 날짜가
-            지나면 지난 기록으로 옮겨져요.
-          </p>
-        </div>
-      </div>
-
-      <div
-        className="notice"
-        style={{
-          marginBottom: 28,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 16,
-          flexWrap: "wrap",
-        }}
-      >
-        <strong>약속은 여기서 직접 만들고, 투표는 채팅방에서 만들어요.</strong>
-
-        <div className="row" style={{ gap: 8 }}>
-          <button type="button" className="btn sm" onClick={() => openCreate()}>
-            + 약속 만들기
-          </button>
-          <button
-            type="button"
-            className="btn secondary sm"
-            onClick={() => router.push(`/groups/${groupId}/chat`)}
-          >
-            채팅방으로 →
-          </button>
-        </div>
-      </div>
-
-      <div className={mini.split}>
-        {/* 확정된 약속 */}
-        <section>
-          <div className="row-between" style={{ marginBottom: 16 }}>
-            <h2 className="section-title">확정된 약속 목록</h2>
-            {!loading && <span className="chip">{meetings.length}개</span>}
+    <AppShell active="meetings" dashboard>
+      <div className={board.page}>
+        <header className={board.hero}>
+          <div>
+            <p className={board.heroEyebrow}>OUR PLANS</p>
+            <h1 className={board.heroTitle}>모든 약속</h1>
+            <p className={board.heroSub}>
+              다가오는 약속과 함께 가능한 날을 한눈에 확인해요.
+            </p>
           </div>
+          <button type="button" className={board.createButton} onClick={() => openCreate()}>
+            + 새 약속 만들기
+          </button>
+        </header>
 
-          {notice && (
-            <p className="notice" role="status" style={{ marginBottom: 16 }}>
-              {notice}
-            </p>
-          )}
-
-          {creating && (
-            <article
-              className="card"
-              ref={createRef}
-              style={{ marginBottom: 16 }}
-            >
-              <MeetingCreateForm
-                key={createWhen}
-                groupId={groupId}
-                members={members}
-                nameMode={nameMode}
-                initialWhen={createWhen}
-                onCreated={(created) => void handleCreated(created)}
-                onCancel={() => setCreating(false)}
-              />
-            </article>
-          )}
-          {groupError && (
-            <p className="error" style={{ marginBottom: 16 }}>
-              {groupError}
-            </p>
-          )}
-
-          {error ? (
-            <div className="card">
-              <p className="error">{error}</p>
-
-              <button
-                type="button"
-                className="btn"
-                onClick={() => void loadMeetings()}
-                style={{ marginTop: 16 }}
-              >
-                다시 시도
-              </button>
+        <div className={board.columns}>
+          <section className={board.panel} aria-label="다가오는 약속">
+            <div className={board.panelHead}>
+              <div>
+                <p className={board.panelEyebrow}>UPCOMING</p>
+                <h2>다가오는 약속</h2>
+              </div>
+              <span className={board.count}>{loading ? '…' : meetings.length}</span>
             </div>
-          ) : meetings.length === 0 ? (
-            <div className="card">
-              <p className="card-title">
-                {loading ? "불러오는 중…" : "앞으로 예정된 확정 약속이 없어요."}
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="stack">
-                {meetings
-                  .slice(
-                    (Math.min(listPage, pageCount(meetings.length)) - 1) *
-                      PAGE_SIZE,
-                    Math.min(listPage, pageCount(meetings.length)) * PAGE_SIZE,
-                  )
-                  .map((meeting) => {
-                    const people = (meeting.participant_ids ?? [])
-                      .map((id) => memberById.get(id))
-                      .filter((m): m is GroupMember => !!m);
+            <div className={board.panelContent}>
+              {notice && <p className={board.notice} role="status">{notice}</p>}
 
-                    return (
-                      <article className="card meet-card" key={meeting.id}>
-                        {editingId === meeting.id ? (
-                          <MeetingEditor
-                            groupId={groupId}
-                            meeting={meeting}
-                            members={members}
-                            nameMode={nameMode}
-                            onSaved={handleSaved}
-                            onCancel={() => setEditingId(null)}
-                          />
-                        ) : (
-                          <div
-                            className="row-between meet-row"
-                            style={{ gap: 16, flexWrap: "wrap" }}
-                          >
-                            <div
-                              className="row"
-                              style={{ alignItems: "flex-start" }}
+              {creating && (
+                <article className={board.formCard} ref={createRef}>
+                  <MeetingCreateForm
+                    key={createWhen}
+                    groupId={groupId}
+                    members={members}
+                    nameMode={nameMode}
+                    initialWhen={createWhen}
+                    onCreated={(created) => void handleCreated(created)}
+                    onCancel={() => setCreating(false)}
+                  />
+                </article>
+              )}
+              {groupError && <p className="error">{groupError}</p>}
+              {error ? (
+                <div className={board.emptyCard}>
+                  <p className="error">{error}</p>
+                  <button type="button" className="btn sm" onClick={() => void loadMeetings()}>
+                    다시 시도
+                  </button>
+                </div>
+              ) : meetings.length === 0 ? (
+                <div className={board.emptyCard}>
+                  <p>{loading ? '불러오는 중…' : '다가오는 약속이 아직 없어요.'}</p>
+                  {!loading && <button type="button" className="btn sm" onClick={() => openCreate()}>+ 약속 만들기</button>}
+                </div>
+              ) : (
+                <>
+                  <div className={board.meetingList}>
+                    {meetings
+                      .slice(
+                        (Math.min(listPage, pageCount(meetings.length)) - 1) * PAGE_SIZE,
+                        Math.min(listPage, pageCount(meetings.length)) * PAGE_SIZE,
+                      )
+                      .map((meeting) => {
+                        const people = (meeting.participant_ids ?? [])
+                          .map((id) => memberById.get(id))
+                          .filter((m): m is GroupMember => !!m);
+                        const date = new Date(meeting.meeting_time);
+                        const daysLeft = Math.round(
+                          (new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime() -
+                            new Date(new Date().setHours(0, 0, 0, 0)).getTime()) /
+                            86400000,
+                        );
+                        const expanded = expandedId === meeting.id || editingId === meeting.id;
+                        const canReadDate = !Number.isNaN(date.getTime());
+                        return (
+                          <article key={meeting.id} className={board.meetingCard}>
+                            <button
+                              type="button"
+                              className={board.meetingSummary}
+                              aria-expanded={expanded}
+                              aria-controls={`meeting-detail-${meeting.id}`}
+                              onClick={() => {
+                                if (editingId !== null) setEditingId(null);
+                                setExpandedId(expanded ? null : meeting.id);
+                              }}
                             >
-                              <span className="avatar lg">
-                                <CalIcon size="1.1em" />
+                              <span className={board.dateTile}>
+                                <span className={board.month}>{canReadDate ? ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"][date.getMonth()] : '—'}</span>
+                                <strong>{canReadDate ? String(date.getDate()).padStart(2, '0') : '—'}</strong>
                               </span>
-
-                              <div>
-                                <h3 className="card-title">{meeting.title}</h3>
-
-                                <p className="muted" style={{ marginTop: 6 }}>
-                                  {formatDate(meeting.meeting_time)}
-                                </p>
-
-                                <p className="muted" style={{ marginTop: 8 }}>
-                                  📍 {meeting.location || "장소 미정"}
-                                </p>
-
-                                <div style={{ marginTop: 10 }}>
-                                  {people.length === 0 ? (
-                                    <p className="muted">
-                                      👥 참여 멤버를 아직 기록하지 않았어요.
-                                    </p>
-                                  ) : (
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        flexWrap: "wrap",
-                                        gap: 6,
-                                        alignItems: "center",
-                                      }}
-                                    >
-                                      <span className="muted">
-                                        👥 참여 {people.length}명
-                                      </span>
-                                      {people.map((m) => (
-                                        <span
-                                          key={m.user_id}
-                                          className="chip"
-                                          style={{
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            gap: 4,
-                                          }}
-                                        >
-                                          <Avatar
-                                            userId={m.user_id}
-                                            name={pickName(m, nameMode)}
-                                            image={m.profile_image}
-                                            size="sm"
-                                          />
+                              <span className={board.meetingInfo}>
+                                <span className={board.groupBadge}>{group?.name ?? '우리 그룹'}</span>
+                                <strong className={board.meetingName}>{meeting.title}</strong>
+                                <span className={board.meetingMeta}>
+                                  📍 {meeting.location || '장소 미정'} · {canReadDate ? date.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }) : '시간 미정'}
+                                </span>
+                              </span>
+                              <span className={board.meetingSide}>
+                                <span className={board.avatars} aria-label={`참여 멤버 ${people.length}명`}>
+                                  {people.slice(0, 5).map((m) => (
+                                    <Avatar
+                                      key={m.user_id}
+                                      userId={m.user_id}
+                                      name={pickName(m, nameMode)}
+                                      image={m.profile_image}
+                                      size="sm"
+                                    />
+                                  ))}
+                                </span>
+                                <span className={board.sideBottom}>
+                                  <span className={board.dDay}>{daysLeft <= 0 ? 'TODAY' : `D-${daysLeft}`}</span>
+                                  <span className={board.chevron} aria-hidden="true">{expanded ? '⌄' : '›'}</span>
+                                </span>
+                              </span>
+                            </button>
+                            {expanded && (
+                              <div className={board.meetingDetail} id={`meeting-detail-${meeting.id}`}>
+                                {editingId === meeting.id ? (
+                                  <MeetingEditor
+                                    groupId={groupId}
+                                    meeting={meeting}
+                                    members={members}
+                                    nameMode={nameMode}
+                                    onSaved={handleSaved}
+                                    onCancel={() => setEditingId(null)}
+                                  />
+                                ) : (
+                                  <>
+                                    <p><strong>날짜·시간</strong> {formatDate(meeting.meeting_time)}</p>
+                                    <p><strong>참여 인원</strong> {people.length}명</p>
+                                    <div className={board.participantList}>
+                                      {people.length > 0 ? people.map((m) => (
+                                        <span className={board.participant} key={m.user_id}>
+                                          <Avatar userId={m.user_id} name={pickName(m, nameMode)} image={m.profile_image} size="sm" />
                                           {pickName(m, nameMode)}
                                         </span>
-                                      ))}
+                                      )) : <span className="muted">참여 멤버를 아직 기록하지 않았어요.</span>}
                                     </div>
-                                  )}
-                                </div>
+                                    <div className={board.actions}>
+                                      <button type="button" className="btn secondary sm" onClick={() => { setNotice(''); setEditingId(meeting.id); }}>수정</button>
+                                      <button type="button" className="btn secondary sm" onClick={() => void deleteMeeting(meeting.id)}>삭제</button>
+                                    </div>
+                                  </>
+                                )}
                               </div>
-                            </div>
+                            )}
+                          </article>
+                        );
+                      })}
+                  </div>
+                  <Pager
+                    page={Math.min(listPage, pageCount(meetings.length))}
+                    pages={pageCount(meetings.length)}
+                    onChange={setListPage}
+                  />
+                </>
+              )}
+            </div>
+          </section>
 
-                            <div
-                              className="stack meet-actions"
-                              style={{ alignItems: "flex-end", minWidth: 90 }}
-                            >
-                              <span className="chip">확정</span>
-
-                              <button
-                                type="button"
-                                className="btn secondary sm"
-                                onClick={() => {
-                                  setNotice("");
-                                  setEditingId(meeting.id);
-                                }}
-                              >
-                                수정
-                              </button>
-
-                              <button
-                                type="button"
-                                className="btn secondary sm"
-                                onClick={() => void deleteMeeting(meeting.id)}
-                              >
-                                삭제
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </article>
-                    );
-                  })}
+          <section className={board.panel} aria-label="함께 가능한 날">
+            <div className={board.panelHead}>
+              <div>
+                <p className={board.panelEyebrow}>AVAILABLE</p>
+                <h2>함께 가능한 날</h2>
               </div>
-              <Pager
-                page={Math.min(listPage, pageCount(meetings.length))}
-                pages={pageCount(meetings.length)}
-                onChange={setListPage}
+              <button type="button" className={board.calendarOpen} onClick={() => setCalendarOpen(true)}>
+                크게 보기 →
+              </button>
+            </div>
+            <div className={board.calendarContent}>
+              <AvailabilityMini
+                key={miniKey}
+                groupId={groupId}
+                members={members}
+                meetings={meetings}
+                onOpen={() => setCalendarOpen(true)}
+                boardStyle
               />
-            </>
-          )}
-        </section>
-
-        {/* 작은 달력: 누르면 큰 달력 창이 열린다 */}
-        <aside className={mini.side}>
-          <AvailabilityMini
-            key={miniKey}
-            groupId={groupId}
-            members={members}
-            meetings={meetings}
-            onOpen={() => setCalendarOpen(true)}
-          />
-        </aside>
+            </div>
+          </section>
+        </div>
       </div>
 
       {calendarOpen && (

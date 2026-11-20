@@ -1,11 +1,15 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import css from './groupsCalendar.module.css'
 
-type GroupLite = { id: number; name: string; icon: string | null }
+type GroupLite = {
+  id: number
+  name: string
+  icon: string | null
+}
 
 type MeetingLite = {
   id: number
@@ -16,7 +20,15 @@ type MeetingLite = {
   status: string
 }
 
-// 그룹마다 다른 색 (내 그룹 순서대로 배정, 넘치면 처음부터 다시)
+type CalendarProps = {
+  groups: GroupLite[]
+  meetings?: MeetingLite[]
+  listHref?: string
+  dashboard?: boolean
+  /** true면 날짜를 선택했을 때만 달력 아래 상세 목록을 보여준다. */
+  selectionOnly?: boolean
+}
+
 const COLORS = [
   '#1FA58A',
   '#3B82F6',
@@ -27,100 +39,125 @@ const COLORS = [
   '#84CC16',
   '#64748B',
 ]
+
 const DOW = ['일', '월', '화', '수', '목', '금', '토']
-const MAX_CHIPS = 2 // 칸 하나에 제목을 보여 줄 최대 개수 (나머지는 +N)
+const MAX_CHIPS = 2
 
 const pad = (n: number) => String(n).padStart(2, '0')
-const ymd = (d: Date) =>
-  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+
+const ymd = (date: Date) =>
+  `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 
 function parseDay(day: string) {
-  const [y, m, d] = day.split('-').map(Number)
-  return new Date(y, m - 1, d)
+  const [year, month, date] = day.split('-').map(Number)
+  return new Date(year, month - 1, date)
 }
 
 function dayLabel(day: string) {
-  const d = parseDay(day)
-  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]})`
+  const date = parseDay(day)
+
+  return `${date.getMonth() + 1}월 ${date.getDate()}일 (${DOW[date.getDay()]})`
 }
 
 function timeLabel(iso: string) {
-  const d = new Date(iso)
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+  const date = new Date(iso)
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-/**
- * 메인 페이지 달력: 내가 속한 모든 그룹의 약속을 한 달력에 모아 보여 준다.
- * 그룹마다 색이 달라서 어느 그룹 약속인지 바로 알 수 있다.
- */
+const seoulDayFormatter = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Asia/Seoul',
+})
+
 export default function GroupsMeetingCalendar({
   groups,
   meetings: given,
   listHref,
-}: {
-  groups: GroupLite[]
-  /** 이미 불러온 약속이 있으면 넘겨 준다 (그러면 다시 불러오지 않는다) */
-  meetings?: MeetingLite[];
-  /** 약속을 눌렀을 때 갈 전체 약속 목록 주소 (없으면 그 약속이 속한 그룹의 약속 목록) */
-  listHref?: string;
-}) {
+  dashboard = false,
+  selectionOnly = false,
+}: CalendarProps) {
   const todayKey = ymd(new Date())
+
   const [month, setMonth] = useState(() => {
-    const n = new Date()
-    return new Date(n.getFullYear(), n.getMonth(), 1)
+    const now = new Date()
+    return new Date(now.getFullYear(), now.getMonth(), 1)
   })
+
   const [fetched, setFetched] = useState<MeetingLite[]>([])
   const [loadingOwn, setLoadingOwn] = useState(true)
-  const [failed, setFailed] = useState(0) // 불러오지 못한 그룹 수
-  const [hidden, setHidden] = useState<number[]>([]) // 숨긴 그룹
-  const [selected, setSelected] = useState<string | null>(null) // null 이면 다가오는 약속을 보여 준다
+  const [failed, setFailed] = useState(0)
+  const [hidden, setHidden] = useState<number[]>([])
+  const [selected, setSelected] = useState<string | null>(null)
 
-  // 그룹 목록이 바뀔 때만 다시 불러온다 (그룹마다 약속 목록을 한 번씩 조회)
-  const groupKey = groups.map((g) => g.id).join(',')
+  const groupKey = groups.map((group) => group.id).join(',')
+  const hasGivenMeetings = given !== undefined
+
   const meetings = given ?? fetched
-  const loading = given ? false : loadingOwn
+  const loading = hasGivenMeetings ? false : loadingOwn
+
+  // 부모가 약속을 전달하면 중복 조회하지 않는다.
   useEffect(() => {
-    if (given) return
+    if (hasGivenMeetings) return
+
     let cancelled = false
+
+    const groupIds = groupKey ? groupKey.split(',').map(Number) : []
+
+    setLoadingOwn(true)
+    setFailed(0)
+    setFetched([])
+
     Promise.allSettled(
-      groups.map((g) => api<MeetingLite[]>(`/groups/${g.id}/meetings`)),
+      groupIds.map((id) => api<MeetingLite[]>(`/groups/${id}/meetings`)),
     ).then((results) => {
       if (cancelled) return
+
       const all: MeetingLite[] = []
-      let bad = 0
-      for (const r of results) {
-        if (r.status === 'fulfilled') all.push(...r.value)
-        else bad += 1
+      let failedCount = 0
+
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          all.push(...result.value)
+        } else {
+          failedCount += 1
+        }
       }
+
       setFetched(all)
-      setFailed(bad)
+      setFailed(failedCount)
       setLoadingOwn(false)
     })
+
     return () => {
       cancelled = true
     }
-    // groups 배열 자체는 매 렌더 새로 만들어질 수 있어서 id 목록으로 비교한다
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupKey, given])
+  }, [groupKey, hasGivenMeetings])
 
   const colorOf = (groupId: number) => {
-    const idx = groups.findIndex((g) => g.id === groupId)
-    return COLORS[(idx < 0 ? 0 : idx) % COLORS.length]
+    const index = groups.findIndex((group) => group.id === groupId)
+    return COLORS[(index < 0 ? 0 : index) % COLORS.length]
   }
-  const nameOf = (groupId: number) =>
-    groups.find((g) => g.id === groupId)?.name ?? ''
 
-  // 날짜별로 묶기 (확정된 약속만, 숨긴 그룹 제외)
+  const nameOf = (groupId: number) =>
+    groups.find((group) => group.id === groupId)?.name ?? ''
+
+  // 확정된 약속을 날짜별로 묶는다.
   const byDay = useMemo(() => {
     const map = new Map<string, MeetingLite[]>()
-    for (const m of meetings) {
-      if (m.status?.toLowerCase() !== 'confirmed') continue
-      if (hidden.includes(m.group_id)) continue
-      const d = new Date(m.meeting_time)
-      if (Number.isNaN(d.getTime())) continue
-      const k = ymd(d)
-      map.set(k, [...(map.get(k) ?? []), m])
+
+    for (const meeting of meetings) {
+      if (meeting.status?.toLowerCase() !== 'confirmed') continue
+      if (hidden.includes(meeting.group_id)) continue
+
+      const date = new Date(meeting.meeting_time)
+      if (Number.isNaN(date.getTime())) continue
+
+      const key = ymd(date)
+      const list = map.get(key) ?? []
+
+      list.push(meeting)
+      map.set(key, list)
     }
+
     for (const list of map.values()) {
       list.sort(
         (a, b) =>
@@ -128,69 +165,122 @@ export default function GroupsMeetingCalendar({
           new Date(b.meeting_time).getTime(),
       )
     }
+
     return map
   }, [meetings, hidden])
 
-  // 이번 달 칸 42개 (앞뒤 달 일부 포함)
   const year = month.getFullYear()
   const monthIdx = month.getMonth()
   const startOffset = new Date(year, monthIdx, 1).getDay()
-  const cells = Array.from({ length: 42 }, (_, i) => {
-    const d = new Date(year, monthIdx, 1 - startOffset + i)
-    return { key: ymd(d), date: d, inMonth: d.getMonth() === monthIdx }
+  const daysInMonth = new Date(year, monthIdx + 1, 0).getDate()
+
+  // 홈에서는 이번 달에 필요한 4~6주만 표시한다.
+  // 다른 화면은 기존처럼 6주를 유지한다.
+  const weekCount = dashboard ? Math.ceil((startOffset + daysInMonth) / 7) : 6
+
+  const cells = Array.from({ length: weekCount * 7 }, (_, index) => {
+    const date = new Date(year, monthIdx, 1 - startOffset + index)
+
+    return {
+      key: ymd(date),
+      date,
+      inMonth: date.getMonth() === monthIdx,
+    }
   })
 
-  const shift = (delta: number) => setMonth(new Date(year, monthIdx + delta, 1))
-  const goToday = () => {
-    const n = new Date()
-    setMonth(new Date(n.getFullYear(), n.getMonth(), 1))
+  function shift(delta: number) {
+    setMonth(new Date(year, monthIdx + delta, 1))
     setSelected(null)
   }
 
-  const selList = selected ? (byDay.get(selected) ?? []) : []
+  function goToday() {
+    const now = new Date()
+
+    setMonth(new Date(now.getFullYear(), now.getMonth(), 1))
+    setSelected(null)
+  }
+
+  const selectedMeetings = selected ? (byDay.get(selected) ?? []) : []
 
   // 오늘 이후 약속 중 가까운 5개
   const upcoming = useMemo(() => {
     const list: MeetingLite[] = []
-    for (const [k, items] of byDay) if (k >= todayKey) list.push(...items)
+
+    for (const [key, items] of byDay) {
+      if (key >= todayKey) list.push(...items)
+    }
+
     list.sort(
       (a, b) =>
         new Date(a.meeting_time).getTime() - new Date(b.meeting_time).getTime(),
     )
+
     return list.slice(0, 5)
   }, [byDay, todayKey])
 
-  const item = (m: MeetingLite, withDate: boolean) => (
-    <Link
-      key={m.id}
-      href={
-        new Intl.DateTimeFormat("sv-SE", {
-          timeZone: "Asia/Seoul",
-        }).format(new Date(m.meeting_time)) <
-        new Intl.DateTimeFormat("sv-SE", {
-          timeZone: "Asia/Seoul",
-        }).format(new Date())
-          ? `/groups/${m.group_id}/meeting-record/${m.id}`
-          : (listHref ?? `/groups/${m.group_id}/meetings`)
-      }
-      className={css.item}
-      style={{ ['--c' as string]: colorOf(m.group_id) }}
-    >
-      <span className={css.itemBar} />
-      <span className={css.itemBody}>
-        <strong>{m.title}</strong>
-        <span className="muted">
-          {withDate ? `${dayLabel(ymd(new Date(m.meeting_time)))} ` : ''}
-          {timeLabel(m.meeting_time)} · {nameOf(m.group_id)}
-          {m.location ? ` · 📍 ${m.location}` : ''}
+  const calendarStyle = dashboard
+    ? ({
+        '--calendar-weeks': weekCount,
+      } as CSSProperties)
+    : undefined
+
+  function meetingHref(meeting: MeetingLite) {
+    const meetingDay = seoulDayFormatter.format(new Date(meeting.meeting_time))
+    const today = seoulDayFormatter.format(new Date())
+
+    if (meetingDay < today) {
+      return `/groups/${meeting.group_id}/meeting-record/${meeting.id}`
+    }
+
+    return listHref ?? `/groups/${meeting.group_id}/meetings`
+  }
+
+  function renderMeeting(meeting: MeetingLite, withDate: boolean) {
+    return (
+      <Link
+        key={`${meeting.group_id}-${meeting.id}`}
+        href={meetingHref(meeting)}
+        className={css.item}
+        style={
+          {
+            '--c': colorOf(meeting.group_id),
+          } as CSSProperties
+        }
+      >
+        <span className={css.itemBar} />
+
+        <span className={css.itemBody}>
+          <strong>{meeting.title}</strong>
+
+          <span className="muted">
+            {withDate
+              ? `${dayLabel(ymd(new Date(meeting.meeting_time)))} `
+              : ''}
+            {timeLabel(meeting.meeting_time)}
+            {' · '}
+            {nameOf(meeting.group_id)}
+            {meeting.location ? ` · 📍 ${meeting.location}` : ''}
+          </span>
         </span>
-      </span>
-      <span className="link-arrow">→</span>
-    </Link>
-  )
+
+        <span className="link-arrow" aria-hidden="true">
+          →
+        </span>
+      </Link>
+    )
+  }
 
   return (
-    <div className={css.wrap}>
+    <div
+      className={`${css.wrap} ${dashboard ? css.dashboard : ''}`}
+      data-selected={selected ? 'true' : 'false'}
+      style={calendarStyle}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          setSelected(null)
+        }
+      }}
+    >
       <div className={css.head}>
         <div className={css.month}>
           <button
@@ -201,9 +291,11 @@ export default function GroupsMeetingCalendar({
           >
             ‹
           </button>
+
           <span className={css.monthLabel}>
             {year}년 {monthIdx + 1}월
           </span>
+
           <button
             type="button"
             className={css.nav}
@@ -213,57 +305,70 @@ export default function GroupsMeetingCalendar({
             ›
           </button>
         </div>
+
         <button type="button" className="btn secondary sm" onClick={goToday}>
           오늘
         </button>
       </div>
 
-      {/* 그룹 색 범례: 누르면 그 그룹 약속을 숨기거나 다시 보인다 */}
+      {/* 그룹 이름을 누르면 해당 그룹의 약속 표시를 전환한다. */}
       {groups.length > 1 && (
         <div className={css.legend}>
-          {groups.map((g) => {
-            const off = hidden.includes(g.id)
+          {groups.map((group) => {
+            const off = hidden.includes(group.id)
+
             return (
               <button
-                key={g.id}
+                key={group.id}
                 type="button"
                 className={`${css.who} ${off ? css.whoOff : ''}`}
                 aria-pressed={!off}
-                onClick={() =>
-                  setHidden((cur) =>
-                    cur.includes(g.id)
-                      ? cur.filter((x) => x !== g.id)
-                      : [...cur, g.id],
+                onClick={() => {
+                  setHidden((current) =>
+                    current.includes(group.id)
+                      ? current.filter((id) => id !== group.id)
+                      : [...current, group.id],
                   )
-                }
+                }}
               >
-                <i className={css.dot} style={{ background: colorOf(g.id) }} />
-                {g.name}
+                <i
+                  className={css.dot}
+                  style={{ background: colorOf(group.id) }}
+                  aria-hidden="true"
+                />
+                {group.name}
               </button>
             )
           })}
         </div>
       )}
 
-      {failed > 0 && (
+      {!hasGivenMeetings && failed > 0 && (
         <p className="muted" role="status">
           그룹 {failed}곳의 약속은 불러오지 못했어요. 새로고침해 보세요.
         </p>
       )}
 
-      <div className={css.body}>
-        <div className={css.grid}>
-          {DOW.map((d, i) => (
+      <div className={`${css.body} ${selectionOnly ? css.selectionOnly : ''}`}>
+        <div className={css.grid} aria-busy={loading}>
+          {DOW.map((day, index) => (
             <div
-              key={d}
-              className={`${css.dow} ${i === 0 ? css.sun : ''} ${i === 6 ? css.sat : ''}`}
+              key={day}
+              className={[
+                css.dow,
+                index === 0 ? css.sun : '',
+                index === 6 ? css.sat : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
             >
-              {d}
+              {day}
             </div>
           ))}
 
           {cells.map(({ key, date, inMonth }) => {
             const list = byDay.get(key) ?? []
+
             const classes = [
               css.cell,
               inMonth ? '' : css.out,
@@ -272,11 +377,17 @@ export default function GroupsMeetingCalendar({
             ]
               .filter(Boolean)
               .join(' ')
-            const summary = `${date.getMonth() + 1}월 ${date.getDate()}일${
-              list.length
-                ? `, 약속 ${list.map((m) => `${nameOf(m.group_id)} ${m.title}`).join(', ')}`
-                : ', 약속 없음'
-            }`
+
+            const summary =
+              `${date.getMonth() + 1}월 ${date.getDate()}일` +
+              (list.length
+                ? `, 약속 ${list
+                    .map(
+                      (meeting) =>
+                        `${nameOf(meeting.group_id)} ${meeting.title}`,
+                    )
+                    .join(', ')}`
+                : ', 약속 없음')
 
             return (
               <button
@@ -285,28 +396,37 @@ export default function GroupsMeetingCalendar({
                 className={classes}
                 onClick={() => setSelected(key)}
                 aria-label={summary}
+                aria-pressed={selected === key}
                 title={summary}
               >
                 <span className={css.num}>{date.getDate()}</span>
-                {list.slice(0, MAX_CHIPS).map((m) => (
+
+                {list.slice(0, MAX_CHIPS).map((meeting) => (
                   <span
-                    key={m.id}
+                    key={`${meeting.group_id}-${meeting.id}`}
                     className={css.chip}
-                    style={{ ['--c' as string]: colorOf(m.group_id) }}
+                    style={
+                      {
+                        '--c': colorOf(meeting.group_id),
+                      } as CSSProperties
+                    }
                   >
-                    {m.title}
+                    {meeting.title}
                   </span>
                 ))}
+
                 {list.length > MAX_CHIPS && (
                   <span className={css.more}>+{list.length - MAX_CHIPS}</span>
                 )}
-                {/* 좁은 화면에서는 제목 대신 그룹 색 점만 (칸이 작아져도 넘치지 않게) */}
+
                 {list.length > 0 && (
-                  <span className={css.dots} aria-hidden>
-                    {list.slice(0, 4).map((m) => (
+                  <span className={css.dots} aria-hidden="true">
+                    {list.slice(0, 4).map((meeting) => (
                       <i
-                        key={m.id}
-                        style={{ background: colorOf(m.group_id) }}
+                        key={`${meeting.group_id}-${meeting.id}`}
+                        style={{
+                          background: colorOf(meeting.group_id),
+                        }}
                       />
                     ))}
                   </span>
@@ -316,41 +436,46 @@ export default function GroupsMeetingCalendar({
           })}
         </div>
 
-        {/* 옆 패널: 날짜를 고르면 그날 약속, 아니면 다가오는 약속 */}
+        {/* selectionOnly: 날짜를 누르기 전에는 상세 패널을 숨긴다. */}
+        {(!selectionOnly || selected) && (
         <div className={css.panel}>
           {selected ? (
             <>
               <div className={css.panelHead}>
                 <span className={css.panelTitle}>{dayLabel(selected)}</span>
+
                 <button
                   type="button"
                   className="btn secondary sm"
                   onClick={() => setSelected(null)}
                 >
-                  다가오는 약속 보기
+                  {dashboard || selectionOnly ? '선택 해제' : '다가오는 약속 보기'}
                 </button>
               </div>
+
               {loading ? (
                 <span className="muted">불러오는 중…</span>
-              ) : selList.length === 0 ? (
+              ) : selectedMeetings.length === 0 ? (
                 <span className="muted">이 날은 약속이 없어요.</span>
               ) : (
-                selList.map((m) => item(m, false))
+                selectedMeetings.map((meeting) => renderMeeting(meeting, false))
               )}
             </>
           ) : (
             <>
               <span className={css.panelTitle}>다가오는 약속</span>
+
               {loading ? (
                 <span className="muted">불러오는 중…</span>
               ) : upcoming.length === 0 ? (
                 <span className="muted">앞으로 예정된 약속이 없어요.</span>
               ) : (
-                upcoming.map((m) => item(m, true))
+                upcoming.map((meeting) => renderMeeting(meeting, true))
               )}
             </>
           )}
         </div>
+        )}
       </div>
     </div>
   )

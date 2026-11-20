@@ -1,495 +1,590 @@
-'use client';
+'use client'
 
-import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
-import { api, ApiError } from '@/lib/api';
-import AppShell from '@/components/AppShell';
-import { LAST_GROUP_KEY } from '@/components/Sidebar';
-import { ddayLabel } from '@/lib/dday';
-import { pickName, readNameMode } from '@/lib/nameMode';
-import Avatar from '@/components/Avatar';
-import HomeBoard from '@/features/group-home/HomeBoard';
-import { QRCodeSVG } from 'qrcode.react';
+import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useParams, useRouter } from 'next/navigation'
+import { api, ApiError } from '@/lib/api'
+import AppShell from '@/components/AppShell'
+import { LAST_GROUP_KEY } from '@/components/Sidebar'
+import { ddayLabel } from '@/lib/dday'
+import { pickName, readNameMode } from '@/lib/nameMode'
+import Avatar from '@/components/Avatar'
+import HomeBoard from '@/features/group-home/HomeBoard'
+import { QRCodeSVG } from 'qrcode.react'
 
 type Member = {
-  user_id: number;
-  nickname: string;
-  account_nickname?: string | null;
-  profile_image: string | null;
-  role: string;
-};
-
-type GroupDetail = {
-  id: number;
-  name: string;
-  icon: string | null;
-  description: string | null;
-  started_on: string | null;
-  my_role: string;
-  members: Member[];
-};
-
-type InviteStatus = {
-  active: boolean;
-  expires_at: string | null;
-  max_uses: number | null;
-  used_count: number | null;
-};
-
-type InviteIssued = {
-  token: string;
-  invite_url: string;
-  expires_at: string;
-  max_uses: number;
-};
-
-type MeetingLite = {
-  id: number;
-  group_id: number;
-  title: string;
-  location: string;
-  meeting_time: string;
-  status: string;
-};
-
-function startOfToday() {
-  const n = new Date();
-  return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  user_id: number
+  nickname: string
+  account_nickname?: string | null
+  profile_image: string | null
+  role: string
 }
 
-const AVATAR_TONES = ['', 'peach', 'lavender'];
+type GroupDetail = {
+  id: number
+  name: string
+  icon: string | null
+  description: string | null
+  started_on: string | null
+  my_role: string
+  members: Member[]
+}
+
+type InviteStatus = {
+  active: boolean
+  expires_at: string | null
+  max_uses: number | null
+  used_count: number | null
+}
+
+type InviteIssued = {
+  token: string
+  invite_url: string
+  expires_at: string
+  max_uses: number
+}
+
+type MeetingLite = {
+  id: number
+  group_id: number
+  title: string
+  location: string
+  meeting_time: string
+  status: string
+}
+
+const AVATAR_TONES = ['', 'peach', 'lavender']
+
+function startOfToday() {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+}
 
 function formatTime(iso: string | null) {
-  return iso ? new Date(iso).toLocaleString('ko-KR') : '-';
+  return iso ? new Date(iso).toLocaleString('ko-KR') : '-'
 }
 
 export default function GroupDetailPage() {
-  const router = useRouter();
-  const params = useParams<{ id: string }>();
-  const groupId = params.id;
+  const router = useRouter()
+  const params = useParams<{ id: string }>()
+  const groupId = params.id
 
-  const [group, setGroup] = useState<GroupDetail | null>(null);
-  const [invite, setInvite] = useState<InviteStatus | null>(null);
-  const [issued, setIssued] = useState<InviteIssued | null>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
-  const [meetings, setMeetings] = useState<MeetingLite[] | null>(null);
+  const [group, setGroup] = useState<GroupDetail | null>(null)
+  const [invite, setInvite] = useState<InviteStatus | null>(null)
+  const [issued, setIssued] = useState<InviteIssued | null>(null)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [copied, setCopied] = useState(false)
+  const [meetings, setMeetings] = useState<MeetingLite[] | null>(null)
 
-  function handleError(err: unknown) {
-    if (err instanceof ApiError && err.status === 401) {
-      router.push('/login');
-      return;
-    }
-    if (err instanceof ApiError && err.status === 403) {
-      setError('이 그룹에 접근할 수 없습니다.');
-      return;
-    }
-    setError(err instanceof ApiError ? err.message : '오류가 발생했습니다.');
-  }
+  const handleError = useCallback(
+    (err: unknown) => {
+      if (err instanceof ApiError && err.status === 401) {
+        router.push('/login')
+        return
+      }
+
+      if (err instanceof ApiError && err.status === 403) {
+        setError('이 그룹에 접근할 수 없습니다.')
+        return
+      }
+
+      setError(err instanceof ApiError ? err.message : '오류가 발생했습니다.')
+    },
+    [router],
+  )
 
   const loadInvite = useCallback(async () => {
     try {
-      setInvite(await api<InviteStatus>(`/groups/${groupId}/invite`));
+      const data = await api<InviteStatus>(`/groups/${groupId}/invite`)
+      setInvite(data)
     } catch (err) {
-      handleError(err);
+      handleError(err)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupId]);
+  }, [groupId, handleError])
 
   const loadGroup = useCallback(async () => {
     try {
-      const data = await api<GroupDetail>(`/groups/${groupId}`);
-      const mode = readNameMode();
+      const data = await api<GroupDetail>(`/groups/${groupId}`)
+      const mode = readNameMode()
 
       setGroup({
         ...data,
-        members: data.members.map((m) => ({
-          ...m,
-          nickname: pickName(m, mode),
+        members: data.members.map((member) => ({
+          ...member,
+          nickname: pickName(member, mode),
         })),
-      });
+      })
 
       if (data.my_role === 'owner') {
-        await loadInvite();
+        await loadInvite()
       }
     } catch (err) {
-      handleError(err);
+      handleError(err)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupId, loadInvite]);
+  }, [groupId, loadInvite, handleError])
 
   useEffect(() => {
-    loadGroup();
-  }, [loadGroup]);
+    void loadGroup()
+  }, [loadGroup])
 
-  // 이 그룹의 약속
+  // 이 그룹의 약속 목록
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false
+
     api<MeetingLite[]>(`/groups/${groupId}/meetings`)
       .then((list) => {
-        if (!cancelled) setMeetings(list);
+        if (!cancelled) setMeetings(list)
       })
-      .catch(() => {
-        if (!cancelled) setMeetings([]);
-      });
+      .catch((err) => {
+        if (cancelled) return
+        setMeetings([])
+        handleError(err)
+      })
 
     return () => {
-      cancelled = true;
-    };
-  }, [groupId]);
+      cancelled = true
+    }
+  }, [groupId, handleError])
 
   async function onIssue() {
-    setError('');
-    setCopied(false);
+    setError('')
+    setCopied(false)
 
     try {
       const result = await api<InviteIssued>(`/groups/${groupId}/invite`, {
         method: 'POST',
-      });
-      setIssued(result);
-      await loadInvite();
+      })
+
+      setIssued(result)
+      await loadInvite()
     } catch (err) {
-      handleError(err);
+      handleError(err)
     }
   }
 
   async function onRevoke() {
-    setError('');
+    setError('')
 
     try {
-      await api(`/groups/${groupId}/invite`, { method: 'DELETE' });
-      setIssued(null);
-      await loadInvite();
+      await api(`/groups/${groupId}/invite`, {
+        method: 'DELETE',
+      })
+
+      setIssued(null)
+      await loadInvite()
     } catch (err) {
-      handleError(err);
+      handleError(err)
     }
   }
 
   async function onCopy() {
-    if (!issued) return;
+    if (!issued) return
 
     try {
-      await navigator.clipboard.writeText(issued.invite_url);
-      setCopied(true);
+      await navigator.clipboard.writeText(issued.invite_url)
+      setCopied(true)
     } catch {
-      setCopied(false);
+      setCopied(false)
+      setError('링크를 복사하지 못했어요. 주소를 직접 선택해서 복사해 주세요.')
     }
   }
 
-  // 방장이 멤버를 내보낸다
-  async function onKick(m: Member) {
-    if (!window.confirm(`${m.nickname}님을 이 그룹에서 내보낼까요?`)) return;
+  // 방장이 멤버를 내보내기
+  async function onKick(member: Member) {
+    if (!window.confirm(`${member.nickname}님을 이 그룹에서 내보낼까요?`)) {
+      return
+    }
 
-    setError('');
+    setError('')
 
     try {
-      await api(`/groups/${groupId}/members/${m.user_id}`, {
+      await api(`/groups/${groupId}/members/${member.user_id}`, {
         method: 'DELETE',
-      });
-      await loadGroup();
+      })
+
+      await loadGroup()
     } catch (err) {
-      handleError(err);
+      handleError(err)
     }
   }
 
-  // 멤버가 스스로 그룹을 나간다
+  // 그룹 나가기
   async function onLeave() {
-    const wasOwner = group?.my_role === 'owner';
-    const lastOne = (group?.members.length ?? 0) <= 1;
+    const wasOwner = group?.my_role === 'owner'
+    const lastOne = (group?.members.length ?? 0) <= 1
 
-    const msg = lastOne
+    const message = lastOne
       ? '마지막 멤버예요. 나가면 아무도 이 그룹에 들어올 수 없게 돼요. 그래도 나갈까요?'
       : wasOwner
         ? '방장이 나가면 먼저 들어온 멤버가 방장이 돼요. 나갈까요?'
-        : '이 그룹에서 나갈까요? 공유 중인 내 위치도 함께 사라져요.';
+        : '이 그룹에서 나갈까요? 공유 중인 내 위치도 함께 사라져요.'
 
-    if (!window.confirm(msg)) return;
+    if (!window.confirm(message)) return
 
-    setError('');
+    setError('')
 
     try {
-      await api(`/groups/${groupId}/members/me`, { method: 'DELETE' });
+      await api(`/groups/${groupId}/members/me`, {
+        method: 'DELETE',
+      })
 
       try {
-        localStorage.removeItem(LAST_GROUP_KEY);
+        localStorage.removeItem(LAST_GROUP_KEY)
       } catch {
-        /* 무시 */
+        // 저장소에 접근할 수 없어도 그룹 나가기는 완료한다.
       }
 
-      router.push('/groups');
+      router.push('/groups')
     } catch (err) {
-      handleError(err);
+      handleError(err)
     }
   }
 
   if (loading) {
     return (
       <AppShell>
-        <div className="card muted">불러오는 중...</div>
+        <div className="card muted" role="status">
+          불러오는 중...
+        </div>
       </AppShell>
-    );
+    )
   }
 
   if (!group) {
     return (
       <AppShell>
-        <div className="error">{error || '그룹을 불러오지 못했습니다.'}</div>
+        <div className="error" role="alert">
+          {error || '그룹을 불러오지 못했습니다.'}
+        </div>
+
         <Link href="/groups" className="link-arrow">
           ← 내 그룹으로
         </Link>
       </AppShell>
-    );
+    )
   }
 
-  const isOwner = group.my_role === 'owner';
-  const hasLink = invite !== null && invite.max_uses !== null;
+  const isOwner = group.my_role === 'owner'
+  const hasLink = invite !== null && invite.max_uses !== null
+  const togetherLabel = ddayLabel(group.started_on)
 
-  // 오늘 이후 확정 약속 중 가장 가까운 것
+  // 오늘 이후 확정 약속 중 가장 가까운 약속
   const nextMeeting = (meetings ?? [])
     .filter(
-      (m) =>
-        m.status?.toLowerCase() === 'confirmed' &&
-        new Date(m.meeting_time).getTime() >= startOfToday().getTime(),
+      (meeting) =>
+        meeting.status?.toLowerCase() === 'confirmed' &&
+        new Date(meeting.meeting_time).getTime() >= startOfToday().getTime(),
     )
     .sort(
       (a, b) =>
         new Date(a.meeting_time).getTime() - new Date(b.meeting_time).getTime(),
-    )[0];
+    )[0]
 
   return (
     <AppShell
+      dashboard
+      active="home"
       group={{
         id: group.id,
         name: group.name,
         icon: group.icon,
-        memberNicknames: group.members.map((m) => m.nickname),
+        memberNicknames: group.members.map((member) => member.nickname),
       }}
     >
-      <p style={{ marginBottom: 16 }}>
-        <Link href="/groups" className="link-arrow">
-          ← 내 그룹
-        </Link>
-      </p>
-
-      <div className="page-head">
-        <div>
-          <p className="eyebrow">
-            {isOwner ? '내가 만든 그룹' : '함께하는 그룹'}
-          </p>
-
-          <h1 className="page-title">
-            {group.icon ? `${group.icon} ` : ''}
-            {group.name}
-          </h1>
-
-          {group.description && <p className="page-sub">{group.description}</p>}
-
-          {ddayLabel(group.started_on) && (
-            <p className="meta" style={{ marginTop: 6 }}>
-              🗓 {ddayLabel(group.started_on)}
-            </p>
-          )}
+      {error && (
+        <div className="error" role="alert">
+          {error}
         </div>
+      )}
 
-        <span className="chip">{isOwner ? '방장' : '멤버'}</span>
-      </div>
-
-      {error && <div className="error">{error}</div>}
-
-      {/* 약속 달력 · 다음 약속 · 최근 추억 */}
+      {/* PC에서는 남은 화면 높이를 채우는 홈 대시보드 */}
       <HomeBoard
-        group={{ id: group.id, name: group.name, icon: group.icon }}
+        group={{
+          id: group.id,
+          name: group.name,
+          icon: group.icon,
+        }}
         members={group.members}
         meetings={meetings}
         nextMeeting={nextMeeting}
       />
 
-      <div className="grid-main">
-        <section className="card">
-          <div className="row-between" style={{ marginBottom: 12 }}>
-            <h2 className="card-title">함께하는 친구들</h2>
-            <span className="meta">{group.members.length}명</span>
-          </div>
+      {/* 기존 관리 기능은 삭제하지 않고 펼침 패널로 이동 */}
+      <details className="home-manage">
+        <summary>그룹 정보 · 멤버 · 초대 관리</summary>
 
-          <div>
-            {group.members.map((m, i) => (
-              <div
-                className="row-between"
-                key={m.user_id}
-                style={{ padding: '10px 0' }}
+        <div className="home-manage-body">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 16,
+              marginBottom: 24,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                columnGap: 20,
+                rowGap: 8,
+                minWidth: 0,
+              }}
+            >
+              <h1
+                className="page-title"
+                style={{ margin: 0, overflowWrap: 'anywhere' }}
               >
-                <div className="row">
-                  <Avatar
-                    userId={m.user_id}
-                    name={m.nickname}
-                    image={m.profile_image}
-                    size="lg"
-                    tone={AVATAR_TONES[i % AVATAR_TONES.length]}
-                  />
-                  <strong>{m.nickname}</strong>
-                </div>
+                {group.icon ? `${group.icon} ` : ''}
+                {group.name}
+              </h1>
 
-                <div className="row">
-                  {m.role === 'owner' ? (
-                    <span className="chip">방장</span>
-                  ) : (
-                    <span className="chip outline">멤버</span>
-                  )}
-
-                  {isOwner && m.role !== 'owner' && (
-                    <button
-                      className="btn secondary sm"
-                      onClick={() => onKick(m)}
-                    >
-                      내보내기
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {isOwner ? (
-          <section className="card mint">
-            <h2 className="card-title" style={{ marginBottom: 4 }}>
-              친구 초대하기
-            </h2>
-
-            <p className="muted" style={{ marginBottom: 16 }}>
-              링크를 받은 친구가 참여하면 이 그룹의 이야기를 함께 이어갈 수
-              있어요.
-            </p>
-
-            {invite && (
-              <div className="card" style={{ padding: 16, marginBottom: 14 }}>
-                <p className="meta" style={{ marginBottom: 4 }}>
-                  현재 링크
+              {group.description && (
+                <p
+                  className="page-sub"
+                  style={{ margin: 0, overflowWrap: 'anywhere' }}
+                >
+                  {group.description}
                 </p>
+              )}
 
-                <p>
-                  {!hasLink
-                    ? '아직 만든 링크가 없어요.'
-                    : invite.active
-                      ? `사용 가능 · ${invite.used_count}/${invite.max_uses}회 사용 · ${formatTime(invite.expires_at)}까지`
-                      : '만료되었거나 모두 사용됐어요.'}
-                </p>
-              </div>
-            )}
-
-            <div className="row" style={{ flexWrap: 'wrap' }}>
-              <button className="btn" onClick={onIssue}>
-                {hasLink ? '새 링크 만들기' : '초대 링크 만들기'}
-              </button>
-
-              {hasLink && (
-                <button className="btn secondary" onClick={onRevoke}>
-                  링크 회수
-                </button>
+              {ddayLabel(group.started_on) && (
+                <span className="meta" style={{ margin: 0 }}>
+                  🗓 {ddayLabel(group.started_on)}
+                </span>
               )}
             </div>
 
-            {hasLink && (
-              <p className="meta" style={{ marginTop: 10 }}>
-                새 링크를 만들면 기존 링크는 사라져요.
-              </p>
-            )}
+            <span className="chip" style={{ flexShrink: 0 }}>
+              {isOwner ? '방장' : '멤버'}
+            </span>
+          </div>
 
-            {issued && (
-              <div className="card" style={{ padding: 16, marginTop: 16 }}>
-                <p className="meta" style={{ marginBottom: 8 }}>
-                  이 주소는 지금 한 번만 보여요. 복사해서 친구에게 보내 주세요.
-                </p>
+          <div className="grid-main">
+            <section className="card">
+              <div className="row-between" style={{ marginBottom: 12 }}>
+                <h2 className="card-title">함께하는 친구들</h2>
+                <span className="meta">{group.members.length}명</span>
+              </div>
 
-                <input
-                  className="input"
-                  type="text"
-                  readOnly
-                  value={issued.invite_url}
-                />
-
-                <div className="row-between" style={{ marginTop: 12 }}>
-                  <span className="meta">
-                    {formatTime(issued.expires_at)}까지 · 최대 {issued.max_uses}
-                    명
-                  </span>
-
-                  <button className="btn secondary sm" onClick={onCopy}>
-                    {copied ? '복사됨 ✓' : '링크 복사'}
-                  </button>
-                </div>
-
-                {/* QR 코드 */}
-                <div
-                  style={{
-                    marginTop: 20,
-                    paddingTop: 18,
-                    borderTop: '1px solid var(--border, #e5e7eb)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 10,
-                  }}
-                >
-                  <strong>QR코드로도 초대할 수 있어요</strong>
-
+              <div>
+                {group.members.map((member, index) => (
                   <div
+                    className="row-between"
+                    key={member.user_id}
                     style={{
-                      background: '#fff',
-                      padding: 12,
-                      borderRadius: 12,
-                      border: '1px solid #e5e7eb',
+                      padding: '10px 0',
+                      gap: 12,
+                      flexWrap: 'wrap',
                     }}
                   >
-                    <QRCodeSVG
-                      value={issued.invite_url}
-                      size={180}
-                      level="M"
-                      includeMargin={false}
-                    />
+                    <div className="row" style={{ minWidth: 0 }}>
+                      <Avatar
+                        userId={member.user_id}
+                        name={member.nickname}
+                        image={member.profile_image}
+                        size="lg"
+                        tone={AVATAR_TONES[index % AVATAR_TONES.length]}
+                      />
+
+                      <strong style={{ overflowWrap: 'anywhere' }}>
+                        {member.nickname}
+                      </strong>
+                    </div>
+
+                    <div className="row">
+                      {member.role === 'owner' ? (
+                        <span className="chip">방장</span>
+                      ) : (
+                        <span className="chip outline">멤버</span>
+                      )}
+
+                      {isOwner && member.role !== 'owner' && (
+                        <button
+                          type="button"
+                          className="btn secondary sm"
+                          onClick={() => onKick(member)}
+                        >
+                          내보내기
+                        </button>
+                      )}
+                    </div>
                   </div>
-
-                  <p
-                    className="meta"
-                    style={{ textAlign: 'center', margin: 0 }}
-                  >
-                    QR코드를 스캔하면 초대 링크로 이동해요.
-                  </p>
-                </div>
+                ))}
               </div>
+            </section>
+
+            {isOwner ? (
+              <section className="card mint">
+                <h2 className="card-title" style={{ marginBottom: 4 }}>
+                  친구 초대하기
+                </h2>
+
+                <p className="muted" style={{ marginBottom: 16 }}>
+                  링크를 받은 친구가 참여하면 이 그룹의 이야기를 함께 이어갈 수
+                  있어요.
+                </p>
+
+                {invite && (
+                  <div
+                    className="card"
+                    style={{ padding: 16, marginBottom: 14 }}
+                  >
+                    <p className="meta" style={{ marginBottom: 4 }}>
+                      현재 링크
+                    </p>
+
+                    <p>
+                      {!hasLink
+                        ? '아직 만든 링크가 없어요.'
+                        : invite.active
+                          ? `사용 가능 · ${invite.used_count}/${invite.max_uses}회 사용 · ${formatTime(invite.expires_at)}까지`
+                          : '만료되었거나 모두 사용됐어요.'}
+                    </p>
+                  </div>
+                )}
+
+                <div className="row" style={{ flexWrap: 'wrap' }}>
+                  <button type="button" className="btn" onClick={onIssue}>
+                    {hasLink ? '새 링크 만들기' : '초대 링크 만들기'}
+                  </button>
+
+                  {hasLink && (
+                    <button
+                      type="button"
+                      className="btn secondary"
+                      onClick={onRevoke}
+                    >
+                      링크 회수
+                    </button>
+                  )}
+                </div>
+
+                {hasLink && (
+                  <p className="meta" style={{ marginTop: 10 }}>
+                    새 링크를 만들면 기존 링크는 사라져요.
+                  </p>
+                )}
+
+                {issued && (
+                  <div className="card" style={{ padding: 16, marginTop: 16 }}>
+                    <p className="meta" style={{ marginBottom: 8 }}>
+                      이 주소는 지금 한 번만 보여요. 복사해서 친구에게 보내
+                      주세요.
+                    </p>
+
+                    <input
+                      className="input"
+                      type="text"
+                      readOnly
+                      value={issued.invite_url}
+                      aria-label="초대 링크"
+                    />
+
+                    <div
+                      className="row-between"
+                      style={{
+                        marginTop: 12,
+                        gap: 8,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <span className="meta">
+                        {formatTime(issued.expires_at)}까지 · 최대{' '}
+                        {issued.max_uses}명
+                      </span>
+
+                      <button
+                        type="button"
+                        className="btn secondary sm"
+                        onClick={onCopy}
+                      >
+                        {copied ? '복사됨 ✓' : '링크 복사'}
+                      </button>
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: 20,
+                        paddingTop: 18,
+                        borderTop: '1px solid var(--border, #e5e7eb)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 10,
+                      }}
+                    >
+                      <strong>QR코드로도 초대할 수 있어요</strong>
+
+                      <div
+                        style={{
+                          background: '#fff',
+                          padding: 12,
+                          borderRadius: 12,
+                          border: '1px solid #e5e7eb',
+                        }}
+                      >
+                        <QRCodeSVG
+                          value={issued.invite_url}
+                          size={180}
+                          level="M"
+                          includeMargin={false}
+                        />
+                      </div>
+
+                      <p
+                        className="meta"
+                        style={{ textAlign: 'center', margin: 0 }}
+                      >
+                        QR코드를 스캔하면 초대 링크로 이동해요.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </section>
+            ) : (
+              <section className="card mint">
+                <h2 className="card-title" style={{ marginBottom: 4 }}>
+                  초대는 방장이 해요
+                </h2>
+
+                <p className="muted">
+                  친구를 더 부르고 싶다면 방장에게 초대 링크를 부탁해 보세요.
+                </p>
+              </section>
             )}
-          </section>
-        ) : (
-          <section className="card mint">
-            <h2 className="card-title" style={{ marginBottom: 4 }}>
-              초대는 방장이 해요
-            </h2>
+          </div>
 
-            <p className="muted">
-              친구를 더 부르고 싶다면 방장에게 초대 링크를 부탁해 보세요.
+          <section
+            className="row-between"
+            style={{
+              marginTop: 28,
+              gap: 12,
+              flexWrap: 'wrap',
+            }}
+          >
+            <p className="meta">
+              나가면 이 그룹의 채팅과 사진을 볼 수 없어요. 다시 들어오려면 초대
+              링크가 필요해요.
+              {isOwner && ' 방장이 나가면 먼저 들어온 멤버가 방장이 돼요.'}
             </p>
+
+            <button
+              type="button"
+              className="btn secondary sm"
+              onClick={onLeave}
+            >
+              그룹 나가기
+            </button>
           </section>
-        )}
-      </div>
-
-      <section
-        className="row-between"
-        style={{ marginTop: 28, gap: 12, flexWrap: 'wrap' }}
-      >
-        <p className="meta">
-          나가면 이 그룹의 채팅과 사진을 볼 수 없어요. 다시 들어오려면 초대
-          링크가 필요해요.
-          {isOwner && ' 방장이 나가면 먼저 들어온 멤버가 방장이 돼요.'}
-        </p>
-
-        <button className="btn secondary sm" onClick={onLeave}>
-          그룹 나가기
-        </button>
-      </section>
+        </div>
+      </details>
     </AppShell>
-  );
+  )
 }

@@ -22,10 +22,12 @@ export default function AppShell({
   group,
   active,
   children,
+  dashboard = false,
 }: {
   group?: ShellGroup
   active?: ActiveMenu
   children: React.ReactNode
+  dashboard?: boolean
 }) {
   const router = useRouter()
   const shellRef = useChatViewport(active === 'chat')
@@ -104,7 +106,9 @@ export default function AppShell({
     <div
       ref={shellRef}
       className="app-shell"
-      data-layout={active === 'chat' ? 'chat' : 'page'}
+      data-layout={
+        active === 'chat' ? 'chat' : dashboard ? 'dashboard' : 'page'
+      }
     >
       <header className="shell-header">
         <div className="group-switch-wrap" ref={switchRef}>
@@ -160,9 +164,13 @@ export default function AppShell({
         </div>
 
         <Link href="/groups" className="brand">
-          <i />
+          <span className="brand-dots" aria-hidden="true">
+            •••
+          </span>
           <span>모여락</span>
-          <i />
+          <span className="brand-dots" aria-hidden="true">
+            •••
+          </span>
         </Link>
 
         <div className="header-right">

@@ -134,7 +134,28 @@
   font-family: var(--font-display);
   font-size: 13px;
   text-decoration: none;
-  clip-path: polygon(50% 0, 61% 16%, 78% 6%, 82% 25%, 100% 25%, 91% 43%, 100% 58%, 80% 63%, 80% 84%, 61% 78%, 50% 100%, 39% 80%, 21% 91%, 20% 69%, 0 65%, 10% 48%, 0 32%, 20% 28%, 20% 7%, 39% 17%);
+  clip-path: polygon(
+    50% 0,
+    61% 16%,
+    78% 6%,
+    82% 25%,
+    100% 25%,
+    91% 43%,
+    100% 58%,
+    80% 63%,
+    80% 84%,
+    61% 78%,
+    50% 100%,
+    39% 80%,
+    21% 91%,
+    20% 69%,
+    0 65%,
+    10% 48%,
+    0 32%,
+    20% 28%,
+    20% 7%,
+    39% 17%
+  );
 }
 .burst:hover {
   text-decoration: none;
@@ -252,5 +273,92 @@
 @media (max-width: 760px) {
   .board {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (min-width: 1181px) and (min-height: 740px) {
+  .board {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    margin-bottom: 0;
+
+    grid-template-columns:
+      minmax(0, 1.42fr)
+      minmax(0, 0.95fr)
+      minmax(0, 0.68fr);
+
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .middle,
+  .right {
+    display: grid;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    min-height: 0;
+    gap: 14px;
+  }
+
+  .board > *,
+  .middle > *,
+  .right > * {
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .board :global(.panel) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .board :global(.panel-head) {
+    flex: none;
+  }
+
+  .board :global(.panel-body) {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .calendar :global(.panel-body) {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .ticket {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .ticketTop {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+
+  .ticketPeople,
+  .ticketActions {
+    flex-wrap: wrap;
+  }
+
+  .photoGrid {
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+
+  .photoGrid a {
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .photoGrid figure {
+    height: 100%;
+    aspect-ratio: auto;
   }
 }

@@ -15,10 +15,11 @@ function formatTime(dateString: string | null | undefined) {
   if (!dateString) return ''
   const date = new Date(dateString)
   if (Number.isNaN(date.getTime())) return ''
+  // 참고 화면처럼 메시지 시간을 '오전 10:24' 형식으로 표시
   return date.toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
+    hour: 'numeric',
     minute: '2-digit',
-    hour12: false,
+    hour12: true,
   })
 }
 
@@ -324,14 +325,7 @@ export default function MessageList({
                   )}
                 </div>
               </div>
-              {isMine && (
-                <Avatar
-                  userId={senderId}
-                  name={sender}
-                  image={imageOf?.(senderId) ?? null}
-                  size="sm"
-                />
-              )}
+              {/* 내 메시지는 참고 디자인처럼 우측 말풍선만 표시 */}
             </div>
           </Fragment>
         )

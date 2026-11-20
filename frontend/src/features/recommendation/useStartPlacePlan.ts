@@ -14,15 +14,15 @@ export function useStartPlacePlan(groupId: number, onStatus: (text: string) => v
     if (busy.current) return
     busy.current = true
     setStarting(true)
-    onStatus('약속 장소 추천 링크를 만들고 있어요.')
+    onStatus('약속 장소 추천 페이지를 준비하고 있어요.')
     try {
       if (request.current?.groupId !== groupId) {
         request.current = { groupId, id: crypto.randomUUID() }
       }
       const data = await api<{ id: string; href: string }>(`/groups/${groupId}/place-plans`, {
-        method: 'POST', body: { request_id: request.current.id },
+        method: 'POST', body: { request_id: request.current.id, share_in_chat: false },
       })
-      onStatus('채팅에 추천 링크를 남겼어요.')
+      onStatus('')
       router.push(`/recommend?groupId=${groupId}&planId=${encodeURIComponent(data.id)}`)
       // 응답 유실 재시도에는 같은 ID, 성공 후 다음 새 약속은 새 ID.
       request.current = null

@@ -1,46 +1,46 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { api, ApiError } from "@/lib/api";
+import { useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { api, ApiError } from '@/lib/api'
 
 type JoinOut = {
-  group_id: number;
-  name: string;
-  already_member: boolean;
-};
+  group_id: number
+  name: string
+  already_member: boolean
+}
 
 export default function InvitePage() {
-  const router = useRouter();
-  const params = useParams<{ token: string }>();
-  const token = params.token;
+  const router = useRouter()
+  const params = useParams<{ token: string }>()
+  const token = params.token
 
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   async function onJoin() {
-    setError("");
-    setLoading(true);
+    setError('')
+    setLoading(true)
     try {
       const res = await api<JoinOut>(`/invites/${token}/join`, {
-        method: "POST",
-      });
-      router.push(`/groups/${res.group_id}`);
+        method: 'POST',
+      })
+      router.push(`/groups/${res.group_id}`)
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         // 로그인 후 이 초대 페이지로 돌아오도록 기억해 둔다
         try {
-          sessionStorage.setItem("pending_invite", `/invite/${token}`);
+          sessionStorage.setItem('pending_invite', `/invite/${token}`)
         } catch {
           // sessionStorage 를 못 쓰는 환경이면 그냥 넘어간다
         }
-        router.push("/login");
-        return;
+        router.push('/login')
+        return
       }
       setError(
-        err instanceof ApiError ? err.message : "참여하는 중 문제가 생겼어요.",
-      );
-      setLoading(false);
+        err instanceof ApiError ? err.message : '참여하는 중 문제가 생겼어요.',
+      )
+      setLoading(false)
     }
   }
 
@@ -64,7 +64,7 @@ export default function InvitePage() {
                 <circle cx="12" cy="10" r="2.5" />
               </svg>
             </span>
-            MeetMap
+            모여락
           </div>
         </div>
 
@@ -80,7 +80,7 @@ export default function InvitePage() {
           {error && <div className="error">{error}</div>}
 
           <button className="btn block" onClick={onJoin} disabled={loading}>
-            {loading ? "참여하는 중…" : "참여하기 →"}
+            {loading ? '참여하는 중…' : '참여하기 →'}
           </button>
 
           <p className="meta" style={{ marginTop: 14 }}>
@@ -96,5 +96,5 @@ export default function InvitePage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

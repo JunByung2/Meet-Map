@@ -9,7 +9,7 @@ import { LAST_GROUP_KEY } from '@/components/Sidebar';
 import { ddayLabel } from '@/lib/dday';
 import { pickName, readNameMode } from '@/lib/nameMode';
 import Avatar from '@/components/Avatar';
-import GroupsMeetingCalendar from '@/features/calendar/GroupsMeetingCalendar';
+import HomeBoard from '@/features/group-home/HomeBoard';
 import { QRCodeSVG } from 'qrcode.react';
 
 type Member = {
@@ -53,27 +53,9 @@ type MeetingLite = {
   status: string;
 };
 
-const DOW = ['일', '월', '화', '수', '목', '금', '토'];
-
 function startOfToday() {
   const n = new Date();
   return new Date(n.getFullYear(), n.getMonth(), n.getDate());
-}
-
-function dLabel(iso: string) {
-  const d = new Date(iso);
-  const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const diff = Math.round(
-    (day.getTime() - startOfToday().getTime()) / 86400000,
-  );
-  return diff <= 0 ? '오늘' : `D-${diff}`;
-}
-
-function whenLabel(iso: string) {
-  const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]}) ${hh}:${mm}`;
 }
 
 const AVATAR_TONES = ['', 'peach', 'lavender'];
@@ -318,82 +300,13 @@ export default function GroupDetailPage() {
 
       {error && <div className="error">{error}</div>}
 
-      {/* 다음 약속 */}
-      <section className="card mint" style={{ marginBottom: 16 }}>
-        <p className="meta" style={{ marginBottom: 6 }}>
-          다음 약속
-        </p>
-
-        {meetings === null ? (
-          <p className="muted">불러오는 중…</p>
-        ) : nextMeeting ? (
-          <div
-            className="row-between"
-            style={{ gap: 16, flexWrap: 'wrap', alignItems: 'center' }}
-          >
-            <div>
-              <h2 className="card-title">
-                <span className="chip" style={{ marginRight: 8 }}>
-                  {dLabel(nextMeeting.meeting_time)}
-                </span>
-                {nextMeeting.title}
-              </h2>
-
-              <p className="muted" style={{ marginTop: 6 }}>
-                {whenLabel(nextMeeting.meeting_time)}
-                {nextMeeting.location ? ` · 📍 ${nextMeeting.location}` : ''}
-              </p>
-            </div>
-
-            <div className="row" style={{ gap: 8 }}>
-              <Link
-                href={`/groups/${group.id}/meetings`}
-                className="btn sm"
-                style={{ textDecoration: 'none' }}
-              >
-                약속 보기
-              </Link>
-
-              <Link
-                href={`/groups/${group.id}/chat`}
-                className="btn secondary sm"
-                style={{ textDecoration: 'none' }}
-              >
-                채팅방으로
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div
-            className="row-between"
-            style={{ gap: 16, flexWrap: 'wrap', alignItems: 'center' }}
-          >
-            <p className="muted">아직 예정된 약속이 없어요.</p>
-
-            <Link
-              href={`/groups/${group.id}/meetings`}
-              className="btn sm"
-              style={{ textDecoration: 'none' }}
-            >
-              + 약속 만들기
-            </Link>
-          </div>
-        )}
-      </section>
-
-      {/* 우리 그룹 약속 달력 */}
-      <section style={{ marginBottom: 32 }}>
-        <div className="row-between" style={{ marginBottom: 16 }}>
-          <h2 className="section-title">약속 달력</h2>
-        </div>
-
-        <div className="card">
-          <GroupsMeetingCalendar
-            groups={[{ id: group.id, name: group.name, icon: group.icon }]}
-            meetings={meetings ?? []}
-          />
-        </div>
-      </section>
+      {/* 약속 달력 · 다음 약속 · 최근 추억 */}
+      <HomeBoard
+        group={{ id: group.id, name: group.name, icon: group.icon }}
+        members={group.members}
+        meetings={meetings}
+        nextMeeting={nextMeeting}
+      />
 
       <div className="grid-main">
         <section className="card">

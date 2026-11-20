@@ -1,5 +1,5 @@
 .home {
-  color: #213c40;
+  color: var(--ink);
   max-width: 1180px;
   margin: auto;
 }
@@ -18,10 +18,10 @@
 .eyebrow {
   font-size: 12px;
   font-weight: 700;
-  color: #247c73;
+  color: var(--teal);
 }
 .muted {
-  color: #70827f;
+  color: var(--muted);
   font-size: 13px;
   line-height: 1.7;
   margin: 8px 0;
@@ -33,8 +33,8 @@
   margin-bottom: 30px;
 }
 .stats > div {
-  background: #fff;
-  border-radius: 18px;
+  background: var(--white);
+  border-radius: 10px;
   padding: 22px;
   display: flex;
   justify-content: space-between;
@@ -43,7 +43,7 @@
 }
 .stats span {
   font-size: 13px;
-  color: #70827f;
+  color: var(--muted);
 }
 .stats strong {
   font-size: 25px;
@@ -72,19 +72,19 @@
 .heading a,
 .chat a {
   font-size: 12px;
-  color: #247c73;
+  color: var(--teal);
   text-decoration: none;
 }
 .hero {
   padding: 18px;
-  border-radius: 20px;
-  background: #fff;
+  border-radius: 10px;
+  background: var(--white);
 }
 .cover {
   height: 300px;
-  border-radius: 14px;
+  border-radius: 10px;
   overflow: hidden;
-  background: #e4eeea;
+  background: var(--mint);
 }
 .home img {
   width: 100%;
@@ -120,9 +120,9 @@
 }
 .next {
   padding: 24px;
-  border: 1px solid #dce6e2;
-  background: #fff;
-  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  border-radius: 10px;
 }
 .next h3 {
   margin-top: 24px;
@@ -133,9 +133,9 @@
 }
 .badge {
   font-size: 12px;
-  color: #247c73;
-  background: #e3f0eb;
-  border-radius: 20px;
+  color: var(--teal);
+  background: var(--mint);
+  border-radius: 10px;
   padding: 7px 10px;
   display: inline-block;
 }
@@ -143,16 +143,16 @@
   display: block;
   margin-top: 20px;
   padding: 15px;
-  background: #213c40;
+  background: var(--ink);
   color: white;
-  border-radius: 12px;
+  border-radius: 8px;
   text-decoration: none;
   font-size: 12px;
 }
 .chat {
-  background: #e2efea;
+  background: var(--mint);
   padding: 24px;
-  border-radius: 18px;
+  border-radius: 10px;
   margin-top: 18px;
   font-size: 13px;
 }
@@ -172,13 +172,13 @@
 }
 .thumbnail {
   height: 170px;
-  border-radius: 14px;
+  border-radius: 10px;
   overflow: hidden;
-  background: #e4eeea;
+  background: var(--mint);
 }
 .meta {
   font-size: 11px;
-  color: #247c73;
+  color: var(--teal);
   line-height: 1.7;
   margin: 12px 0 6px;
 }
@@ -187,7 +187,7 @@
 }
 .memory {
   background: white;
-  border-radius: 18px;
+  border-radius: 10px;
   overflow: hidden;
 }
 .memory .thumbnail {
@@ -206,13 +206,13 @@
   gap: 16px;
   background: white;
   padding: 22px;
-  border: 1px solid #dce6e2;
-  border-radius: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
   margin-top: 28px;
   font-size: 14px;
 }
 .empty {
-  color: #70827f;
+  color: var(--muted);
   font-size: 13px;
   line-height: 1.8;
   padding: 20px 0;
@@ -293,7 +293,7 @@
 .frame :global(.shell-header) {
   height: 60px;
   padding: 0 24px;
-  background: #fffefd;
+  background: var(--white);
 }
 .frame :global(.brand) {
   font-size: 18px;
@@ -324,11 +324,11 @@
 .frame :global(.sidebar) {
   padding: 24px 14px;
   gap: 22px;
-  background: #fffefd;
+  background: var(--white);
 }
 .frame :global(.current-group) {
   padding: 16px 14px;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 .frame :global(.current-group .name) {
   font-size: 17px;
@@ -336,7 +336,7 @@
 .frame :global(.nav-item) {
   min-height: 42px;
   padding: 10px 14px;
-  border-radius: 11px;
+  border-radius: 8px;
   font-size: 13px;
 }
 .frame :global(.friend-row) {
@@ -345,7 +345,7 @@
 .frame :global(.lock-note) {
   font-size: 11px;
   padding: 14px;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 .frame :global(.content) {
   max-width: 1160px;
@@ -386,7 +386,7 @@
 .stats > div {
   min-height: 66px;
   padding: 18px;
-  border-radius: 17px;
+  border-radius: 10px;
 }
 .stats span {
   font-size: 12px;
@@ -407,12 +407,12 @@
 }
 .hero {
   padding: 18px;
-  border-radius: 19px;
+  border-radius: 10px;
 }
 .cover {
   height: auto;
   aspect-ratio: 2.75;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 .heroBody {
   align-items: flex-start;
@@ -437,7 +437,7 @@
 }
 .friends > span {
   font-size: 11px;
-  color: #70827f;
+  color: var(--muted);
   margin-left: 3px;
 }
 .next {
@@ -460,11 +460,11 @@
 .thumbnail {
   height: auto;
   aspect-ratio: 2.3;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 .memory .thumbnail {
   aspect-ratio: 2.05;
-  border-radius: 14px 14px 0 0;
+  border-radius: 10px 14px 0 0;
 }
 .memoryBody {
   padding: 5px 17px 16px;
@@ -532,7 +532,7 @@
   }
   .frame :global(.sidebar) {
     border-right: 0;
-    border-bottom: 1px solid #dce6e2;
+    border-bottom: 1px solid var(--line);
   }
   .frame :global(.content) {
     padding: 24px 16px;
@@ -587,4 +587,21 @@
 .header .muted {
   font-size: 15px;
   margin-top: 8px;
+}
+
+/* 새 디자인: 종이 카드 + 갈색 테두리, 다가오는 약속은 티켓처럼 점선 */
+.stats > div,
+.hero,
+.next {
+  border: 2px solid var(--brown);
+  border-radius: 8px;
+}
+.next {
+  border-style: dashed;
+}
+.badge {
+  background: var(--brown);
+  color: var(--cream);
+  border-radius: 4px;
+  letter-spacing: 0.08em;
 }

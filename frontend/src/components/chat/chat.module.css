@@ -15,7 +15,7 @@
   gap: 10px;
   margin-bottom: 16px;
   padding: 13px 15px;
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--mint);
   font-size: 13px;
   font-weight: 700;
@@ -78,7 +78,7 @@
 
 .bubble {
   padding: 11px 13px;
-  border: 1px solid #eef0ec;
+  border: 1px solid var(--mist);
   border-radius: 5px 13px 13px 13px;
   background: var(--white);
   font-size: 13px;
@@ -89,7 +89,7 @@
 
 .mine .bubble {
   border-color: var(--mint);
-  border-radius: 13px 5px 13px 13px;
+  border-radius: 8px 5px 13px 13px;
   background: var(--mint);
 }
 
@@ -106,8 +106,8 @@
 .composer {
   margin-top: 8px;
   padding: 13px;
-  border: 1px solid #eef0ec;
-  border-radius: 15px;
+  border: 1px solid var(--mist);
+  border-radius: 10px;
   background: var(--white);
 }
 
@@ -121,7 +121,7 @@
 .chip {
   padding: 6px 10px;
   border: 0;
-  border-radius: 20px;
+  border-radius: 10px;
   background: #f1f5f3;
   color: #617477;
   font-family: inherit;
@@ -149,8 +149,8 @@
   flex: 1;
   padding: 10px 12px;
   border: 1px solid #dfe8e5;
-  border-radius: 12px;
-  background: #fff;
+  border-radius: 8px;
+  background: var(--white);
   color: #1f6f68;
   font-family: inherit;
   font-size: 13px;
@@ -356,7 +356,7 @@
   display: inline-block;
   margin-bottom: 10px;
   padding: 6px 9px;
-  border-radius: 20px;
+  border-radius: 10px;
   background: var(--mint);
   color: var(--teal);
   font-size: 10px;
@@ -370,7 +370,7 @@
   min-height: 100px;
   margin-bottom: 11px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #e2f0eb, #e8ece4);
+  background: linear-gradient(135deg, var(--mint), #e8ece4);
   font-size: 31px;
 }
 
@@ -439,7 +439,7 @@
   min-width: 110px;
   padding: 5px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--white);
   box-shadow: 0 8px 24px rgba(33, 60, 64, 0.16);
 }
@@ -476,7 +476,7 @@
   width: 100%;
   max-width: 340px;
   padding: 20px;
-  border-radius: 18px;
+  border-radius: 10px;
   background: var(--white);
 }
 
@@ -588,7 +588,7 @@
     flex: none;
     margin-top: 6px;
     padding: 8px;
-    border-radius: 12px;
+    border-radius: 8px;
   }
   .tools {
     flex-wrap: nowrap;
@@ -773,9 +773,9 @@
   max-height: calc(var(--sheet-height, 100dvh) - 24px);
   margin: 0;
   padding: 0;
-  border: 1px solid #dce6e3;
-  border-radius: 20px;
-  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
   color: #254347;
   overflow: hidden;
 }
@@ -792,7 +792,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #e6ebe9;
+  border-bottom: 1px solid var(--line);
 }
 .meetDialogHeader h2 {
   margin: 0;
@@ -807,8 +807,8 @@
 
 .meetLauncher {
   flex: none;
-  border: 1px solid #dce6e3;
-  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
   background: white;
   color: #254347;
   padding: 10px;
@@ -1037,11 +1037,11 @@
 .loadingMain { flex: 1; min-height: 0; overflow: hidden; }
 .loadingMessages { width: 100%; padding: 24px 12px; box-sizing: border-box; color: var(--muted); font-size: 13px; text-align: center; }
 .loadingBubbles { display: flex; flex-direction: column; gap: 18px; margin-top: 28px; }
-.loadingBubbles i { display: block; width: 48%; height: 42px; border-radius: 12px; background: #e7efec; }
+.loadingBubbles i { display: block; width: 48%; height: 42px; border-radius: 8px; background: var(--line); }
 .loadingBubbles i:nth-child(2) { align-self: flex-end; width: 35%; }
 .loadingBubbles i:nth-child(3) { width: 57%; }
-.loadingComposer { display: flex; gap: 8px; padding: 8px; border: 1px solid #eef0ec; border-radius: 12px; background: white; flex: none; margin-top: 4px; }
-.loadingComposer i { display: block; height: 42px; border-radius: 10px; background: #e7efec; }
+.loadingComposer { display: flex; gap: 8px; padding: 8px; border: 1px solid var(--mist); border-radius: 8px; background: white; flex: none; margin-top: 4px; }
+.loadingComposer i { display: block; height: 42px; border-radius: 10px; background: var(--line); }
 .loadingComposer i:first-child { width: 40px; }
 .loadingComposer i:nth-child(2) { flex: 1; }
 .loadingComposer i:last-child { width: 64px; }

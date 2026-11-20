@@ -1,6 +1,5 @@
 .page {
-  --mint: #247c73;
-  --ink: #213c40;
+  --mint: var(--teal);
   color: var(--ink);
   max-width: 1440px;
   margin: 0 auto;
@@ -20,7 +19,7 @@
 .results {
   background: #f8faf9;
   border: 1px solid #e2ebe7;
-  border-radius: 20px;
+  border-radius: 10px;
   padding: 20px;
 }
 
@@ -59,8 +58,8 @@
 
 .memberCard {
   padding: 16px;
-  border: 1px solid #dce5e1;
-  border-radius: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
   background: white;
 }
 
@@ -124,7 +123,7 @@
 
 .hint {
   margin: 8px 0 0;
-  color: #74817d;
+  color: var(--muted);
   font-size: 12px;
   line-height: 1.6;
 }
@@ -138,8 +137,8 @@
   width: 100%;
   min-width: 0;
   padding: 12px 14px;
-  border: 1px solid #ccd9d2;
-  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
   background: white;
   color: var(--ink);
 }
@@ -152,7 +151,7 @@
 .button {
   padding: 12px 18px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--mint);
   color: white;
   font-weight: 600 !important;
@@ -192,8 +191,8 @@
 .resultCard {
   margin-top: 12px;
   padding: 16px;
-  border: 1px solid #dce5e1;
-  border-radius: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
   background: white;
 }
 
@@ -203,7 +202,7 @@
 
 .empty {
   padding: 28px 0;
-  color: #74817d;
+  color: var(--muted);
   text-align: center;
   font-size: 13px;
 }
@@ -215,8 +214,8 @@
 .mapCanvas {
   width: 100%;
   overflow: hidden;
-  border: 1px solid #dce5e1;
-  border-radius: 20px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
 }
 
 @media (max-width: 1000px) {

@@ -1,34 +1,34 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { api, ApiError } from "@/lib/api";
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { api, ApiError } from '@/lib/api'
 
 export default function SignupPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [nickname, setNickname] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [nickname, setNickname] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+    e.preventDefault()
+    setError('')
+    setLoading(true)
     try {
-      await api("/auth/signup", {
-        method: "POST",
+      await api('/auth/signup', {
+        method: 'POST',
         body: { email, password, nickname },
-      });
-      router.push("/login");
+      })
+      router.push('/login')
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "가입 중 문제가 생겼어요.",
-      );
+        err instanceof ApiError ? err.message : '가입 중 문제가 생겼어요.',
+      )
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
@@ -52,7 +52,7 @@ export default function SignupPage() {
                 <circle cx="12" cy="10" r="2.5" />
               </svg>
             </span>
-            MeetMap
+            모여락
           </div>
         </div>
 
@@ -110,19 +110,19 @@ export default function SignupPage() {
               </span>
             </div>
             <button className="btn block" type="submit" disabled={loading}>
-              {loading ? "가입 중…" : "가입하기"}
+              {loading ? '가입 중…' : '가입하기'}
             </button>
           </form>
 
-          <p className="meta" style={{ textAlign: "center", marginTop: 18 }}>
+          <p className="meta" style={{ textAlign: 'center', marginTop: 18 }}>
             이미 계정이 있나요? <Link href="/login">로그인</Link>
           </p>
-          <p className="meta" style={{ textAlign: "center", marginTop: 8 }}>
+          <p className="meta" style={{ textAlign: 'center', marginTop: 8 }}>
             가입하면 <Link href="/privacy">개인정보 처리방침</Link>을 확인한
             것으로 봐요.
           </p>
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -1,0 +1,170 @@
+/* 그룹을 열기 전 "내 그룹" 화면: 모여락 패널 스타일 */
+.gp-calendar {
+  margin-bottom: 24px;
+}
+.gp-calendar .panel-body {
+  padding: 14px;
+}
+.gp-board {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.gp-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.gp-solo .gp-side {
+  max-width: 560px;
+}
+
+/* 큰 화면: 한 화면에 다 보이게. 왼쪽은 달력, 오른쪽은 그룹 목록(위, 스크롤) + 새 그룹 만들기(아래) */
+@media (min-width: 1181px) and (min-height: 740px) {
+  .gp-head {
+    margin-bottom: 12px;
+  }
+  .gp-head .page-sub {
+    display: none;
+  }
+  .gp-head .page-title {
+    font-size: 28px;
+    margin: 0;
+  }
+  .gp-head .eyebrow {
+    margin-bottom: 2px;
+  }
+  .gp-board {
+    display: grid;
+    grid-template-columns: minmax(0, 1.75fr) minmax(330px, 1fr);
+    gap: 18px;
+    height: calc(100vh - 292px);
+    min-height: 560px;
+    align-items: stretch;
+  }
+  .gp-solo {
+    grid-template-columns: minmax(0, 560px);
+    height: auto;
+    min-height: 0;
+  }
+  .gp-calendar {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-bottom: 0;
+  }
+  .gp-calendar .panel-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .gp-cal-frame {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+  .gp-side {
+    gap: 18px;
+    min-height: 0;
+  }
+  .gp-solo .gp-side {
+    height: auto;
+  }
+  .gp-groups {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 150px;
+  }
+  .gp-groups .panel-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .gp-new {
+    flex: none;
+  }
+  .gp-new .panel-body {
+    padding: 12px 14px;
+  }
+  .gp-new .muted {
+    margin-bottom: 8px !important;
+    font-size: 12.5px;
+  }
+  .gp-new .field {
+    margin-bottom: 10px;
+    gap: 5px;
+  }
+  .gp-new .field .hint {
+    display: none;
+  }
+  .gp-new .input {
+    height: 40px;
+  }
+  .gp-new .meta {
+    margin-top: 8px !important;
+    font-size: 11.5px;
+  }
+}
+.gp-groups,
+.gp-new {
+  min-width: 0;
+}
+.gp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.gp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--brown);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--brown);
+  text-decoration: none;
+}
+.gp-row:hover {
+  background: #efe0cb;
+  box-shadow: 3px 3px 0 var(--brown);
+  transform: translate(-1px, -1px);
+}
+.gp-row .avatar {
+  border: 1.5px solid var(--brown);
+  background: #ecdcc6;
+}
+.gp-row .link-arrow {
+  color: var(--brown);
+}
+.gp-empty {
+  padding: 18px;
+  border: 2px dashed #b9a28f;
+  border-radius: 6px;
+  background: var(--paper);
+}
+.gp-new .btn.block {
+  width: 100%;
+}
+.gp-new .field label {
+  color: var(--brown);
+  letter-spacing: 0.04em;
+}
+.gp-new .input {
+  border: 1.5px solid var(--brown);
+  background: var(--cream);
+  border-radius: 6px;
+}
+.gp-new .input:focus {
+  background: #fffdf8;
+  outline: 2px solid var(--brown);
+  outline-offset: 1px;
+}
+.gp-new .meta {
+  color: var(--muted);
+}

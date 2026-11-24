@@ -1,28 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
-import Pager, { PAGE_SIZE as REC_PAGE, pageCount } from "@/components/Pager";
 import { colorMap, type Memories } from "@/lib/memories";
 import { formatMeetDate } from "@/lib/records";
+import Panel from "@/components/Panel";
 import "./memories.css";
 
-type Tab = "photos" | "records";
 const PAGE = 60;
 
-const dayKey = (iso: string) => iso.slice(0, 10);
+const dayKey = (iso: string) => iso.slice(0, 7); // 월별로 묶기
+const monthLabel = (k: string) =>
+  `${k.slice(0, 4)}년 ${Number(k.slice(5, 7))}월`;
 
-/** 그룹을 열지 않은 상태에서 내 모든 그룹의 사진 · 지난 기록을 모아 보여 준다 (읽기 전용) */
+/** 그룹을 열지 않은 상태에서 내 모든 그룹의 사진을 모아 보여 준다 (읽기 전용) */
 export default function AllMemories() {
   const router = useRouter();
   const [data, setData] = useState<Memories | null>(null);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<Tab>("photos");
   const [groupId, setGroupId] = useState<number | null>(null); // null = 전체
   const [shown, setShown] = useState(PAGE);
-  const [recPage, setRecPage] = useState(1);
 
   useEffect(() => {
     api<Memories>("/me/memories?places=0")
@@ -49,15 +48,10 @@ export default function AllMemories() {
       ),
     [data, groupId],
   );
-  const records = useMemo(
-    () =>
-      (data?.records ?? []).filter(
-        (r) => groupId === null || r.group_id === groupId,
-      ),
-    [data, groupId],
-  );
+  const countOf = (id: number) =>
+    (data?.photos ?? []).filter((p) => p.group_id === id).length;
 
-  // 날짜별로 묶기 (최근 날짜 먼저)
+  // 월별로 묶기 (최근 날짜 먼저)
   const days = useMemo(() => {
     const map = new Map<string, typeof photos>();
     for (const p of photos.slice(0, shown)) {
@@ -79,156 +73,90 @@ export default function AllMemories() {
       </div>
     );
 
+  const pick = (id: number | null) => {
+    setGroupId(id);
+    setShown(PAGE);
+  };
+
   return (
-    <>
-      <div className="mt-tabs" role="tablist">
-        <button
-          type="button"
-          className={tab === "photos" ? "on" : ""}
-          role="tab"
-          aria-selected={tab === "photos"}
-          onClick={() => setTab("photos")}
-        >
-          사진
-        </button>
-        <button
-          type="button"
-          className={tab === "records" ? "on" : ""}
-          role="tab"
-          aria-selected={tab === "records"}
-          onClick={() => setTab("records")}
-        >
-          지난 기록
-        </button>
-      </div>
-
-      <div className="am-groups">
-        <button
-          type="button"
-          className={groupId === null ? "on" : ""}
-          onClick={() => {
-            setGroupId(null);
-            setShown(PAGE);
-            setRecPage(1);
-          }}
-        >
-          전체
-        </button>
-        {data.groups.map((g) => (
+    <Panel
+      title="모아 보는 추억"
+      kicker="ALL MEMORIES"
+      className="am-panel"
+      action={<span className="am-count">사진 {photos.length}장</span>}
+    >
+      <div className="am-layout">
+        <div className="am-groups am-side" aria-label="그룹 고르기">
           <button
-            key={g.id}
             type="button"
-            className={`${groupId === g.id ? "on tint" : ""}`}
-            style={{ ["--c" as string]: colors.get(g.id) }}
-            onClick={() => {
-              setGroupId(g.id);
-              setShown(PAGE);
-              setRecPage(1);
-            }}
+            className={groupId === null ? "on" : ""}
+            onClick={() => pick(null)}
           >
-            <i
-              className="gdot"
-              style={{ ["--c" as string]: colors.get(g.id) }}
-            />
-            {g.name}
+            <span>전체</span>
+            <b>{data.photos.length}</b>
           </button>
-        ))}
-      </div>
-
-      {tab === "photos" ? (
-        photos.length === 0 ? (
-          <div className="card muted">아직 올린 사진이 없어요.</div>
-        ) : (
-          <>
-            {days.map(([day, list]) => (
-              <section key={day}>
-                <h2 className="am-day">{formatMeetDate(day)}</h2>
-                <div className="am-grid">
-                  {list.map((p) => (
-                    <Link
-                      key={p.id}
-                      href={`/groups/${p.group_id}/photos/${p.id}?from=memories`}
-                      className={`am-tile tinted${p.signed_url ? "" : " noimg"}`}
-                      style={{ ["--c" as string]: colors.get(p.group_id) }}
-                      title={nameOf(p.group_id)}
-                    >
-                      {p.signed_url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={p.signed_url}
-                          alt={p.title ?? `${nameOf(p.group_id)} 사진`}
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            ))}
-            {photos.length > shown && (
-              <button
-                type="button"
-                className="btn secondary am-more"
-                onClick={() => setShown((n) => n + PAGE)}
-              >
-                더 보기
-              </button>
-            )}
-          </>
-        )
-      ) : records.length === 0 ? (
-        <div className="card muted">
-          약속이 확정되면 지난 기록이 여기에 자동으로 생겨요.
+          {data.groups.map((g) => (
+            <button
+              key={g.id}
+              type="button"
+              className={groupId === g.id ? "on tint" : ""}
+              style={{ ["--c" as string]: colors.get(g.id) }}
+              onClick={() => pick(g.id)}
+            >
+              <i
+                className="gdot"
+                style={{ ["--c" as string]: colors.get(g.id) }}
+              />
+              <span>{g.name}</span>
+              <b>{countOf(g.id)}</b>
+            </button>
+          ))}
         </div>
-      ) : (
-        <>
-          <div className="am-rec">
-            {records
-              .slice(
-                (Math.min(recPage, pageCount(records.length, REC_PAGE)) - 1) *
-                  REC_PAGE,
-                Math.min(recPage, pageCount(records.length, REC_PAGE)) *
-                  REC_PAGE,
-              )
-              .map((r) => (
-                <Link
-                  key={`${r.group_id}-${r.id}`}
-                  href={`/groups/${r.group_id}/records/${r.id}?from=memories`}
-                  style={{ ["--c" as string]: colors.get(r.group_id) }}
+
+        <div className="am-scroll">
+          {photos.length === 0 ? (
+            <div className="card muted">아직 올린 사진이 없어요.</div>
+          ) : (
+            <>
+              <div className="am-grid">
+                {days.map(([day, list]) => (
+                  <Fragment key={day}>
+                    <h2 className="am-day">{monthLabel(day)}</h2>
+                    {list.map((p) => (
+                      <Link
+                        key={p.id}
+                        href={`/groups/${p.group_id}/photos/${p.id}?from=memories`}
+                        className={`am-tile tinted${p.signed_url ? "" : " noimg"}`}
+                        style={{ ["--c" as string]: colors.get(p.group_id) }}
+                        title={`${nameOf(p.group_id)} · ${formatMeetDate(p.created_at.slice(0, 10))}`}
+                      >
+                        {p.signed_url && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={p.signed_url}
+                            alt={p.title ?? `${nameOf(p.group_id)} 사진`}
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        )}
+                      </Link>
+                    ))}
+                  </Fragment>
+                ))}
+              </div>
+              {photos.length > shown && (
+                <button
+                  type="button"
+                  className="btn secondary am-more"
+                  onClick={() => setShown((n) => n + PAGE)}
                 >
-                  <span className="am-rec-cover">
-                    {r.cover_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={r.cover_url}
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    ) : (
-                      "사진 없음"
-                    )}
-                  </span>
-                  <span className="am-rec-body">
-                    <strong>{r.title}</strong>
-                    <span className="meta">
-                      {formatMeetDate(r.meet_date)} · {nameOf(r.group_id)}
-                    </span>
-                    <span className="meta">
-                      {r.place_name ?? "장소 미정"} · 사진 {r.photo_count}장
-                    </span>
-                  </span>
-                </Link>
-              ))}
-          </div>
-          <Pager
-            page={Math.min(recPage, pageCount(records.length, REC_PAGE))}
-            pages={pageCount(records.length, REC_PAGE)}
-            onChange={setRecPage}
-          />
-        </>
-      )}
-    </>
+                  더 보기
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </Panel>
   );
 }

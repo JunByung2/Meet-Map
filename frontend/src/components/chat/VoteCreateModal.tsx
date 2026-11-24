@@ -6,6 +6,7 @@ import type { PlaceValue } from "@/lib/photos";
 import { usePlaceSearch } from "@/lib/usePlaceSearch";
 import styles from "./vote.module.css";
 import CalIcon from "@/components/CalIcon";
+import Ico from "@/components/Ico";
 
 /** text: 입력한 항목 이름 / place: 검색해서 고른 장소 (직접 적기만 했으면 null) */
 type Option = { key: number; text: string; place: PlaceValue | null };
@@ -93,7 +94,11 @@ function OptionRow({
         )}
       </div>
 
-      {option.place && <p className={styles.when}>📍 {option.place.address}</p>}
+      {option.place && (
+        <p className={styles.when}>
+          <Ico n="pin" /> {option.place.address}
+        </p>
+      )}
 
       {showResults && search.error && (
         <p className={styles.msg}>{search.error}</p>

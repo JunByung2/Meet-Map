@@ -16,6 +16,7 @@ import { pickName, useNameMode, type NameMode } from "@/lib/nameMode";
 import type { PlaceValue } from "@/lib/photos";
 import { usePlaceSearch } from "@/lib/usePlaceSearch";
 import CalIcon from "@/components/CalIcon";
+import Ico from "@/components/Ico";
 
 type Meeting = {
   id: number;
@@ -200,7 +201,9 @@ function MeetingEditor({
         </p>
         {!searching ? (
           <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-            <span>📍 {placeName}</span>
+            <span>
+              <Ico n="pin" /> {placeName}
+            </span>
             <button
               type="button"
               className="btn secondary sm"
@@ -526,7 +529,7 @@ function MeetingCreateForm({
         </div>
         {picked && (
           <p className="muted" style={{ marginTop: 6 }}>
-            📍 {picked.address}
+            <Ico n="pin" /> {picked.address}
           </p>
         )}
         {searching && (
@@ -807,7 +810,6 @@ export default function GroupMeetingsPage() {
         <header className={board.hero}>
           <div>
             <p className={board.heroEyebrow}>OUR PLANS</p>
-            <h1 className={board.heroTitle}>모든 약속</h1>
             <p className={board.heroSub}>
               다가오는 약속과 함께 가능한 날을 한눈에 확인해요.
             </p>
@@ -956,7 +958,8 @@ export default function GroupMeetingsPage() {
                                   {meeting.title}
                                 </strong>
                                 <span className={board.meetingMeta}>
-                                  📍 {meeting.location || "장소 미정"} ·{" "}
+                                  <Ico n="pin" />{" "}
+                                  {meeting.location || "장소 미정"} ·{" "}
                                   {canReadDate
                                     ? date.toLocaleTimeString("ko-KR", {
                                         hour: "numeric",

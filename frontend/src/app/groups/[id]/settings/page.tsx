@@ -7,6 +7,7 @@ import { api, ApiError } from "@/lib/api";
 import { ddayLabel } from "@/lib/dday";
 import AppShell from "@/components/AppShell";
 import { pickName, readNameMode } from "@/lib/nameMode";
+import Ico from "@/components/Ico";
 
 type Member = {
   user_id: number;
@@ -220,7 +221,9 @@ export default function GroupSettingsPage() {
         </p>
       )}
 
-      <div style={{ display: "grid", gap: 20, maxWidth: 560 }}>
+      <div
+        style={{ display: "grid", gap: 20, maxWidth: 560, margin: "0 auto" }}
+      >
         <section className="card">
           <h2 className="card-title" style={{ marginBottom: 12 }}>
             그룹 정보
@@ -244,7 +247,7 @@ export default function GroupSettingsPage() {
                 <input
                   id="icon"
                   className="input"
-                  placeholder="예: 🍀"
+                  placeholder="예: ★"
                   value={icon}
                   onChange={(e) => setIcon(e.target.value)}
                   maxLength={20}
@@ -292,7 +295,7 @@ export default function GroupSettingsPage() {
               <p className="muted">{group.description || "설명이 없어요."}</p>
               {dday && (
                 <p className="meta" style={{ marginTop: 10 }}>
-                  🗓 {dday}
+                  <Ico n="cal" /> {dday}
                 </p>
               )}
               <p className="meta" style={{ marginTop: 10 }}>

@@ -372,3 +372,11 @@
     font-size: 22px;
   }
 }
+
+/* 지도 페이지와 같은 폭(1280px - 좌우 여백 36px씩 = 1208px)으로 가운데에 모은다. (폭은 max-width 숫자로 조절) */
+@media (min-width: 901px) {
+  .page {
+    max-width: 1208px;
+    margin-inline: auto;
+  }
+}

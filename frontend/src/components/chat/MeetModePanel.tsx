@@ -12,6 +12,7 @@ import type { useArrivals } from "@/hooks/useArrivals";
 import { pickName, useNameMode } from "@/lib/nameMode";
 import ArrivalBoard from "@/components/chat/ArrivalBoard";
 import styles from "./meetmode.module.css";
+import Ico from "@/components/Ico";
 
 type Meet = ReturnType<typeof useLocationShare>;
 type ArrivalState = ReturnType<typeof useArrivals>;
@@ -83,7 +84,15 @@ function ModeBadge({ mode }: { mode: ShareMode }) {
         background: once ? "rgba(183,121,31,0.14)" : "rgba(63,125,110,0.14)",
       }}
     >
-      {once ? "📍 1회 공유" : `⏱ ${SHARE_MINUTES}분 공유`}
+      {once ? (
+        <>
+          <Ico n="pin" /> 1회 공유
+        </>
+      ) : (
+        <>
+          <Ico n="clock" /> {SHARE_MINUTES}분 공유
+        </>
+      )}
     </span>
   );
 }
@@ -224,7 +233,10 @@ export default function MeetModePanel({
   const expanded = inDialog || mobileOpen || asking || !!meet.problem;
 
   return (
-    <aside className={`${styles.panel} ${inDialog ? styles.dialogPanel : ''}`} aria-label="Meet Mode">
+    <aside
+      className={`${styles.panel} ${inDialog ? styles.dialogPanel : ""}`}
+      aria-label="Meet Mode"
+    >
       <div className={styles.head}>
         <span className={styles.title}>
           <i className={`${styles.dot} ${open ? "" : styles.dotOff}`} />
@@ -235,14 +247,16 @@ export default function MeetModePanel({
             {open ? "오늘 약속" : "잠김"}
           </span>
         )}
-        {!inDialog && <button
-          type="button"
-          className={styles.mToggle}
-          aria-expanded={expanded}
-          onClick={() => setMobileOpen((v) => !v)}
-        >
-          {expanded ? "접기 ▲" : "열기 ▼"}
-        </button>}
+        {!inDialog && (
+          <button
+            type="button"
+            className={styles.mToggle}
+            aria-expanded={expanded}
+            onClick={() => setMobileOpen((v) => !v)}
+          >
+            {expanded ? "접기 ▲" : "열기 ▼"}
+          </button>
+        )}
       </div>
 
       <div className={`${styles.body} ${expanded ? styles.bodyOpen : ""}`}>
@@ -258,7 +272,9 @@ export default function MeetModePanel({
 
         {locked && (
           <div className={styles.lock}>
-            <div className={styles.lockIcon}>🔒</div>
+            <div className={styles.lockIcon}>
+              <Ico n="lock" />
+            </div>
             <h2 className={styles.lockTitle}>
               예정된 약속이 없어
               <br />

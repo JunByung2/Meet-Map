@@ -855,8 +855,8 @@
   .composerBottom > button {
     flex: none;
   }
-  :global(.app-shell[data-keyboard='open']) .mobileTitle,
-  :global(.app-shell[data-keyboard='open']) .meetLauncher {
+  :global(.app-shell[data-keyboard="open"]) .mobileTitle,
+  :global(.app-shell[data-keyboard="open"]) .meetLauncher {
     display: none;
   }
 }
@@ -1007,7 +1007,7 @@
     max-height: 44px;
     overflow-y: auto;
   }
-  :global(.app-shell[data-keyboard='open']) .compactTop {
+  :global(.app-shell[data-keyboard="open"]) .compactTop {
     display: none;
   }
 }
@@ -1872,5 +1872,19 @@
   /* 불필요한 안내문 숨기기 */
   .composer > .hint {
     display: none;
+  }
+}
+
+/* ==========================================
+   채팅 화면 전체(채팅창 + 오른쪽 사이드바 한 프레임)의 가로 폭 조절
+   - 화면을 꽉 채우지 않고 가운데에 모아서 양옆에 여백을 둔다.
+   - 폭을 바꾸려면 max-width 숫자만 고친다. (작게: 960px, 크게: 1240px)
+   반드시 chat.module.css 의 맨 아래에 둔다.
+   ========================================== */
+@media (min-width: 1051px) {
+  .layout {
+    width: 100%;
+    max-width: 1100px;
+    margin-inline: auto;
   }
 }

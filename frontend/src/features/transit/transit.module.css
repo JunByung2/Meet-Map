@@ -277,3 +277,128 @@
     max-height: 300px;
   }
 }
+
+/* ==========================================
+   지도 > 교통 경로 : 모여락 디자인(갈색·크림)에 맞춘 출발지/목적지 입력 영역
+   반드시 파일 맨 아래에 둔다.
+   ========================================== */
+.panel,
+.mapBox {
+  background: var(--paper);
+  border: 2px solid var(--brown);
+  border-radius: 9px;
+  box-shadow: none;
+}
+.panel h2 {
+  margin: -20px -20px 14px;
+  padding: 11px 16px;
+  border-radius: 6px 6px 0 0;
+  background: var(--brown);
+  color: var(--cream);
+  font-size: 16px;
+  letter-spacing: 0.02em;
+}
+.label {
+  margin: 14px 0 6px;
+  color: var(--brown);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.input {
+  border: 1.5px solid var(--brown);
+  border-radius: 6px;
+  padding: 11px 12px;
+  background: var(--cream);
+  color: var(--brown);
+}
+.input::placeholder {
+  color: #9a8379;
+}
+.input:focus {
+  outline: 2px solid var(--brown);
+  outline-offset: 1px;
+  background: #fffdf8;
+}
+.button {
+  border: 1.5px solid var(--brown);
+  border-radius: 6px;
+  background: var(--brown);
+  color: var(--cream);
+  font-weight: 700;
+}
+.button:hover:not(:disabled) {
+  background: #33231f;
+}
+.secondary {
+  background: transparent;
+  color: var(--brown);
+}
+.secondary:hover:not(:disabled) {
+  background: var(--cream);
+}
+.selectedPlace {
+  color: var(--brown);
+  font-weight: 700;
+}
+.hint {
+  color: var(--muted);
+}
+.badge {
+  border-radius: 6px;
+  background: var(--brown);
+  color: var(--cream);
+}
+.searchItem {
+  border: 1.5px solid var(--brown);
+  border-radius: 6px;
+  background: var(--cream);
+  color: var(--brown);
+}
+.searchItem:hover {
+  background: #efe0cb;
+}
+.filters select {
+  border: 1.5px solid var(--brown);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--brown);
+}
+.routeCard {
+  border: 1.5px solid var(--brown);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--brown);
+}
+.routeCard:hover {
+  background: var(--cream);
+}
+.active {
+  border: 2px solid var(--brown);
+  background: #efe0cb;
+}
+.step {
+  border-left: 3px solid var(--brown);
+}
+.transfer {
+  border-radius: 6px;
+  background: var(--cream);
+  border: 1px solid var(--brown);
+  color: var(--brown);
+}
+.timingCard {
+  border: 1.5px solid var(--brown);
+  border-radius: 8px;
+  background: var(--cream);
+}
+.error {
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  background: var(--danger-bg);
+  color: #8a2f2b;
+}
+@media (max-width: 600px) {
+  .panel h2 {
+    margin: -14px -14px 12px;
+  }
+}

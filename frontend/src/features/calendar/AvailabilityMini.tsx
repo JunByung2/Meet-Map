@@ -49,12 +49,17 @@ export default function AvailabilityMini({
   const year = month.getFullYear();
   const monthIdx = month.getMonth();
   const startOffset = new Date(year, monthIdx, 1).getDay();
-  const cells = Array.from({ length: 42 }, (_, i) => {
+  // 실제 월에 필요한 주 수(4~6주)만 사용해 빈 마지막 주가 생기지 않도록 한다.
+  const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+  const weeks = Math.ceil((startOffset + daysInMonth) / 7);
+  const cells = Array.from({ length: weeks * 7 }, (_, i) => {
     const d = new Date(year, monthIdx, 1 - startOffset + i);
     return { key: ymd(d), date: d, inMonth: d.getMonth() === monthIdx };
   });
   const rangeStart = ymd(new Date(year, monthIdx, 1 - startOffset));
-  const rangeEnd = ymd(new Date(year, monthIdx, 1 - startOffset + 41));
+  const rangeEnd = ymd(
+    new Date(year, monthIdx, 1 - startOffset + weeks * 7 - 1),
+  );
 
   // 보이는 기간의 '되는 날' 표시를 불러온다 (달을 빨리 넘기면 이전 응답은 버린다)
   useEffect(() => {
@@ -99,13 +104,27 @@ export default function AvailabilityMini({
           <button type="button" onClick={() => shift(-1)} aria-label="이전 달">
             ‹
           </button>
-          <span>
-            {year}.{pad(monthIdx + 1)}
+          <span className={css.monthLabel}>
+            {boardStyle
+              ? `${year}년 ${monthIdx + 1}월`
+              : `${year}.${pad(monthIdx + 1)}`}
           </span>
           <button type="button" onClick={() => shift(1)} aria-label="다음 달">
             ›
           </button>
         </div>
+        {boardStyle && (
+          <button
+            type="button"
+            className={css.todayButton}
+            onClick={() => {
+              const n = new Date();
+              setMonth(new Date(n.getFullYear(), n.getMonth(), 1));
+            }}
+          >
+            오늘
+          </button>
+        )}
       </div>
 
       <button
@@ -114,7 +133,15 @@ export default function AvailabilityMini({
         onClick={onOpen}
         aria-label="함께 가능한 날 달력 크게 보기"
       >
-        <span className={css.grid} aria-hidden>
+        <span
+          className={css.grid}
+          aria-hidden
+          style={
+            boardStyle
+              ? { gridTemplateRows: `36px repeat(${weeks}, minmax(0, 1fr))` }
+              : undefined
+          }
+        >
           {DOW.map((d) => (
             <span key={d} className={css.dow}>
               {d}
@@ -134,7 +161,10 @@ export default function AvailabilityMini({
               .join(" ");
             return (
               <span key={key} className={cls}>
-                {date.getDate()}
+                <span className={css.dayNumber}>{date.getDate()}</span>
+                {boardStyle && inMonth && n > 0 && (
+                  <small className={css.availabilityCount}>{n}명</small>
+                )}
                 {meetingDays.has(key) && <i className={css.dot} />}
               </span>
             );

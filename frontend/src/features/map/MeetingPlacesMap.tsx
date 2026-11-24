@@ -1,105 +1,110 @@
-'use client'
+"use client";
 
-import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
-import { api } from '@/lib/api'
-import { loadKakao, searchKeyword } from '@/lib/kakao'
-import BaseKakaoMap, { type MapPlace } from './BaseKakaoMap'
-import styles from './meetingPlaces.module.css'
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { api } from "@/lib/api";
+import { loadKakao, searchKeyword } from "@/lib/kakao";
+import BaseKakaoMap, { type MapPlace } from "./BaseKakaoMap";
+import styles from "./meetingPlaces.module.css";
+import Ico from "@/components/Ico";
+import Pager, { pageCount } from "@/components/Pager";
 
-type Group = { id: number; name: string; icon: string | null }
+const LIST_SIZE = 5; // 목록은 5개씩 나눠서 보여 준다
+
+type Group = { id: number; name: string; icon: string | null };
 
 type Meeting = {
-  id: number
-  group_id: number
-  title: string
-  location: string
-  place_address: string | null
-  place_lat: number | null
-  place_lng: number | null
-  meeting_time: string
-  status: string
-}
+  id: number;
+  group_id: number;
+  title: string;
+  location: string;
+  place_address: string | null;
+  place_lat: number | null;
+  place_lng: number | null;
+  meeting_time: string;
+  status: string;
+};
 
 type Item = {
-  meeting: Meeting
-  group: Group
-  color: string
-  lat: number | null
-  lng: number | null
-}
+  meeting: Meeting;
+  group: Group;
+  color: string;
+  lat: number | null;
+  lng: number | null;
+};
 
 // 그룹마다 다른 마커 색 (그룹 번호가 작은 순서대로 배정해서, 늘 같은 그룹은 같은 색)
 const GROUP_COLORS = [
-  '#E5574F', // 빨강
-  '#3B82C4', // 파랑
-  '#E09A2B', // 주황
-  '#8E5BC2', // 보라
-  '#D2578F', // 분홍
-  '#7A8B2E', // 올리브
-  '#A8704A', // 갈색
-  '#4F5BD5', // 남색
-]
+  "#E5574F", // 빨강
+  "#3B82C4", // 파랑
+  "#E09A2B", // 주황
+  "#8E5BC2", // 보라
+  "#D2578F", // 분홍
+  "#7A8B2E", // 올리브
+  "#A8704A", // 갈색
+  "#4F5BD5", // 남색
+];
 
-const FETCH_LIMIT = 15 // 좌표가 없는 약속을 장소 검색으로 찾는 최대 개수
+const FETCH_LIMIT = 15; // 좌표가 없는 약속을 장소 검색으로 찾는 최대 개수
 
 function whenText(iso: string) {
-  return new Date(iso).toLocaleString('ko-KR', {
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
+  return new Date(iso).toLocaleString("ko-KR", {
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function startOfToday() {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  return d.getTime()
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
 }
 
 /** 내가 속한 모든 그룹의 약속 장소를 지도에 찍는다. 그룹마다 마커 색이 다르다. */
 export default function MeetingPlacesMap() {
-  const [items, setItems] = useState<Item[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [range, setRange] = useState<'upcoming' | 'all'>('upcoming')
-  const [hidden, setHidden] = useState<Set<number>>(new Set())
-  const [selectedId, setSelectedId] = useState('')
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [range, setRange] = useState<"upcoming" | "all">("all");
+  const [hidden, setHidden] = useState<Set<number>>(new Set());
+  const [selectedId, setSelectedId] = useState("");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     async function load() {
       try {
-        const groups = await api<Group[]>('/groups')
-        const ordered = [...groups].sort((a, b) => a.id - b.id)
+        const groups = await api<Group[]>("/groups");
+        const ordered = [...groups].sort((a, b) => a.id - b.id);
         const colorOf = new Map(
           ordered.map((g, i) => [g.id, GROUP_COLORS[i % GROUP_COLORS.length]]),
-        )
+        );
         const results = await Promise.allSettled(
           groups.map((g) => api<Meeting[]>(`/groups/${g.id}/meetings`)),
-        )
-        if (cancelled) return
+        );
+        if (cancelled) return;
 
-        const list: Item[] = []
+        const list: Item[] = [];
         groups.forEach((g, i) => {
-          const r = results[i]
-          if (r.status !== 'fulfilled') return
+          const r = results[i];
+          if (r.status !== "fulfilled") return;
           for (const m of r.value) {
-            if (m.status === 'cancelled') continue
+            if (m.status === "cancelled") continue;
             list.push({
               meeting: m,
               group: g,
               color: colorOf.get(g.id) ?? GROUP_COLORS[0],
               lat: m.place_lat,
               lng: m.place_lng,
-            })
+            });
           }
-        })
-        setItems(list)
-        setLoading(false)
+        });
+        setItems(list);
+        setLoading(false);
 
         // 예전 약속처럼 좌표가 없으면, 장소 이름으로 한 번 검색해서 찾아 본다
         const missing = Array.from(
@@ -108,69 +113,69 @@ export default function MeetingPlacesMap() {
               .filter((it) => it.lat === null || it.lng === null)
               .map((it) => it.meeting.location),
           ),
-        ).slice(0, FETCH_LIMIT)
-        if (missing.length === 0) return
+        ).slice(0, FETCH_LIMIT);
+        if (missing.length === 0) return;
         try {
-          const kakao = await loadKakao()
-          const found = new Map<string, { lat: number; lng: number }>()
+          const kakao = await loadKakao();
+          const found = new Map<string, { lat: number; lng: number }>();
           for (const loc of missing) {
-            const [first] = await searchKeyword(kakao, loc)
-            if (first) found.set(loc, { lat: first.lat, lng: first.lng })
+            const [first] = await searchKeyword(kakao, loc);
+            if (first) found.set(loc, { lat: first.lat, lng: first.lng });
           }
-          if (cancelled || found.size === 0) return
+          if (cancelled || found.size === 0) return;
           setItems((cur) =>
             cur.map((it) => {
-              if (it.lat !== null && it.lng !== null) return it
-              const hit = found.get(it.meeting.location)
-              return hit ? { ...it, lat: hit.lat, lng: hit.lng } : it
+              if (it.lat !== null && it.lng !== null) return it;
+              const hit = found.get(it.meeting.location);
+              return hit ? { ...it, lat: hit.lat, lng: hit.lng } : it;
             }),
-          )
+          );
         } catch {
           /* 카카오 검색을 못 쓰면 좌표 없는 약속은 목록에만 보인다 */
         }
       } catch {
         if (!cancelled) {
-          setError('약속 정보를 불러오지 못했어요.')
-          setLoading(false)
+          setError("약속 정보를 불러오지 못했어요.");
+          setLoading(false);
         }
       }
     }
 
-    void load()
+    void load();
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   // 그룹 목록(범례): 약속이 있는 그룹만
   const legend = useMemo(() => {
     const map = new Map<
       number,
       { group: Group; color: string; count: number }
-    >()
+    >();
     for (const it of items) {
-      const cur = map.get(it.group.id)
-      if (cur) cur.count += 1
-      else map.set(it.group.id, { group: it.group, color: it.color, count: 1 })
+      const cur = map.get(it.group.id);
+      if (cur) cur.count += 1;
+      else map.set(it.group.id, { group: it.group, color: it.color, count: 1 });
     }
-    return Array.from(map.values()).sort((a, b) => a.group.id - b.group.id)
-  }, [items])
+    return Array.from(map.values()).sort((a, b) => a.group.id - b.group.id);
+  }, [items]);
 
   const visible = useMemo(() => {
-    const from = startOfToday()
+    const from = startOfToday();
     return items
       .filter((it) => !hidden.has(it.group.id))
       .filter(
         (it) =>
-          range === 'all' ||
+          range === "all" ||
           new Date(it.meeting.meeting_time).getTime() >= from,
       )
       .sort(
         (a, b) =>
           new Date(a.meeting.meeting_time).getTime() -
           new Date(b.meeting.meeting_time).getTime(),
-      )
-  }, [items, hidden, range])
+      );
+  }, [items, hidden, range]);
 
   // places 가 새로 만들어질 때마다 지도가 다시 맞춰지므로, 바뀔 때만 만든다
   const places: MapPlace[] = useMemo(
@@ -185,18 +190,31 @@ export default function MeetingPlacesMap() {
           color: it.color,
         })),
     [visible],
-  )
+  );
 
-  const noPlace = visible.length - places.length
+  const pages = pageCount(visible.length, LIST_SIZE);
+  const safePage = Math.min(page, pages);
+  const pageItems = visible.slice(
+    (safePage - 1) * LIST_SIZE,
+    safePage * LIST_SIZE,
+  );
+
+  // 지도에서 마커를 누르면 그 약속이 있는 페이지로 목록을 넘긴다
+  function pickOnMap(id: string) {
+    setSelectedId(id);
+    const idx = visible.findIndex((it) => `meeting-${it.meeting.id}` === id);
+    if (idx >= 0) setPage(Math.floor(idx / LIST_SIZE) + 1);
+  }
 
   function toggleGroup(id: number) {
     setHidden((cur) => {
-      const next = new Set(cur)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-    setSelectedId('')
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setSelectedId("");
+    setPage(1);
   }
 
   if (loading)
@@ -204,7 +222,7 @@ export default function MeetingPlacesMap() {
       <p className="muted" role="status">
         약속 장소를 불러오고 있어요.
       </p>
-    )
+    );
   if (error)
     return (
       <section className="card">
@@ -212,7 +230,7 @@ export default function MeetingPlacesMap() {
           {error}
         </p>
       </section>
-    )
+    );
   if (items.length === 0)
     return (
       <section className="card">
@@ -221,19 +239,19 @@ export default function MeetingPlacesMap() {
           찍혀요.
         </p>
       </section>
-    )
+    );
 
   return (
     <section className={styles.wrap}>
       <div className={styles.toolbar}>
         <div className={styles.legend} role="group" aria-label="그룹별 색">
           {legend.map(({ group, color, count }) => {
-            const off = hidden.has(group.id)
+            const off = hidden.has(group.id);
             return (
               <button
                 key={group.id}
                 type="button"
-                className={`${styles.chip} ${off ? styles.chipOff : ''}`}
+                className={`${styles.chip} ${off ? styles.chipOff : ""}`}
                 aria-pressed={!off}
                 onClick={() => toggleGroup(group.id)}
               >
@@ -241,21 +259,27 @@ export default function MeetingPlacesMap() {
                 {group.name}
                 <span className={styles.count}>{count}</span>
               </button>
-            )
+            );
           })}
         </div>
         <div className={styles.seg} role="group" aria-label="기간">
           <button
             type="button"
-            className={range === 'upcoming' ? styles.segOn : ''}
-            onClick={() => setRange('upcoming')}
+            className={range === "upcoming" ? styles.segOn : ""}
+            onClick={() => {
+              setRange("upcoming");
+              setPage(1);
+            }}
           >
             다가오는 약속
           </button>
           <button
             type="button"
-            className={range === 'all' ? styles.segOn : ''}
-            onClick={() => setRange('all')}
+            className={range === "all" ? styles.segOn : ""}
+            onClick={() => {
+              setRange("all");
+              setPage(1);
+            }}
           >
             전체
           </button>
@@ -266,32 +290,25 @@ export default function MeetingPlacesMap() {
         <BaseKakaoMap
           places={places}
           selectedPlaceId={selectedId}
-          onPlaceClick={(p) => setSelectedId(p.id)}
+          onPlaceClick={(p) => pickOnMap(p.id)}
           height="440px"
         />
       ) : (
         <p className={styles.empty}>
           {visible.length === 0
-            ? '이 조건에 맞는 약속이 없어요.'
-            : '지도에 찍을 수 있는 약속이 없어요.'}
-        </p>
-      )}
-
-      {noPlace > 0 && places.length > 0 && (
-        <p className={styles.note}>
-          {noPlace}개 약속은 장소 위치를 찾지 못해서 지도에는 없고 목록에만
-          보여요.
+            ? "이 조건에 맞는 약속이 없어요."
+            : "지도에 찍을 수 있는 약속이 없어요."}
         </p>
       )}
 
       <ul className={styles.list}>
-        {visible.map((it) => {
-          const id = `meeting-${it.meeting.id}`
-          const canShow = it.lat !== null && it.lng !== null
+        {pageItems.map((it) => {
+          const id = `meeting-${it.meeting.id}`;
+          const canShow = it.lat !== null && it.lng !== null;
           return (
             <li
               key={it.meeting.id}
-              className={`${styles.row} ${selectedId === id ? styles.rowOn : ''}`}
+              className={`${styles.row} ${selectedId === id ? styles.rowOn : ""}`}
             >
               <button
                 type="button"
@@ -306,8 +323,8 @@ export default function MeetingPlacesMap() {
                     {it.group.name} · {whenText(it.meeting.meeting_time)}
                   </span>
                   <span className="muted">
-                    📍 {it.meeting.location}
-                    {!canShow && ' (위치를 찾지 못했어요)'}
+                    <Ico n="pin" /> {it.meeting.location}
+                    {!canShow && " (위치를 찾지 못했어요)"}
                   </span>
                 </span>
               </button>
@@ -318,9 +335,10 @@ export default function MeetingPlacesMap() {
                 약속 보기 →
               </Link>
             </li>
-          )
+          );
         })}
       </ul>
+      <Pager page={safePage} pages={pages} onChange={setPage} />
     </section>
-  )
+  );
 }

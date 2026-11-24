@@ -8,6 +8,7 @@ import Pager, { PAGE_SIZE, pageCount } from "@/components/Pager";
 import Avatar from "@/components/Avatar";
 import DateTimePicker from "@/components/chat/DateTimePicker";
 import AvailabilityCalendar from "@/features/calendar/AvailabilityCalendar";
+import calendarCss from "@/features/calendar/calendar.module.css";
 import AvailabilityMini from "@/features/calendar/AvailabilityMini";
 import board from "./meetingsBoard.module.css";
 import { useGroupContext, type GroupMember } from "@/hooks/useGroupContext";
@@ -15,6 +16,7 @@ import { pickName, useNameMode, type NameMode } from "@/lib/nameMode";
 import type { PlaceValue } from "@/lib/photos";
 import { usePlaceSearch } from "@/lib/usePlaceSearch";
 import CalIcon from "@/components/CalIcon";
+import Ico from "@/components/Ico";
 
 type Meeting = {
   id: number;
@@ -199,7 +201,9 @@ function MeetingEditor({
         </p>
         {!searching ? (
           <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-            <span>📍 {placeName}</span>
+            <span>
+              <Ico n="pin" /> {placeName}
+            </span>
             <button
               type="button"
               className="btn secondary sm"
@@ -525,7 +529,7 @@ function MeetingCreateForm({
         </div>
         {picked && (
           <p className="muted" style={{ marginTop: 6 }}>
-            📍 {picked.address}
+            <Ico n="pin" /> {picked.address}
           </p>
         )}
         {searching && (
@@ -806,12 +810,15 @@ export default function GroupMeetingsPage() {
         <header className={board.hero}>
           <div>
             <p className={board.heroEyebrow}>OUR PLANS</p>
-            <h1 className={board.heroTitle}>모든 약속</h1>
             <p className={board.heroSub}>
               다가오는 약속과 함께 가능한 날을 한눈에 확인해요.
             </p>
           </div>
-          <button type="button" className={board.createButton} onClick={() => openCreate()}>
+          <button
+            type="button"
+            className={board.createButton}
+            onClick={() => openCreate()}
+          >
             + 새 약속 만들기
           </button>
         </header>
@@ -823,10 +830,16 @@ export default function GroupMeetingsPage() {
                 <p className={board.panelEyebrow}>UPCOMING</p>
                 <h2>다가오는 약속</h2>
               </div>
-              <span className={board.count}>{loading ? '…' : meetings.length}</span>
+              <span className={board.count}>
+                {loading ? "…" : meetings.length}
+              </span>
             </div>
             <div className={board.panelContent}>
-              {notice && <p className={board.notice} role="status">{notice}</p>}
+              {notice && (
+                <p className={board.notice} role="status">
+                  {notice}
+                </p>
+              )}
 
               {creating && (
                 <article className={board.formCard} ref={createRef}>
@@ -845,22 +858,38 @@ export default function GroupMeetingsPage() {
               {error ? (
                 <div className={board.emptyCard}>
                   <p className="error">{error}</p>
-                  <button type="button" className="btn sm" onClick={() => void loadMeetings()}>
+                  <button
+                    type="button"
+                    className="btn sm"
+                    onClick={() => void loadMeetings()}
+                  >
                     다시 시도
                   </button>
                 </div>
               ) : meetings.length === 0 ? (
                 <div className={board.emptyCard}>
-                  <p>{loading ? '불러오는 중…' : '다가오는 약속이 아직 없어요.'}</p>
-                  {!loading && <button type="button" className="btn sm" onClick={() => openCreate()}>+ 약속 만들기</button>}
+                  <p>
+                    {loading ? "불러오는 중…" : "다가오는 약속이 아직 없어요."}
+                  </p>
+                  {!loading && (
+                    <button
+                      type="button"
+                      className="btn sm"
+                      onClick={() => openCreate()}
+                    >
+                      + 약속 만들기
+                    </button>
+                  )}
                 </div>
               ) : (
                 <>
                   <div className={board.meetingList}>
                     {meetings
                       .slice(
-                        (Math.min(listPage, pageCount(meetings.length)) - 1) * PAGE_SIZE,
-                        Math.min(listPage, pageCount(meetings.length)) * PAGE_SIZE,
+                        (Math.min(listPage, pageCount(meetings.length)) - 1) *
+                          PAGE_SIZE,
+                        Math.min(listPage, pageCount(meetings.length)) *
+                          PAGE_SIZE,
                       )
                       .map((meeting) => {
                         const people = (meeting.participant_ids ?? [])
@@ -868,14 +897,24 @@ export default function GroupMeetingsPage() {
                           .filter((m): m is GroupMember => !!m);
                         const date = new Date(meeting.meeting_time);
                         const daysLeft = Math.round(
-                          (new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime() -
-                            new Date(new Date().setHours(0, 0, 0, 0)).getTime()) /
+                          (new Date(
+                            date.getFullYear(),
+                            date.getMonth(),
+                            date.getDate(),
+                          ).getTime() -
+                            new Date(
+                              new Date().setHours(0, 0, 0, 0),
+                            ).getTime()) /
                             86400000,
                         );
-                        const expanded = expandedId === meeting.id || editingId === meeting.id;
+                        const expanded =
+                          expandedId === meeting.id || editingId === meeting.id;
                         const canReadDate = !Number.isNaN(date.getTime());
                         return (
-                          <article key={meeting.id} className={board.meetingCard}>
+                          <article
+                            key={meeting.id}
+                            className={board.meetingCard}
+                          >
                             <button
                               type="button"
                               className={board.meetingSummary}
@@ -887,18 +926,53 @@ export default function GroupMeetingsPage() {
                               }}
                             >
                               <span className={board.dateTile}>
-                                <span className={board.month}>{canReadDate ? ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"][date.getMonth()] : '—'}</span>
-                                <strong>{canReadDate ? String(date.getDate()).padStart(2, '0') : '—'}</strong>
+                                <span className={board.month}>
+                                  {canReadDate
+                                    ? [
+                                        "JAN",
+                                        "FEB",
+                                        "MAR",
+                                        "APR",
+                                        "MAY",
+                                        "JUN",
+                                        "JUL",
+                                        "AUG",
+                                        "SEP",
+                                        "OCT",
+                                        "NOV",
+                                        "DEC",
+                                      ][date.getMonth()]
+                                    : "—"}
+                                </span>
+                                <strong>
+                                  {canReadDate
+                                    ? String(date.getDate()).padStart(2, "0")
+                                    : "—"}
+                                </strong>
                               </span>
                               <span className={board.meetingInfo}>
-                                <span className={board.groupBadge}>{group?.name ?? '우리 그룹'}</span>
-                                <strong className={board.meetingName}>{meeting.title}</strong>
+                                <span className={board.groupBadge}>
+                                  {group?.name ?? "우리 그룹"}
+                                </span>
+                                <strong className={board.meetingName}>
+                                  {meeting.title}
+                                </strong>
                                 <span className={board.meetingMeta}>
-                                  📍 {meeting.location || '장소 미정'} · {canReadDate ? date.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }) : '시간 미정'}
+                                  <Ico n="pin" />{" "}
+                                  {meeting.location || "장소 미정"} ·{" "}
+                                  {canReadDate
+                                    ? date.toLocaleTimeString("ko-KR", {
+                                        hour: "numeric",
+                                        minute: "2-digit",
+                                      })
+                                    : "시간 미정"}
                                 </span>
                               </span>
                               <span className={board.meetingSide}>
-                                <span className={board.avatars} aria-label={`참여 멤버 ${people.length}명`}>
+                                <span
+                                  className={board.avatars}
+                                  aria-label={`참여 멤버 ${people.length}명`}
+                                >
                                   {people.slice(0, 5).map((m) => (
                                     <Avatar
                                       key={m.user_id}
@@ -910,13 +984,23 @@ export default function GroupMeetingsPage() {
                                   ))}
                                 </span>
                                 <span className={board.sideBottom}>
-                                  <span className={board.dDay}>{daysLeft <= 0 ? 'TODAY' : `D-${daysLeft}`}</span>
-                                  <span className={board.chevron} aria-hidden="true">{expanded ? '⌄' : '›'}</span>
+                                  <span className={board.dDay}>
+                                    {daysLeft <= 0 ? "TODAY" : `D-${daysLeft}`}
+                                  </span>
+                                  <span
+                                    className={board.chevron}
+                                    aria-hidden="true"
+                                  >
+                                    {expanded ? "⌄" : "›"}
+                                  </span>
                                 </span>
                               </span>
                             </button>
                             {expanded && (
-                              <div className={board.meetingDetail} id={`meeting-detail-${meeting.id}`}>
+                              <div
+                                className={board.meetingDetail}
+                                id={`meeting-detail-${meeting.id}`}
+                              >
                                 {editingId === meeting.id ? (
                                   <MeetingEditor
                                     groupId={groupId}
@@ -928,19 +1012,56 @@ export default function GroupMeetingsPage() {
                                   />
                                 ) : (
                                   <>
-                                    <p><strong>날짜·시간</strong> {formatDate(meeting.meeting_time)}</p>
-                                    <p><strong>참여 인원</strong> {people.length}명</p>
+                                    <p>
+                                      <strong>날짜·시간</strong>{" "}
+                                      {formatDate(meeting.meeting_time)}
+                                    </p>
+                                    <p>
+                                      <strong>참여 인원</strong> {people.length}
+                                      명
+                                    </p>
                                     <div className={board.participantList}>
-                                      {people.length > 0 ? people.map((m) => (
-                                        <span className={board.participant} key={m.user_id}>
-                                          <Avatar userId={m.user_id} name={pickName(m, nameMode)} image={m.profile_image} size="sm" />
-                                          {pickName(m, nameMode)}
+                                      {people.length > 0 ? (
+                                        people.map((m) => (
+                                          <span
+                                            className={board.participant}
+                                            key={m.user_id}
+                                          >
+                                            <Avatar
+                                              userId={m.user_id}
+                                              name={pickName(m, nameMode)}
+                                              image={m.profile_image}
+                                              size="sm"
+                                            />
+                                            {pickName(m, nameMode)}
+                                          </span>
+                                        ))
+                                      ) : (
+                                        <span className="muted">
+                                          참여 멤버를 아직 기록하지 않았어요.
                                         </span>
-                                      )) : <span className="muted">참여 멤버를 아직 기록하지 않았어요.</span>}
+                                      )}
                                     </div>
                                     <div className={board.actions}>
-                                      <button type="button" className="btn secondary sm" onClick={() => { setNotice(''); setEditingId(meeting.id); }}>수정</button>
-                                      <button type="button" className="btn secondary sm" onClick={() => void deleteMeeting(meeting.id)}>삭제</button>
+                                      <button
+                                        type="button"
+                                        className="btn secondary sm"
+                                        onClick={() => {
+                                          setNotice("");
+                                          setEditingId(meeting.id);
+                                        }}
+                                      >
+                                        수정
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn secondary sm"
+                                        onClick={() =>
+                                          void deleteMeeting(meeting.id)
+                                        }
+                                      >
+                                        삭제
+                                      </button>
                                     </div>
                                   </>
                                 )}
@@ -966,7 +1087,11 @@ export default function GroupMeetingsPage() {
                 <p className={board.panelEyebrow}>AVAILABLE</p>
                 <h2>함께 가능한 날</h2>
               </div>
-              <button type="button" className={board.calendarOpen} onClick={() => setCalendarOpen(true)}>
+              <button
+                type="button"
+                className={board.calendarOpen}
+                onClick={() => setCalendarOpen(true)}
+              >
                 크게 보기 →
               </button>
             </div>
@@ -989,45 +1114,39 @@ export default function GroupMeetingsPage() {
           role="dialog"
           aria-modal="true"
           aria-label="함께 가능한 날 찾기"
+          className={calendarCss.modalBackdrop}
           onClick={closeCalendar}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 1000,
-            background: "rgba(20, 35, 38, 0.45)",
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "center",
-            padding: "4vh 16px",
-            overflowY: "auto",
-          }}
         >
           <div
-            className="card"
+            className={calendarCss.modalCard}
             onClick={(e) => e.stopPropagation()}
-            style={{ width: "min(980px, 100%)" }}
           >
-            <div className="row-between" style={{ marginBottom: 16 }}>
-              <h2 className="section-title">🗓 함께 가능한 날 찾기</h2>
+            <div className={calendarCss.modalHeader}>
+              <div className={calendarCss.modalTitleBlock}>
+                <span className={calendarCss.modalKicker}>SCHEDULE</span>
+                <h2 className={calendarCss.modalTitle}>함께 가능한 날 찾기</h2>
+              </div>
               <button
                 type="button"
-                className="btn secondary sm"
+                className={calendarCss.modalClose}
                 onClick={closeCalendar}
               >
                 닫기 ✕
               </button>
             </div>
-            <AvailabilityCalendar
-              groupId={groupId}
-              members={members}
-              meId={me?.id ?? null}
-              nameMode={nameMode}
-              meetings={meetings}
-              onCreateOnDay={(day) => {
-                closeCalendar();
-                openCreate(day);
-              }}
-            />
+            <div className={calendarCss.modalBody}>
+              <AvailabilityCalendar
+                groupId={groupId}
+                members={members}
+                meId={me?.id ?? null}
+                nameMode={nameMode}
+                meetings={meetings}
+                onCreateOnDay={(day) => {
+                  closeCalendar();
+                  openCreate(day);
+                }}
+              />
+            </div>
           </div>
         </div>
       )}

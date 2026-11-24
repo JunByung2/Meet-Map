@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { formatWhen, useVotePoll, type Candidate } from "./useVotePoll";
 import styles from "./vote.module.css";
+import Ico from "@/components/Ico";
 
 /** 투표 종료 후 채팅방에 올라가는 결과 메시지 (마지막 줄이 voteresult:투표번호) */
 export function resultText(title: string, winner: Candidate, pollId: string) {
@@ -100,7 +101,15 @@ export default function VoteDialog({
           <span
             className={`${styles.tag}${closed ? ` ${styles.tagDone}` : ""}`}
           >
-            {closed ? "🏆 투표가 종료되었어요" : "🗳 투표 진행 중"}
+            {closed ? (
+              <>
+                <Ico n="trophy" /> 투표가 종료되었어요
+              </>
+            ) : (
+              <>
+                <Ico n="vote" /> 투표 진행 중
+              </>
+            )}
           </span>
           <button
             type="button"
@@ -135,7 +144,9 @@ export default function VoteDialog({
                     />
                     <span className={styles.dot} aria-hidden />
                     <span className={styles.optText}>
-                      <b>📍 {c.location}</b>
+                      <b>
+                        <Ico n="pin" /> {c.location}
+                      </b>
                     </span>
                   </label>
                 </li>
@@ -174,7 +185,9 @@ export default function VoteDialog({
                       />
                       <div className={styles.resBody}>
                         <span className={styles.optText}>
-                          <b>📍 {c.location}</b>
+                          <b>
+                            <Ico n="pin" /> {c.location}
+                          </b>
                         </span>
                         <span className={styles.resSide}>
                           <span className={styles.resCount}>
@@ -273,7 +286,9 @@ export default function VoteDialog({
                         />
                         <span className={styles.dot} aria-hidden />
                         <span className={styles.optText}>
-                          <b>📍 {c.location}</b>
+                          <b>
+                            <Ico n="pin" /> {c.location}
+                          </b>
                         </span>
                       </label>
                     </li>

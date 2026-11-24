@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import GroupsMeetingCalendar from "@/features/calendar/GroupsMeetingCalendar";
+import Panel from "@/components/Panel";
+import "./groups-page.css";
 
 type CalMeeting = {
   id: number;
@@ -96,7 +98,7 @@ export default function GroupsPage() {
 
   return (
     <AppShell>
-      <div className="page-head">
+      <div className="page-head gp-head">
         <div>
           <p className="eyebrow">우리만의 공간</p>
           <h1 className="page-title">내 그룹</h1>
@@ -108,124 +110,127 @@ export default function GroupsPage() {
 
       {error && <div className="error">{error}</div>}
 
-      {groups.length > 0 && !loading && (
-        <section style={{ marginBottom: 32 }}>
-          <div className="row-between" style={{ marginBottom: 16 }}>
-            <h2 className="section-title">우리 약속 달력</h2>
-          </div>
-          <div className="card">
-            <GroupsMeetingCalendar
-              groups={groups}
-              meetings={meetings}
-              listHref="/meetings"
-            />
-          </div>
-        </section>
-      )}
-
-      <div className="grid-main">
-        <section>
-          <h2 className="section-title" style={{ marginBottom: 16 }}>
-            함께하는 그룹
-          </h2>
-
-          {loading ? (
-            <div className="card muted">불러오는 중...</div>
-          ) : groups.length === 0 ? (
-            <div className="card">
-              <p className="card-title">아직 그룹이 없어요</p>
-              <p className="muted" style={{ marginTop: 6 }}>
-                오른쪽에서 첫 그룹을 만들거나, 친구가 보낸 초대 링크로 들어와
-                보세요.
-              </p>
+      <div
+        className={`gp-board${groups.length > 0 && !loading ? "" : " gp-solo"}`}
+      >
+        {groups.length > 0 && !loading && (
+          <Panel
+            title="우리 약속 달력"
+            kicker="SCHEDULE"
+            className="gp-calendar"
+            action={
+              <Link className="panel-action" href="/meetings">
+                약속 목록 →
+              </Link>
+            }
+          >
+            {/* 그룹 홈과 같은 달력: 칸이 선으로 나뉜 큰 달력. 높이를 정해 줘야 칸이 꽉 찬다 */}
+            <div className="gp-cal-frame">
+              <GroupsMeetingCalendar
+                groups={groups}
+                meetings={meetings}
+                listHref="/meetings"
+                dashboard
+                selectionOnly
+              />
             </div>
-          ) : (
-            <div className="stack">
-              {groups.map((g) => (
-                <Link
-                  key={g.id}
-                  href={`/groups/${g.id}`}
-                  className="card"
-                  style={{ color: "inherit", textDecoration: "none" }}
-                >
-                  <div className="row-between">
-                    <div className="row">
-                      <span className="avatar lg">
-                        {g.icon ? g.icon : g.name.slice(0, 1)}
-                      </span>
-                      <div>
-                        <p className="card-title">{g.name}</p>
-                        {g.description && (
-                          <p className="muted" style={{ marginTop: 2 }}>
-                            {g.description}
-                          </p>
-                        )}
+          </Panel>
+        )}
+
+        <div className="gp-side">
+          <Panel title="함께하는 그룹" kicker="MY GROUPS" className="gp-groups">
+            {loading ? (
+              <p className="muted">불러오는 중...</p>
+            ) : groups.length === 0 ? (
+              <div className="gp-empty">
+                <p className="card-title">아직 그룹이 없어요</p>
+                <p className="muted" style={{ marginTop: 6 }}>
+                  오른쪽에서 첫 그룹을 만들거나, 친구가 보낸 초대 링크로 들어와
+                  보세요.
+                </p>
+              </div>
+            ) : (
+              <div className="gp-list">
+                {groups.map((g) => (
+                  <Link key={g.id} href={`/groups/${g.id}`} className="gp-row">
+                    <div className="row-between">
+                      <div className="row">
+                        <span className="avatar lg">
+                          {g.icon ? g.icon : g.name.slice(0, 1)}
+                        </span>
+                        <div>
+                          <p className="card-title">{g.name}</p>
+                          {g.description && (
+                            <p className="muted" style={{ marginTop: 2 }}>
+                              {g.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="row">
+                        <span className="chip">
+                          {g.role === "owner" ? "방장" : "멤버"}
+                        </span>
+                        <span className="link-arrow">열기 →</span>
                       </div>
                     </div>
-                    <div className="row">
-                      <span className="chip">
-                        {g.role === "owner" ? "방장" : "멤버"}
-                      </span>
-                      <span className="link-arrow">열기 →</span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Panel>
 
-        <section className="card">
-          <h2 className="card-title" style={{ marginBottom: 4 }}>
-            새 그룹 만들기
-          </h2>
-          <p className="muted" style={{ marginBottom: 20 }}>
-            만든 뒤에 초대 링크로 친구를 불러올 수 있어요.
-          </p>
-          <form onSubmit={onCreate}>
-            <div className="field">
-              <label htmlFor="group-name">그룹 이름 *</label>
-              <input
-                id="group-name"
-                className="input"
-                type="text"
-                placeholder="예. 느린 주말"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={50}
-                required
-              />
-              <span className="hint">
-                친구들이 알아볼 수 있는 이름 · {name.length} / 50자
-              </span>
-            </div>
-            <div className="field">
-              <label htmlFor="group-desc">그룹 소개 (선택)</label>
-              <input
-                id="group-desc"
-                className="input"
-                type="text"
-                placeholder="함께하고 싶은 이야기를 적어 주세요"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
-            <button className="btn block" type="submit" disabled={creating}>
-              {creating ? "만드는 중…" : "그룹 만들기 →"}
-            </button>
-          </form>
-          <p className="meta" style={{ marginTop: 14 }}>
-            초대한 친구만 참여할 수 있어요. 그룹은 검색에 노출되지 않아요.
-          </p>
-        </section>
+          <Panel title="새 그룹 만들기" kicker="NEW GROUP" className="gp-new">
+            <p className="muted" style={{ marginBottom: 18 }}>
+              만든 뒤에 초대 링크로 친구를 불러올 수 있어요.
+            </p>
+            <form onSubmit={onCreate}>
+              <div className="field">
+                <label htmlFor="group-name">그룹 이름 *</label>
+                <input
+                  id="group-name"
+                  className="input"
+                  type="text"
+                  placeholder="예. 느린 주말"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={50}
+                  required
+                />
+                <span className="hint">
+                  친구들이 알아볼 수 있는 이름 · {name.length} / 50자
+                </span>
+              </div>
+              <div className="field">
+                <label htmlFor="group-desc">그룹 소개 (선택)</label>
+                <input
+                  id="group-desc"
+                  className="input"
+                  type="text"
+                  placeholder="함께하고 싶은 이야기를 적어 주세요"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </div>
+              <button className="btn block" type="submit" disabled={creating}>
+                {creating ? "만드는 중…" : "그룹 만들기 →"}
+              </button>
+            </form>
+            <p className="meta" style={{ marginTop: 14 }}>
+              초대한 친구만 참여할 수 있어요. 그룹은 검색에 노출되지 않아요.
+            </p>
+          </Panel>
+        </div>
       </div>
 
-      <div className="notice" style={{ marginTop: 28 }}>
-        <strong>친구가 모이면, 첫 약속부터 시작해 보세요.</strong>
-        <span className="muted">
-          그룹 만들기 → 초대 링크 보내기 → 약속 만들기 → 사진 모으기
-        </span>
-      </div>
+      {groups.length === 0 && !loading && (
+        <div className="notice" style={{ marginTop: 20 }}>
+          <strong>친구가 모이면, 첫 약속부터 시작해 보세요.</strong>
+          <span className="muted">
+            그룹 만들기 → 초대 링크 보내기 → 약속 만들기 → 사진 모으기
+          </span>
+        </div>
+      )}
     </AppShell>
   );
 }

@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import AppShell from "@/components/AppShell";
-import Pager, { PAGE_SIZE, pageCount } from "@/components/Pager";
+import Pager, { pageCount } from "@/components/Pager";
+import Panel from "@/components/Panel";
 import { colorMap } from "@/lib/memories";
 import "@/components/memories.css";
+import "./meetings-page.css";
 
 type Group = { id: number; name: string; icon: string | null };
 type Meeting = {
@@ -19,12 +21,23 @@ type Meeting = {
   status: string;
 };
 
-const fmt = new Intl.DateTimeFormat("ko-KR", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-  weekday: "short",
-  hour: "2-digit",
+const SIZE = 4;
+const MONTHS = [
+  "JAN",
+  "FEB",
+  "MAR",
+  "APR",
+  "MAY",
+  "JUN",
+  "JUL",
+  "AUG",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DEC",
+];
+const timeFmt = new Intl.DateTimeFormat("ko-KR", {
+  hour: "numeric",
   minute: "2-digit",
 });
 
@@ -85,44 +98,67 @@ export default function AllMeetingsPage() {
     };
   }, [meetings, groupId, now]);
 
-  const pastPages = pageCount(past.length);
+  const pastPages = pageCount(past.length, SIZE);
   const safePage = Math.min(pastPage, pastPages);
-  const upPages = pageCount(upcoming.length);
+  const upPages = pageCount(upcoming.length, SIZE);
   const safeUp = Math.min(upPage, upPages);
 
-  const row = (m: Meeting) => (
-    <Link
-      key={`${m.group_id}-${m.id}`}
-      href={`/groups/${m.group_id}/meetings`}
-      className="card"
-      style={{
-        color: "inherit",
-        textDecoration: "none",
-        borderLeft: `5px solid ${colors.get(m.group_id) ?? "var(--line)"}`,
-      }}
-    >
-      <div className="row-between">
-        <div>
-          <p className="card-title">{m.title}</p>
-          <p className="muted" style={{ marginTop: 2 }}>
-            {fmt.format(new Date(m.meeting_time))} · {nameOf(m.group_id)}
-            {m.location ? ` · ${m.location}` : ""}
-          </p>
+  const dday = (m: Meeting) => {
+    const t = new Date(m.meeting_time);
+    const a = new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+    const n = new Date(now);
+    const b = new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime();
+    const d = Math.round((a - b) / 86400000);
+    return d === 0 ? "D-DAY" : `D-${d}`;
+  };
+
+  const row = (m: Meeting, isUp: boolean) => {
+    const t = new Date(m.meeting_time);
+    return (
+      <Link
+        key={`${m.group_id}-${m.id}`}
+        href={`/groups/${m.group_id}/meetings`}
+        className="mp-card"
+      >
+        <div className="mp-date">
+          <small>{MONTHS[t.getMonth()]}</small>
+          <strong>{String(t.getDate()).padStart(2, "0")}</strong>
         </div>
-        <span className="link-arrow">→</span>
-      </div>
-    </Link>
-  );
+        <div className="mp-info">
+          <span className="mp-tag">
+            <i
+              className="gdot"
+              style={{ ["--c" as string]: colors.get(m.group_id) }}
+            />
+            {nameOf(m.group_id)}
+          </span>
+          <span className="mp-name">{m.title}</span>
+          <span className="mp-meta">
+            {t.getFullYear()}.{t.getMonth() + 1}.{t.getDate()} ·{" "}
+            {timeFmt.format(t)}
+            {m.location ? ` · ${m.location}` : ""}
+          </span>
+        </div>
+        <div className="mp-side">
+          {isUp && <span className="mp-dday">{dday(m)}</span>}
+          <span>›</span>
+        </div>
+      </Link>
+    );
+  };
+
+  const resetPages = () => {
+    setPastPage(1);
+    setUpPage(1);
+  };
 
   return (
     <AppShell>
-      <div className="page-head">
+      <div className="page-head mp-head">
         <div>
           <p className="eyebrow">내 모든 그룹</p>
-          <h1 className="page-title">약속</h1>
           <p className="page-sub">
-            내가 속한 모든 그룹의 확정된 약속을 모아 봐요. 누르면 그 그룹의 약속
-            화면으로 이동해요.
+            내가 속한 모든 그룹의 확정된 약속을 모아 봐요.
           </p>
         </div>
       </div>
@@ -141,14 +177,13 @@ export default function AllMeetingsPage() {
       ) : (
         <>
           {groups.length > 1 && (
-            <div className="am-groups">
+            <div className="am-groups mp-chips">
               <button
                 type="button"
                 className={groupId === null ? "on" : ""}
                 onClick={() => {
                   setGroupId(null);
-                  setPastPage(1);
-                  setUpPage(1);
+                  resetPages();
                 }}
               >
                 전체
@@ -161,8 +196,7 @@ export default function AllMeetingsPage() {
                   style={{ ["--c" as string]: colors.get(g.id) }}
                   onClick={() => {
                     setGroupId(g.id);
-                    setPastPage(1);
-                    setUpPage(1);
+                    resetPages();
                   }}
                 >
                   <i
@@ -175,35 +209,48 @@ export default function AllMeetingsPage() {
             </div>
           )}
 
-          <h2 className="section-title" style={{ marginBottom: 12 }}>
-            다가오는 약속
-          </h2>
-          {upcoming.length === 0 ? (
-            <div className="card muted">앞으로 예정된 약속이 없어요.</div>
-          ) : (
-            <>
-              <div className="stack">
-                {upcoming
-                  .slice((safeUp - 1) * PAGE_SIZE, safeUp * PAGE_SIZE)
-                  .map(row)}
-              </div>
-              <Pager page={safeUp} pages={upPages} onChange={setUpPage} />
-            </>
-          )}
-
-          {past.length > 0 && (
-            <>
-              <h2 className="section-title" style={{ margin: "28px 0 12px" }}>
-                지난 약속
-              </h2>
-              <div className="stack">
-                {past
-                  .slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
-                  .map(row)}
-              </div>
-              <Pager page={safePage} pages={pastPages} onChange={setPastPage} />
-            </>
-          )}
+          <div className="mp-cols">
+            <Panel
+              title="다가오는 약속"
+              kicker="UPCOMING"
+              action={<span className="mp-count">{upcoming.length}</span>}
+            >
+              {upcoming.length === 0 ? (
+                <p className="mp-empty">앞으로 예정된 약속이 없어요.</p>
+              ) : (
+                <>
+                  <div className="mp-body">
+                    {upcoming
+                      .slice((safeUp - 1) * SIZE, safeUp * SIZE)
+                      .map((m) => row(m, true))}
+                  </div>
+                  <Pager page={safeUp} pages={upPages} onChange={setUpPage} />
+                </>
+              )}
+            </Panel>
+            <Panel
+              title="지난 약속"
+              kicker="PAST MEETINGS"
+              action={<span className="mp-count">{past.length}</span>}
+            >
+              {past.length === 0 ? (
+                <p className="mp-empty">지난 약속이 아직 없어요.</p>
+              ) : (
+                <>
+                  <div className="mp-body">
+                    {past
+                      .slice((safePage - 1) * SIZE, safePage * SIZE)
+                      .map((m) => row(m, false))}
+                  </div>
+                  <Pager
+                    page={safePage}
+                    pages={pastPages}
+                    onChange={setPastPage}
+                  />
+                </>
+              )}
+            </Panel>
+          </div>
         </>
       )}
     </AppShell>

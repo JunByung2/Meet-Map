@@ -26,7 +26,7 @@
 }
 .ticket::before,
 .ticket::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 58%;
   width: 14px;
@@ -180,6 +180,7 @@
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
+  gap: 5px; /* 아이콘과 글씨 사이 간격 */
 }
 .quickGrid a:hover {
   background: var(--cream);
@@ -189,6 +190,50 @@
 }
 .quickGrid a:nth-child(-n + 2) {
   border-bottom: 1px solid var(--brown);
+}
+/* 함께하는 친구: 위에는 제목 줄, 아래에는 프로필이 가로로 */
+.friends {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--brown);
+}
+.friendsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.friendsHead span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.friendsHead a {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.avatars {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.more8 {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--brown);
+  border-radius: 999px;
+  background: var(--paper);
+  font-size: 12px;
+  font-weight: 700;
 }
 .status {
   display: flex;

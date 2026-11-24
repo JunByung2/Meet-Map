@@ -85,7 +85,7 @@ const NAV: NavItem[] = [
   { label: "그룹 홈", icon: ICONS.home, key: "home" },
   { label: "채팅", icon: ICONS.chat, key: "chat", path: "chat" },
   { label: "약속", icon: ICONS.calendar, key: "meetings", path: "meetings" },
-  { label: "지도", icon: ICONS.map, key: "map", path: "map?view=transit" },
+  { label: "지도", icon: ICONS.map, key: "map", path: "map?view=meetings" },
   // 지난 기록 · 추억지도 · 사진은 "추억" 한 화면에 모아 두고, 자세히 볼 때만 각 화면으로 간다
   { label: "추억", icon: ICONS.photo, key: "memories", path: "memories" },
   {
@@ -146,7 +146,9 @@ export default function Sidebar({
   const hasGroup = group !== undefined;
   useEffect(() => {
     if (!pathId) return;
-    return watchApi<GroupDetail>(`/groups/${pathId}`, (g) => {
+    return watchApi<GroupDetail>(
+      `/groups/${pathId}`,
+      (g) => {
         const mode = readNameMode();
         setPeopleState({
           groupId: g.id,
@@ -170,11 +172,14 @@ export default function Sidebar({
             memberNicknames: g.members?.map((m) => pickName(m, mode)),
           });
         }
-      }, (error) => {
+      },
+      (error) => {
         if (error instanceof ApiError && [0, 401, 403].includes(error.status)) {
-          setFetched(null); setPeopleState(null);
+          setFetched(null);
+          setPeopleState(null);
         }
-      });
+      },
+    );
   }, [hasGroup, pathId]);
 
   // 마지막으로 연 그룹 읽기

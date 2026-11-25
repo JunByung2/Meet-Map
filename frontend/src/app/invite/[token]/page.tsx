@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { api, ApiError } from '@/lib/api'
 
@@ -48,7 +49,7 @@ export default function InvitePage() {
     <div className="center-wrap">
       <div className="center-card">
         <div className="center-brand">
-          <div className="brand">
+          <Link href="/" className="brand" aria-label="모여락 소개 화면으로">
             <span className="brand-logo">
               <svg
                 width="24"
@@ -65,7 +66,7 @@ export default function InvitePage() {
               </svg>
             </span>
             모여락
-          </div>
+          </Link>
         </div>
 
         <div className="card">

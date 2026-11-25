@@ -42,7 +42,7 @@ export default function LoginPage() {
     <div className="center-wrap">
       <div className="center-card">
         <div className="center-brand">
-          <div className="brand">
+          <Link href="/" className="brand" aria-label="모여락 소개 화면으로">
             <span className="brand-logo">
               <svg
                 width="24"
@@ -59,7 +59,7 @@ export default function LoginPage() {
               </svg>
             </span>
             모여락
-          </div>
+          </Link>
         </div>
 
         <div className="card">

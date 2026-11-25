@@ -1281,3 +1281,21 @@ h3,
     overflow: hidden;
   }
 }
+
+.center-brand .brand {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 400;
+  text-decoration: none;
+}
+.center-card .field label,
+.center-card .btn {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+.center-card .field label,
+.center-card .btn,
+.center-brand .brand {
+  font-synthesis: none;
+}

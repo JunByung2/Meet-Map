@@ -416,6 +416,7 @@
   background: #4a322c;
   color: #fffaf2;
 }
+<<<<<<< Updated upstream
 .stationName {
   color: #4a322c;
   font-weight: 900;
@@ -433,6 +434,13 @@
 .stats strong {
   color: #4a322c;
 }
+=======
+.stationName { color: #4a322c; font-weight: 900; }
+.stationAddr { color: #725e55; }
+.stats > div { background: #f3e9da; border-radius: 6px; }
+.stats span { color: #6c554d; }
+.stats strong { color: #4a322c; }
+>>>>>>> Stashed changes
 .mapBtn {
   border: 1.5px solid #4a322c;
   border-radius: 6px;
@@ -440,6 +448,7 @@
   color: #4a322c;
   font-weight: 800;
 }
+<<<<<<< Updated upstream
 .mapBtn:hover {
   background: #f3e9da;
 }
@@ -451,6 +460,11 @@
 .wrap {
   border-top: 1px dashed #cbb8a4;
 }
+=======
+.mapBtn:hover { background: #f3e9da; }
+.mapBtn[aria-pressed='true'] { background: #4a322c; border-color: #4a322c; color: #fffaf2; }
+.wrap { border-top: 1px dashed #cbb8a4; }
+>>>>>>> Stashed changes
 .toggle {
   border: 1.5px solid #4a322c;
   border-radius: 6px;
@@ -458,10 +472,14 @@
   color: #4a322c;
   font-size: 13px;
 }
+<<<<<<< Updated upstream
 .toggle[aria-expanded="true"] {
   background: #4a322c;
   color: #fffaf2;
 }
+=======
+.toggle[aria-expanded='true'] { background: #4a322c; color: #fffaf2; }
+>>>>>>> Stashed changes
 .tab {
   border-color: #d8c5b2;
   border-radius: 6px;
@@ -469,6 +487,7 @@
   color: #4a322c;
   font-size: 13px;
 }
+<<<<<<< Updated upstream
 .tab[aria-selected="true"] {
   background: #4f907a;
   color: #fff;
@@ -522,10 +541,23 @@
 .more:hover {
   background: #f3e9da;
 }
+=======
+.tab[aria-selected='true'] { background: #4f907a; color: #fff; border-color: #4f907a; }
+.filter { border-color: #d8c5b2; background: #fffaf2; color: #4a322c; font-size: 12px; }
+.filter[aria-pressed='true'] { background: #e3eee7; border-color: #4f907a; color: #386d5c; }
+.item { border: 1px solid #dfcbb9; background: #fffaf2; border-radius: 7px; }
+.itemSelected { border: 2px solid #4f907a; background: #f0f6f0; padding: 11px; }
+.name { color: #4a322c; }
+.pick { border: 1.5px solid #4f907a; border-radius: 6px; background: #fffaf2; color: #356c5c; font-size: 13px; }
+.pick[aria-pressed='true'] { background: #4f907a; border-color: #4f907a; color: white; }
+.sub, .more { border: 1px solid #d8c5b2; border-radius: 6px; background: #fffaf2; color: #4a322c; font-size: 12px; }
+.sub:hover, .more:hover { background: #f3e9da; }
+>>>>>>> Stashed changes
 .tray {
   border: 2px solid #4a322c;
   border-radius: 8px;
   background: #fffaf2;
+<<<<<<< Updated upstream
   box-shadow: 0 10px 24px rgba(74, 50, 44, 0.16);
 }
 .trayTitle {
@@ -546,3 +578,12 @@
 .send:disabled {
   background: #c8bcb0;
 }
+=======
+  box-shadow: 0 10px 24px rgba(74,50,44,.16);
+}
+.trayTitle { color: #4a322c; }
+.chipTag { background: #f3e9da; color: #4a322c; }
+.send { border-radius: 6px; background: #4a322c; color: #fffaf2; }
+.send:hover:not(:disabled) { background: #624139; }
+.send:disabled { background: #c8bcb0; }
+>>>>>>> Stashed changes

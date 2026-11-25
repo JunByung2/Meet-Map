@@ -26,6 +26,7 @@
 .heroEyebrow {
   color: #4a322c;
 }
+
 .heroTitle {
   margin: 1px 0 4px;
   color: #4a322c;
@@ -33,6 +34,7 @@
   line-height: 1.2;
   font-weight: 900;
 }
+
 .heroSub {
   margin: 0;
   color: #6e6a64;

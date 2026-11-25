@@ -372,9 +372,13 @@ function DepartureEditor({
             <div className={layout.sectionHead}>
               <p className={layout.sectionKicker}>DEPARTURE</p>
               <h3>출발지를 알려 주세요</h3>
+<<<<<<< Updated upstream
               <p className={layout.sectionSubtitle}>
                 출발할 역이나 장소를 검색해 주세요.
               </p>
+=======
+              <p className={layout.sectionSubtitle}>출발할 역이나 장소를 검색해 주세요.</p>
+>>>>>>> Stashed changes
             </div>
             <label className={layout.targetLabel}>
               누구의 출발지인가요?
@@ -572,9 +576,13 @@ function DepartureEditor({
               ref={mapSectionRef}
               className={`${styles.mapSection} ${layout.mapPanel}`}
             >
+<<<<<<< Updated upstream
               <div
                 className={`${styles.mapHeader} ${layout.mapHeading} ${layout.sectionHead}`}
               >
+=======
+              <div className={`${styles.mapHeader} ${layout.mapHeading} ${layout.sectionHead}`}>
+>>>>>>> Stashed changes
                 <div>
                   <p className={layout.sectionKicker}>START POINTS MAP</p>
                   <h3>멤버 출발지 지도</h3>

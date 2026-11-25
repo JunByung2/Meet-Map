@@ -57,9 +57,13 @@ export default function AvailabilityMini({
     return { key: ymd(d), date: d, inMonth: d.getMonth() === monthIdx };
   });
   const rangeStart = ymd(new Date(year, monthIdx, 1 - startOffset));
+<<<<<<< Updated upstream
   const rangeEnd = ymd(
     new Date(year, monthIdx, 1 - startOffset + weeks * 7 - 1),
   );
+=======
+  const rangeEnd = ymd(new Date(year, monthIdx, 1 - startOffset + weeks * 7 - 1));
+>>>>>>> Stashed changes
 
   // 보이는 기간의 '되는 날' 표시를 불러온다 (달을 빨리 넘기면 이전 응답은 버린다)
   useEffect(() => {
@@ -105,9 +109,13 @@ export default function AvailabilityMini({
             ‹
           </button>
           <span className={css.monthLabel}>
+<<<<<<< Updated upstream
             {boardStyle
               ? `${year}년 ${monthIdx + 1}월`
               : `${year}.${pad(monthIdx + 1)}`}
+=======
+            {boardStyle ? `${year}년 ${monthIdx + 1}월` : `${year}.${pad(monthIdx + 1)}`}
+>>>>>>> Stashed changes
           </span>
           <button type="button" onClick={() => shift(1)} aria-label="다음 달">
             ›
@@ -136,11 +144,15 @@ export default function AvailabilityMini({
         <span
           className={css.grid}
           aria-hidden
+<<<<<<< Updated upstream
           style={
             boardStyle
               ? { gridTemplateRows: `36px repeat(${weeks}, minmax(0, 1fr))` }
               : undefined
           }
+=======
+          style={boardStyle ? { gridTemplateRows: `36px repeat(${weeks}, minmax(0, 1fr))` } : undefined}
+>>>>>>> Stashed changes
         >
           {DOW.map((d) => (
             <span key={d} className={css.dow}>

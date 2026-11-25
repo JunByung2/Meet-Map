@@ -171,10 +171,12 @@
   justify-content: space-between;
   align-items: center;
 }
+
 .boardBox .nav {
   gap: 10px;
   color: #4a322c;
 }
+
 .boardBox .nav button {
   width: 40px;
   height: 40px;

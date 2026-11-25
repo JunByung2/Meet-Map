@@ -2,7 +2,18 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "@/lib/api";
+import { attachRefsOf } from "@/components/chat/AttachMessage";
 import styles from "./groupChatPreview.module.css";
+
+/** 미리보기용 문장: 사진/파일 메시지는 `attach:번호` 대신 "사진 N장을 보냈습니다."로 보여 준다 */
+function previewText(raw: string | null): string {
+  const text = raw?.trim() ?? "";
+  if (!text) return "첨부 메시지";
+  const ids = attachRefsOf(text);
+  if (ids.length === 0) return text;
+  if (text.startsWith("📎")) return "파일을 보냈습니다.";
+  return `사진 ${ids.length}장을 보냈습니다.`;
+}
 
 type PreviewMessage = {
   id: number;
@@ -98,7 +109,7 @@ export default function GroupChatPreview({ groupId }: { groupId: number }) {
                       })}
                     </time>
                   </div>
-                  <p>{message.text?.trim() || "첨부 메시지"}</p>
+                  <p>{previewText(message.text)}</p>
                 </div>
               </div>
             );

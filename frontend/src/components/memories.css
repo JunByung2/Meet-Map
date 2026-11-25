@@ -1033,3 +1033,31 @@
     margin: 14px auto 4px;
   }
 }
+
+/* ===== 모바일(650px 이하): 지난 기록 / 사진 / 추억지도를 탭으로 나눠 한 번에 한 카드만 보여 준다 ===== */
+.mh-tabs {
+  display: none;
+}
+@media (max-width: 650px) {
+  .mh-tabs {
+    display: flex;
+    margin: 0 0 12px;
+  }
+  .mh-tabs button.on {
+    background: var(--brown);
+    color: var(--cream);
+    box-shadow: none;
+  }
+  .mh-grid[data-tab="records"] .mh-photos,
+  .mh-grid[data-tab="records"] .mh-map,
+  .mh-grid[data-tab="photos"] .mh-records,
+  .mh-grid[data-tab="photos"] .mh-map,
+  .mh-grid[data-tab="map"] .mh-records,
+  .mh-grid[data-tab="map"] .mh-photos {
+    display: none;
+  }
+  /* 지난 기록 카드: 아래 기록 카드 목록은 모바일에서 뺀다 (위쪽 "모두 보기"로 이동) */
+  .mh-grid .mh-records .mh-recs {
+    display: none;
+  }
+}

@@ -1,10 +1,11 @@
-.wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; margin: 10px 0; max-height: 45vh; overflow-y: auto; }
-.bubble { width: min(320px, 100%); padding: 8px; border-radius: 10px; background: var(--mint, #e8f6f3); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
+/* 올리는 중인 사진은 대화 맨 아래에 이어 붙는다 (보낸 사진과 같은 모양) */
+.wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; margin: 0; padding-right: 2px; }
+.bubble { width: auto; max-width: 100%; padding: 0; border-radius: 0; background: none; box-shadow: none; }
 .grid { display: grid; gap: 4px; }
 .c1 { grid-template-columns: 1fr; }
 .c2 { grid-template-columns: repeat(2, 1fr); }
 .c3 { grid-template-columns: repeat(3, 1fr); }
-.cell { position: relative; padding: 0; border: 0; border-radius: 10px; overflow: hidden; aspect-ratio: 1; background: #ddd; cursor: default; }
+.cell { position: relative; padding: 0; border: 0; border-radius: 0; overflow: hidden; aspect-ratio: 1; background: var(--peach, #ddd); cursor: default; }
 .c1 .cell { aspect-ratio: 4 / 3; }
 .cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .over { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: rgba(0, 0, 0, 0.38); color: #fff; font-weight: 700; }
@@ -26,13 +27,17 @@
 @keyframes outspin { to { transform: rotate(360deg); } }
 .more { margin: 6px 0 0; font-size: 12px; text-align: right; opacity: 0.7; }
 .c4 { grid-template-columns: repeat(4, 1fr); }
-.bubble:has(.c4) { width: min(340px, 100%); }
-.mosaic { display: flex; flex-direction: column; gap: 4px; max-width: 100%; }
-.mrow { display: flex; gap: 4px; }
+.mosaic { display: flex; flex-direction: column; gap: 3px; max-width: 100%; border-radius: 10px; overflow: hidden; }
+.mrow { display: flex; gap: 3px; }
 .mrow > * { flex: 1 1 0; min-width: 0; }
-.bubble:has(.mosaic) { width: auto; max-width: 100%; }
 
-/* 모바일: 대화창이 늘어났다 줄어드는 칸 안에서 업로드 중인 사진이 납작하게 눌려 안 보이던 문제 */
+/* 실패했을 때 안내 칸: 채팅 말풍선처럼 */
+.foot { padding: 8px 10px; border: 1px solid var(--brown, #46302b); border-radius: 10px; background: var(--paper, #fffaf2); }
+
+/* 모바일: 한 장을 올릴 때는 화면을 꽉 채우지 않게 조금 작게 */
 @media (max-width: 650px) {
-  .wrap { flex: none; max-height: 38vh; }
+  .wrap .mosaic:has(.mrow:only-child > .cell:only-child) { width: 168px !important; }
+  .wrap .loading { gap: 4px; }
+  .wrap .spin { width: 22px; height: 22px; border-width: 2px; }
+  .wrap .loading strong { font-size: 14px; }
 }

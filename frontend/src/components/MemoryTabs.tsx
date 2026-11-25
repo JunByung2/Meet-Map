@@ -34,7 +34,7 @@ export default function MemoryTabs({
       <div className="mt-head">
         <div>
           <p className="eyebrow">함께 남긴 순간</p>
-          <h1 className="page-title">{TITLES[current]}</h1>
+          <h1 className="page-title page-title-sm">{TITLES[current]}</h1>
           {sub && <p className="page-sub">{sub}</p>}
         </div>
         {action}

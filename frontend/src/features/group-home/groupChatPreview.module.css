@@ -87,3 +87,10 @@
   cursor: pointer;
 }
 .composer button:disabled { cursor: default; opacity: .6; }
+
+/* 모바일(650px 이하): 미리보기 메시지는 최근 2개만 (3개일 때 가장 오래된 것만 숨김) */
+@media (max-width: 650px) {
+  .messages > .message:first-child:nth-last-child(3) {
+    display: none;
+  }
+}

@@ -182,8 +182,29 @@ export default function AppShell({
             )}
             <span>{nickname || '나'}</span>
           </Link>
-          <button className="btn secondary sm" onClick={logout}>
-            로그아웃
+          <button
+            className="btn secondary sm header-logout"
+            onClick={logout}
+            aria-label="로그아웃"
+          >
+            <span className="header-logout-text">로그아웃</span>
+            {/* 좁은 화면에서는 글자 대신 이 아이콘만 보인다 */}
+            <svg
+              className="header-logout-icon"
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <path d="M16 17l5-5-5-5" />
+              <path d="M21 12H9" />
+            </svg>
           </button>
         </div>
       </header>

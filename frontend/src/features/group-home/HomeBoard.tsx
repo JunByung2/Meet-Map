@@ -222,6 +222,7 @@ export default function HomeBoard({
           meetings={meetings ?? []}
           selectionOnly
           dashboard
+          compactMobile
         />
       </Panel>
 

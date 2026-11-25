@@ -293,6 +293,8 @@
     row-gap: 8px;
   }
   .cell {
+    /* 위 560px 규칙의 정사각형(aspect-ratio)이 남으면 칸 폭이 112px 로 늘어나 달력이 화면 밖으로 밀린다 */
+    aspect-ratio: auto;
     min-height: 112px;
     padding: 4px 0;
     gap: 4px;
@@ -456,5 +458,23 @@
     border: 2px solid var(--brown);
     border-radius: 6px;
     box-shadow: 0 6px 22px rgb(0 0 0 / 18%);
+  }
+}
+
+/* 그룹 홈 달력(compactMobile): 모바일에서 칸 높이를 112px → 64px 로, 모든 칸을 같은 높이로 */
+@media (max-width: 650px) {
+  .compactMobile .grid {
+    row-gap: 2px;
+  }
+  .compactMobile .cell {
+    min-height: 64px;
+    padding: 2px 0;
+    gap: 2px;
+  }
+  .compactMobile .chip {
+    -webkit-line-clamp: 1;
+    max-height: 16px;
+    font-size: 10px;
+    line-height: 1.5;
   }
 }

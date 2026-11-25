@@ -407,3 +407,42 @@
     aspect-ratio: auto;
   }
 }
+
+/* ===== 모바일(650px 이하)만: 스크롤 줄이기 ===== */
+@media (max-width: 650px) {
+  /* ① 모바일 순서: 약속 달력 → 다음 약속 → 빠른 실행 → 최근 추억 → 그룹 채팅 (원래 배치 그대로) */
+  /* ③ 빠른 실행: 2x2 → 한 줄 4개 */
+  .quickGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .quickGrid a {
+    flex-direction: column;
+    min-height: 58px;
+    padding: 6px 2px;
+    gap: 3px;
+    font-size: 11px;
+    text-align: center;
+  }
+  .quickGrid a:nth-child(odd),
+  .quickGrid a:nth-child(-n + 2) {
+    border-right: 0;
+    border-bottom: 0;
+  }
+  .quickGrid a:not(:last-child) {
+    border-right: 1px solid var(--brown);
+  }
+  /* ④ 최근 추억: 2x2 큰 사진 → 옆으로 밀어보는 한 줄 */
+  .photoGrid {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+  .photoGrid a {
+    flex: 0 0 42%;
+    scroll-snap-align: start;
+  }
+  .photoGrid figure {
+    aspect-ratio: 1.1;
+  }
+}

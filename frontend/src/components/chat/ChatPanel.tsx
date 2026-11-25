@@ -490,17 +490,17 @@ export default function ChatPanel({
             onToggleSelect={toggleSelect}
             selectedPhotos={selectedPhotos}
             onTogglePhoto={togglePhoto}
+            tail={
+              <OutgoingPhotos
+                groups={outgoing.groups}
+                onRetry={outgoing.retry}
+                onDiscard={outgoing.discard}
+                onSendDone={outgoing.sendDoneOnly}
+              />
+            }
+            tailKey={outgoing.groups.length}
           />
           )}
-
-          <div className={styles.outgoingArea}>
-          <OutgoingPhotos
-            groups={outgoing.groups}
-            onRetry={outgoing.retry}
-            onDiscard={outgoing.discard}
-            onSendDone={outgoing.sendDoneOnly}
-          />
-          </div>
 
           {selectMode ? (
             <section className={`${sel.dock} ${styles.selectionDock}`} aria-label="선택한 메시지 삭제">

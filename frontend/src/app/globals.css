@@ -770,6 +770,16 @@ body {
 .page-title {
   font-size: 36px;
 }
+/* 사진 · 사진 올리기 같은 안쪽 페이지 제목: 큰 제목 때문에 스크롤이 늘지 않도록 한 단계 작게 (PC 28px / 모바일 25px) */
+.page-title.page-title-sm {
+  font-size: 28px;
+  line-height: 1.25;
+}
+@media (max-width: 650px) {
+  .page-title.page-title-sm {
+    font-size: 25px;
+  }
+}
 .eyebrow {
   color: var(--teal-dark);
   font-size: 12px;

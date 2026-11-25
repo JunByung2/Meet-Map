@@ -33,9 +33,18 @@ function useNearScreen<T extends HTMLElement>() {
   return [ref, near] as const;
 }
 
+type MemoryTab = "records" | "photos" | "map";
+
+const TAB_LABELS: { key: MemoryTab; label: string }[] = [
+  { key: "records", label: "지난 기록" },
+  { key: "photos", label: "사진" },
+  { key: "map", label: "추억지도" },
+];
+
 /**
  * 추억 화면: 탭으로 갈아타지 않고 지난 기록(달력) · 추억지도 · 사진을 한 페이지에 정리해 보여 준다.
- * PC 는 두 칸(왼쪽 지난 기록, 오른쪽 지도+사진), 모바일은 한 칸으로 쌓는다.
+ * PC 는 두 칸(왼쪽 지난 기록, 오른쪽 지도+사진), 태블릿은 한 칸으로 쌓고,
+ * 모바일(650px 이하)은 탭으로 한 번에 한 카드만 보여 준다.
  */
 export default function MemoryHome({ groupId, onApiError }: { groupId: string; onApiError: (e: unknown) => string }) {
   const router = useRouter();
@@ -44,6 +53,8 @@ export default function MemoryHome({ groupId, onApiError }: { groupId: string; o
   const [covers, setCovers] = useState<DayCover[]>([]);
   const [error, setError] = useState("");
   const [mapRef, mapNear] = useNearScreen<HTMLDivElement>();
+  // 모바일(650px 이하)에서만 쓰는 탭. PC·태블릿은 CSS 로 탭 줄을 숨기고 세 카드를 모두 보여 준다.
+  const [tab, setTab] = useState<MemoryTab>("records");
 
   useEffect(() => {
     let cancelled = false;
@@ -76,7 +87,22 @@ export default function MemoryHome({ groupId, onApiError }: { groupId: string; o
   const recent = (records ?? []).slice(0, 3);
 
   return (
-    <div className="mh-grid">
+    <>
+    <div className="mt-tabs mh-tabs" role="tablist" aria-label="추억 보기">
+      {TAB_LABELS.map((t) => (
+        <button
+          key={t.key}
+          type="button"
+          role="tab"
+          aria-selected={tab === t.key}
+          className={tab === t.key ? "on" : undefined}
+          onClick={() => setTab(t.key)}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+    <div className="mh-grid" data-tab={tab}>
       <section className="card mh-records">
         <div className="mh-title">
           <h2>지난 기록</h2>
@@ -157,5 +183,6 @@ export default function MemoryHome({ groupId, onApiError }: { groupId: string; o
       </section>
       </div>
     </div>
+    </>
   );
 }

@@ -1,7 +1,8 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Noto_Sans_KR, Do_Hyeon } from 'next/font/google'
 import './globals.css'
 import ScrollTopOnRoute from '@/components/ScrollTopOnRoute'
+import RegisterServiceWorker from '@/components/RegisterServiceWorker'
 
 const notoSansKr = Noto_Sans_KR({
   subsets: ['latin'],
@@ -21,6 +22,16 @@ const doHyeon = Do_Hyeon({
 export const metadata: Metadata = {
   title: '모여락',
   description: '친구들과 함께하는 약속과 기록',
+  applicationName: '모여락',
+  // 아이폰 홈 화면에 추가했을 때의 아이콘과 앱 모양
+  icons: { apple: '/apple-touch-icon.png' },
+  appleWebApp: { capable: true, title: '모여락', statusBarStyle: 'black-translucent' },
+}
+
+// 폰 상단 바 색 (앱처럼 보이게)
+export const viewport: Viewport = {
+  themeColor: '#46302b',
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({
@@ -31,6 +42,7 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`${notoSansKr.variable} ${doHyeon.variable}`}>
       <body>
+        <RegisterServiceWorker />
         <ScrollTopOnRoute />
         {children}
       </body>

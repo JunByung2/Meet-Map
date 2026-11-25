@@ -102,7 +102,7 @@ function Detail({
 
   return (
     <>
-      <p style={{ marginBottom: 16 }}>
+      <p className="rc-back" style={{ marginBottom: 16 }}>
         <Link href={back} className="link-arrow">
           {fromAll ? "← 전체 추억으로" : "← 지난 기록으로"}
         </Link>
@@ -138,7 +138,7 @@ function Detail({
         </div>
       )}
 
-      <div className="stack">
+      <div className="stack rc-detail">
         {editing && (
           <section className="card">
             <div className="field">

@@ -294,11 +294,14 @@ function Detail({
   return (
     <>
       <p style={{ marginBottom: 16 }}>
-        <Link href={back} className="link-arrow">
+        <Link href={back} className="link-arrow ph-back-pc">
           {fromAll ? "← 전체 추억으로 돌아가기" : "← 그룹 사진으로 돌아가기"}
         </Link>
+        <Link href={fromAll ? "/memories" : `/groups/${groupId}/memories`} className="link-arrow ph-back-m">
+          ← 추억으로 돌아가기
+        </Link>
       </p>
-      <div className="page-head">
+      <div className="page-head ph-head">
         <div>
           <p className="eyebrow">
             {batch.length > 1

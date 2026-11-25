@@ -219,3 +219,16 @@
 .ph-loc p.info { background: #f1f4f3; color: var(--muted); }
 .ph-gpsmark { position: absolute; right: 8px; bottom: 8px; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.92); color: var(--teal); }
 .ph-gpsmark.none { color: var(--muted); }
+
+/* 사진 상세 · 모바일: 돌아가기 문구를 '추억으로'로 바꾸고, 제목/설명이 한 줄로 가지런히 (PC는 그대로) */
+.ph-back-m { display: none; }
+@media (max-width: 650px) {
+  .ph-back-pc { display: none; }
+  .ph-back-m { display: inline; }
+  .ph-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; margin-bottom: 18px; }
+  .ph-head > div:first-child { display: contents; }
+  .ph-head .eyebrow { grid-column: 1; grid-row: 1; margin-bottom: 2px; }
+  .ph-head .page-title { grid-column: 1; grid-row: 2; font-size: 22px; line-height: 1.3; overflow-wrap: anywhere; }
+  .ph-head > :not(:first-child) { grid-column: 2; grid-row: 1 / 3; align-self: start; }
+  .ph-head .page-sub { grid-column: 1 / -1; grid-row: 3; margin-top: 8px; font-size: 13px; line-height: 1.5; }
+}

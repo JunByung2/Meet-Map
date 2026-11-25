@@ -800,7 +800,7 @@
   border-radius: 4px;
 }
 
-/* 왼쪽 그룹 목록 + 오른쪽 사진 (날짜 머리글이 사진 격자 안에 같이 흐른다) */
+/* 왼쪽 그룹 목록 + 오른쪽(사진 / 추억지도 탭) */
 .am-count {
   padding: 5px 11px;
   border-radius: 999px;
@@ -848,6 +848,21 @@
 .am-side button.on b {
   background: rgba(255, 255, 255, 0.25);
 }
+.am-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.mt-tabs button.on:hover,
+.mt-tabs a.on:hover {
+  color: var(--cream);
+}
+.am-viewtabs {
+  flex: none;
+  max-width: 300px;
+  margin-bottom: 12px;
+}
 .am-grid {
   grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
   gap: 8px;
@@ -858,6 +873,86 @@
 }
 .am-grid .am-day:first-child {
   margin-top: 0;
+}
+
+/* 지도를 감싸는 칸(.km-wrap)에는 높이가 없어서, 꽉 채우도록 직접 맞춰 준다 */
+.am-mapbox .km-wrap {
+  position: absolute;
+  inset: 0;
+}
+.am-mapbox .km-map {
+  height: 100% !important;
+}
+.am-mapview {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.am-mapbox {
+  position: relative;
+  flex: 1;
+  height: 420px;
+  min-height: 320px;
+  border: 2px solid var(--brown);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #ecdcc6;
+}
+.am-mapempty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 300px;
+  text-align: center;
+  color: var(--brown);
+}
+.am-mapempty span {
+  font-size: 13px;
+  opacity: 0.75;
+}
+.am-picked {
+  flex: none;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1.5px dashed var(--brown);
+}
+.am-picked-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  color: var(--brown);
+  font-size: 14px;
+}
+.am-picked-head strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.am-picked-head button {
+  flex: none;
+  padding: 4px 10px;
+  border: 1.5px solid var(--brown);
+  border-radius: 5px;
+  background: var(--paper);
+  color: var(--brown);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.am-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 6px;
+}
+.am-strip .am-tile.tinted {
+  border-width: 3px;
 }
 
 @media (max-width: 760px) {
@@ -876,6 +971,12 @@
   }
   .am-side button span {
     overflow: visible;
+  }
+  .am-viewtabs {
+    max-width: none;
+  }
+  .am-mapbox {
+    height: 320px;
   }
   .am-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -916,7 +1017,12 @@
     overflow-y: auto;
     scrollbar-width: thin;
   }
+  .am-mapbox {
+    height: auto;
+    min-height: 300px;
+  }
   .am-scroll {
+    flex: 1;
     min-height: 0;
     overflow-y: auto;
     padding-right: 6px;

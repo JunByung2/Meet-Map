@@ -9,7 +9,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(33, 60, 64, 0.45);
+  background: rgba(70, 48, 43, 0.45);
 }
 
 .modal {
@@ -20,7 +20,7 @@
   padding: 24px;
   border-radius: 10px;
   background: var(--white);
-  box-shadow: 0 22px 60px rgba(33, 60, 64, 0.28);
+  box-shadow: 0 22px 60px rgba(70, 48, 43, 0.28);
 }
 
 .head {
@@ -78,13 +78,13 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--mist);
-  color: var(--teal);
+  color: var(--brown);
   cursor: pointer;
 }
 
 .calBtn.on {
-  background: var(--mint);
-  border-color: var(--teal);
+  background: #ecdcc6;
+  border-color: var(--brown);
 }
 
 .hiddenDate {
@@ -99,7 +99,7 @@
 .when {
   margin: 5px 2px 0;
   font-size: 11px;
-  color: var(--teal);
+  color: var(--brown);
 }
 
 .found {
@@ -128,7 +128,7 @@
 }
 
 .found button:hover {
-  background: var(--mint);
+  background: #ecdcc6;
 }
 
 .found span {
@@ -143,7 +143,7 @@
   border: 1.5px dashed var(--line);
   border-radius: 8px;
   background: none;
-  color: var(--teal);
+  color: var(--brown);
   font-family: inherit;
   font-weight: 700;
   cursor: pointer;
@@ -181,7 +181,7 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--white);
-  box-shadow: 0 6px 18px rgba(33, 60, 64, 0.07);
+  box-shadow: 0 6px 18px rgba(70, 48, 43, 0.07);
   color: var(--ink);
   text-align: left;
   white-space: normal;
@@ -216,8 +216,8 @@
   align-self: flex-start;
   padding: 4px 11px;
   border-radius: 100px;
-  background: var(--mint);
-  color: var(--teal);
+  background: #ecdcc6;
+  color: var(--brown);
   font-size: 11px;
   font-weight: 700;
 }
@@ -263,8 +263,8 @@
   padding: 10px;
   border: 0;
   border-radius: 100px;
-  background: var(--teal);
-  color: #fff;
+  background: var(--brown);
+  color: var(--cream);
   font-family: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -272,17 +272,17 @@
 }
 
 .cta:hover {
-  background: var(--teal-dark);
+  background: #33231f;
 }
 
 .ctaGhost {
   background: var(--white);
-  border: 1.5px solid var(--teal);
-  color: var(--teal);
+  border: 1.5px solid var(--brown);
+  color: var(--brown);
 }
 
 .ctaGhost:hover {
-  background: var(--mint);
+  background: #ecdcc6;
 }
 
 .winBox {
@@ -292,21 +292,21 @@
   gap: 6px;
   padding: 16px 12px;
   border-radius: 10px;
-  background: var(--mint);
+  background: #ecdcc6;
   text-align: center;
 }
 
 .rank {
   padding: 3px 12px;
   border-radius: 100px;
-  background: var(--teal);
-  color: #fff;
+  background: var(--brown);
+  color: var(--cream);
   font-size: 11px;
   font-weight: 700;
 }
 
 .winnerName {
-  color: var(--teal-dark);
+  color: #33231f;
   font-size: 16px;
 }
 
@@ -353,16 +353,18 @@
   border-radius: 10px;
   background: var(--white);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .opt:hover {
-  border-color: var(--teal);
+  border-color: var(--brown);
 }
 
 .optSel {
-  border-color: var(--teal);
-  background: var(--mint);
+  border-color: var(--brown);
+  background: #ecdcc6;
 }
 
 .opt input {
@@ -381,8 +383,8 @@
 }
 
 .optSel .dot {
-  border-color: var(--teal);
-  background: radial-gradient(circle, var(--teal) 0 45%, var(--white) 50%);
+  border-color: var(--brown);
+  background: radial-gradient(circle, var(--brown) 0 45%, var(--white) 50%);
 }
 
 .optText {
@@ -414,13 +416,13 @@
 }
 
 .resWin {
-  border-color: var(--teal);
+  border-color: var(--brown);
 }
 
 .resFill {
   position: absolute;
   inset: 0 auto 0 0;
-  background: var(--mint);
+  background: #ecdcc6;
 }
 
 .resBody {
@@ -433,7 +435,7 @@
 
 .resCount {
   flex: none;
-  color: var(--teal);
+  color: var(--brown);
   font-size: 14px;
   font-weight: 700;
 }
@@ -442,8 +444,8 @@
   margin-left: 0;
   padding: 2px 8px;
   border-radius: 100px;
-  background: var(--teal);
-  color: #fff;
+  background: var(--brown);
+  color: var(--cream);
   font-size: 10px;
   font-weight: 700;
   vertical-align: middle;
@@ -468,12 +470,12 @@
 
 .primary {
   width: 100%;
-  background: var(--teal);
-  color: #fff;
+  background: var(--brown);
+  color: var(--cream);
 }
 
 .primary:hover:not(:disabled) {
-  background: var(--teal-dark);
+  background: #33231f;
 }
 
 .primary:disabled {
@@ -489,8 +491,8 @@
 }
 
 .secondary:hover:not(:disabled) {
-  border-color: var(--teal);
-  color: var(--teal);
+  border-color: var(--brown);
+  color: var(--brown);
 }
 
 .people {
@@ -506,7 +508,7 @@
   padding: 24px 22px 20px;
   border-radius: 10px;
   background: var(--white);
-  box-shadow: 0 22px 60px rgba(33, 60, 64, 0.3);
+  box-shadow: 0 22px 60px rgba(70, 48, 43, 0.3);
 }
 
 .popupTitle {
@@ -527,14 +529,47 @@
 }
 
 /* ---------- 날짜·시간 고르기 ---------- */
-.dtBack { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(20, 35, 38, 0.45); }
-.dtBox { width: 100%; max-width: 340px; padding: 20px; border-radius: 10px; background: var(--white); box-shadow: 0 14px 44px rgba(0, 0, 0, 0.22); }
-.dtTitle { margin: 0 0 4px; font-size: 16px; }
-.dtLabel { margin: 14px 0 6px; font-size: 12px; font-weight: 700; color: var(--muted); }
-.dtTime { display: flex; align-items: center; gap: 8px; }
-.dtTime input { width: 72px; text-align: center; }
-.dtTime span { font-size: 13px; color: var(--muted); }
-
+.dtBack {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(51, 35, 31, 0.45);
+}
+.dtBox {
+  width: 100%;
+  max-width: 340px;
+  padding: 20px;
+  border-radius: 10px;
+  background: var(--white);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.22);
+}
+.dtTitle {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+.dtLabel {
+  margin: 14px 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.dtTime {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dtTime input {
+  width: 72px;
+  text-align: center;
+}
+.dtTime span {
+  font-size: 13px;
+  color: var(--muted);
+}
 
 .resSide {
   flex: none;
@@ -559,8 +594,8 @@
 .voter {
   padding: 4px 10px;
   border-radius: 100px;
-  background: var(--mint);
-  color: var(--teal-dark);
+  background: #ecdcc6;
+  color: #33231f;
   font-size: 12px;
   font-weight: 600;
 }

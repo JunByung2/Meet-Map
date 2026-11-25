@@ -125,7 +125,9 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gap: 20, maxWidth: 560 }}>
+      <div
+        style={{ display: "grid", gap: 20, maxWidth: 560, margin: "0 auto" }}
+      >
         <ProfilePhotoCard
           userId={me.id}
           nickname={me.nickname}

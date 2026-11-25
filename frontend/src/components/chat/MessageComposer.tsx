@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ClipboardEvent } from 'react'
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import styles from './chat.module.css'
 import tray from './bundle.module.css'
 import { hasAllowedExtension } from '@/lib/photos'
@@ -47,6 +49,9 @@ export default function MessageComposer({
   /** false disables the chip (no messages) */
   canSelect?: boolean
 }) {
+  // /groups/[id]/chat 경로에서 그룹 ID를 받아서 약속 페이지로 이동해요.
+  // 부모 ChatPanel의 기존 props는 변경하지 않아도 됩니다.
+  const { id: groupId } = useParams<{ id: string }>()
   const [text, setText] = useState('')
   const [toolsOpen, setToolsOpen] = useState(false)
   const toolsId = useId()
@@ -344,12 +349,21 @@ export default function MessageComposer({
       )}
 
       <div className={styles.composerBottom}>
-        <button type="button" className={styles.toolsToggle}
+        {/* 기존 첨부·투표·MeetMode·선택 삭제 메뉴 */}
+        <button
+          type="button"
+          className={styles.toolsToggle}
           aria-label={toolsOpen ? '채팅 도구 닫기' : '채팅 도구 열기'}
-          aria-expanded={toolsOpen} aria-controls={toolsId}
-          onClick={() => { setToolsOpen((v) => !v); setAttachOpen(false) }}>
+          aria-expanded={toolsOpen}
+          aria-controls={toolsId}
+          onClick={() => {
+            setToolsOpen((v) => !v)
+            setAttachOpen(false)
+          }}
+        >
           {toolsOpen ? '×' : '+'}
         </button>
+
         <input
           className="input ime-ko"
           lang="ko"
@@ -358,25 +372,95 @@ export default function MessageComposer({
           placeholder={
             pending.length > 0
               ? '사진과 함께 보낼 메시지 (없어도 돼요)'
-              : '친구들에게 메시지 보내기'
+              : '메시지를 입력하세요'
           }
           autoComplete="off"
-          onFocus={() => { setToolsOpen(false); setAttachOpen(false) }}
+          onFocus={() => {
+            setToolsOpen(false)
+            setAttachOpen(false)
+          }}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
               e.preventDefault()
-              submit()
+              void submit()
             }
           }}
         />
+
+        {/* PC 채팅 입력창: 약속 바로가기 / 기존 장소 선택 기능 */}
+        <div className={styles.composerQuickActions}>
+          <Link
+            href={`/groups/${groupId}/meetings`}
+            className={styles.composerQuick}
+            aria-label="약속 페이지로 이동"
+          >
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="5" width="18" height="16" rx="2" />
+              <path d="M7 3v4M17 3v4M3 10h18" />
+            </svg>
+            약속
+          </Link>
+          <button
+            type="button"
+            className={styles.composerQuick}
+            disabled={planning}
+            aria-label="약속 장소 선택"
+            onClick={() => {
+              setToolsOpen(false)
+              setAttachOpen(false)
+              onTool('장소 선택')
+            }}
+          >
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
+              <circle cx="12" cy="10" r="2.5" />
+            </svg>
+            장소
+          </button>
+        </div>
+
         <button
           type="button"
           className={`btn ${styles.send}`}
-          disabled={sending}
-          onClick={submit}
+          aria-label="메시지 보내기"
+          disabled={sending || (!text.trim() && pending.length === 0)}
+          onClick={() => void submit()}
         >
-          ↑ 전송
+          <svg
+            width="21"
+            height="21"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m22 2-7 20-4-9-9-4 20-7Z" />
+            <path d="M22 2 11 13" />
+          </svg>
         </button>
       </div>
 

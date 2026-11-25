@@ -335,7 +335,7 @@ function DepartureEditor({
     <div className={`${styles.page} ${layout.page}`}>
       <header className={layout.header}>
         <div>
-          <p className={layout.eyebrow}>약속 / 장소 정하기</p>
+          <p className={layout.eyebrow}>MEETING PLACE · 약속 장소 정하기</p>
           <h1>우리 어디서 만날까요?</h1>
           <p className={styles.hint}>
             각자의 이동시간을 살펴보고, 함께 만나기 좋은 장소를 골라요.
@@ -347,6 +347,7 @@ function DepartureEditor({
       </header>
       <div className={layout.summary}>
         <div>
+          <p className={layout.summaryKicker}>GROUP PLAN</p>
           <strong>{group.name}</strong>
           <p className={styles.hint}>{me.nickname}님 · 함께 정하는 약속 장소</p>
         </div>
@@ -368,9 +369,12 @@ function DepartureEditor({
         </p>
         <div className={layout.departureLayout}>
           <section className={`${styles.search} ${layout.origin}`}>
-            <div>
+            <div className={layout.sectionHead}>
+              <p className={layout.sectionKicker}>DEPARTURE</p>
               <h3>출발지를 알려 주세요</h3>
-              <p className={styles.hint}>출발할 역이나 장소를 검색해 주세요.</p>
+              <p className={layout.sectionSubtitle}>
+                출발할 역이나 장소를 검색해 주세요.
+              </p>
             </div>
             <label className={layout.targetLabel}>
               누구의 출발지인가요?
@@ -433,7 +437,7 @@ function DepartureEditor({
               />
               <button
                 type="submit"
-                className={styles.button}
+                className={`${styles.button} ${layout.primaryButton}`}
                 disabled={searching || saving}
               >
                 {searching ? "검색 중" : "검색"}
@@ -470,7 +474,7 @@ function DepartureEditor({
                     </button>
                     <button
                       type="button"
-                      className={`${styles.button} ${styles.saveButton}`}
+                      className={`${styles.button} ${styles.saveButton} ${layout.primaryButton}`}
                       disabled={saving}
                       onClick={() => void saveDeparture(place)}
                     >
@@ -485,8 +489,11 @@ function DepartureEditor({
           </section>
           <div className={layout.friendsAndMap}>
             <section className={`${styles.membersSection} ${layout.friends}`}>
-              <div className={styles.heading}>
-                <h2>친구들의 출발지</h2>
+              <div className={`${styles.heading} ${layout.sectionHead}`}>
+                <div>
+                  <p className={layout.sectionKicker}>OUR DEPARTURES</p>
+                  <h2>친구들의 출발지</h2>
+                </div>
                 <span className={styles.badge}>
                   {readyCount}/{group.members.length}명 완료
                 </span>
@@ -565,10 +572,13 @@ function DepartureEditor({
               ref={mapSectionRef}
               className={`${styles.mapSection} ${layout.mapPanel}`}
             >
-              <div className={`${styles.mapHeader} ${layout.mapHeading}`}>
+              <div
+                className={`${styles.mapHeader} ${layout.mapHeading} ${layout.sectionHead}`}
+              >
                 <div>
+                  <p className={layout.sectionKicker}>START POINTS MAP</p>
                   <h3>멤버 출발지 지도</h3>
-                  <p className={styles.hint}>
+                  <p className={layout.sectionSubtitle}>
                     색상과 번호로 각 멤버의 출발지를 확인하세요.
                   </p>
                 </div>
@@ -659,8 +669,11 @@ function DepartureEditor({
           </div>
         </div>
         <section className={layout.recommendations}>
-          <div className={styles.heading}>
-            <h2>이동시간을 비교하고, 만날 곳을 골라요</h2>
+          <div className={`${styles.heading} ${layout.sectionHead}`}>
+            <div>
+              <p className={layout.sectionKicker}>RECOMMENDATIONS</p>
+              <h2>이동시간을 비교하고, 만날 곳을 골라요</h2>
+            </div>
             <span className={styles.badge}>
               {group.members.filter((m) => m.ready).length}/
               {group.members.length}명 입력 완료
@@ -673,7 +686,7 @@ function DepartureEditor({
           </p>
           <button
             type="button"
-            className={styles.button}
+            className={`${styles.button} ${layout.primaryButton}`}
             style={{ marginTop: 16 }}
             disabled={
               !connected || !plan.can_recommend || saving || recommending

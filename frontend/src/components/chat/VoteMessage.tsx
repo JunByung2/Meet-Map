@@ -4,6 +4,7 @@ import { useState } from "react";
 import VoteDialog from "./VoteDialog";
 import { formatWhen, useVotePoll } from "./useVotePoll";
 import styles from "./vote.module.css";
+import Ico from "@/components/Ico";
 
 const VOTE_LINE = /^(vote|voteresult):([0-9a-fA-F-]{8,40})$/;
 
@@ -50,7 +51,7 @@ export default function VoteMessage({
       <>
         <div className={`${styles.card} ${styles.cardResult}`}>
           <span className={`${styles.tag} ${styles.tagDone}`}>
-            🏆 투표가 종료되었어요
+            <Ico n="trophy" /> 투표가 종료되었어요
           </span>
           <strong className={styles.q}>{title}</strong>
           <div className={styles.winBox}>
@@ -87,11 +88,15 @@ export default function VoteMessage({
   return (
     <>
       <div className={styles.card}>
-        <span className={styles.tag}>🗳 투표</span>
+        <span className={styles.tag}>
+          <Ico n="vote" /> 투표
+        </span>
         <strong className={styles.q}>{title}</strong>
         <ul className={styles.plain}>
           {(items ?? []).map((c) => (
-            <li key={c.id}>📍 {c.location}</li>
+            <li key={c.id}>
+              <Ico n="pin" /> {c.location}
+            </li>
           ))}
           {items === null && <li className={styles.sub}>불러오는 중…</li>}
         </ul>

@@ -148,3 +148,253 @@
   display: inline-block;
   margin: 0;
 }
+
+/* 약속 페이지 2단 보드: 기존 가능 날짜 기능은 그대로 두고 표형 달력으로 디자인 */
+.boardBox {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  gap: 12px;
+  color: #4a322c;
+}
+.boardHead {
+  flex: none;
+  min-width: 0;
+  padding: 2px 0 12px;
+  border-bottom: 1px solid #a99081;
+  justify-content: space-between;
+  align-items: center;
+}
+.boardBox .nav {
+  gap: 10px;
+  color: #4a322c;
+}
+.boardBox .nav button {
+  width: 40px;
+  height: 40px;
+  border: 1.5px solid #4a322c;
+  border-radius: 50%;
+  background: #f9f3eb;
+  color: #4a322c;
+  font-size: 23px;
+}
+.boardBox .nav button:hover {
+  background: #dfd3c4;
+}
+.boardBox .monthLabel {
+  font-size: clamp(16px, 1.55vw, 23px);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+}
+.todayButton {
+  border: 1.5px solid #4a322c;
+  border-radius: 6px;
+  background: #f9f3eb;
+  padding: 9px 13px;
+  color: #4a322c;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.todayButton:hover {
+  background: #dfd3c4;
+}
+.boardBox .open {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: hidden;
+  cursor: zoom-in;
+  text-align: left;
+}
+.boardBox .open:hover,
+.boardBox .open:focus-visible {
+  border-color: transparent;
+  background: transparent;
+}
+.boardBox .open:focus-visible {
+  outline: 2px solid #4a322c;
+  outline-offset: 2px;
+}
+.boardBox .grid {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid #bba99b;
+  border-left: 1px solid #c7b5a5;
+  background: #fbf6ee;
+}
+.boardBox .dow {
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  border-right: 1px solid #d4c7bb;
+  border-bottom: 1px solid #bba99b;
+  background: #f4eada;
+  color: #4a322c;
+  font-size: 12px;
+  font-weight: 800;
+}
+.boardBox .dow:first-child {
+  color: #c84e43;
+}
+.boardBox .dow:nth-child(7) {
+  color: #477bb0;
+}
+.boardBox .cell {
+  display: flex;
+  position: relative;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 4px;
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid #d4c7bb;
+  border-bottom: 1px solid #d4c7bb;
+  border-radius: 0;
+  padding: 11px 8px 7px;
+  background: #fbf6ee;
+  color: #4a322c;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: left;
+  opacity: 1;
+  box-shadow: none;
+}
+.boardBox .cell.out {
+  background: #f5ecdf;
+  color: #a6988d;
+}
+.boardBox .cell.some {
+  background: #bdd3ce;
+}
+.boardBox .cell.all {
+  background: #e1d5c9;
+  color: #4a322c;
+}
+.boardBox .cell.out,
+.boardBox .cell.out.some,
+.boardBox .cell.out.all {
+  background: #f5ecdf;
+  color: #a6988d;
+}
+.boardBox .cell.today,
+.boardBox .cell.today.some,
+.boardBox .cell.today.all {
+  background: #4a322c;
+  color: #fff8ed;
+  box-shadow: none;
+}
+.boardBox .dayNumber {
+  font-weight: 800;
+}
+.availabilityCount {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: inherit;
+}
+.boardBox .dot {
+  left: auto;
+  right: 7px;
+  bottom: 7px;
+  margin: 0;
+  width: 6px;
+  height: 6px;
+  background: #ec9e21;
+}
+.boardBox .all .dot {
+  background: #ec9e21;
+}
+.boardBox .hint {
+  display: none;
+}
+.boardBox .legend {
+  flex: none;
+  margin: 2px 0 3px;
+  gap: 6px 9px;
+  color: #654c42;
+  font-size: 11px;
+}
+.boardBox .legend .sw {
+  border-radius: 50%;
+  border: 1px solid #4a322c;
+}
+.boardBox .legend .sw.all {
+  background: #e1d5c9;
+}
+.boardBox .legend .sw.some {
+  background: #bdd3ce;
+}
+.boardBox .legend .dotLegend {
+  border: 0;
+}
+@media (max-width: 1180px) {
+  .boardBox .cell {
+    padding: 7px 4px;
+    font-size: 13px;
+  }
+  .boardBox .nav button {
+    width: 34px;
+    height: 34px;
+  }
+  .boardBox .monthLabel {
+    font-size: 17px;
+  }
+}
+@media (max-width: 680px) {
+  .boardBox {
+    gap: 9px;
+  }
+  .boardHead {
+    padding-bottom: 8px;
+  }
+  .boardBox .cell {
+    min-height: 48px;
+    padding: 6px 4px;
+    font-size: 12px;
+  }
+  .boardBox .grid {
+    flex: none;
+  }
+  .boardBox .dow {
+    font-size: 11px;
+  }
+  .availabilityCount {
+    font-size: 10px;
+  }
+  .boardBox .nav {
+    gap: 4px;
+  }
+  .boardBox .nav button {
+    width: 30px;
+    height: 30px;
+    font-size: 18px;
+  }
+  .boardBox .monthLabel {
+    font-size: 14px;
+  }
+  .todayButton {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+}

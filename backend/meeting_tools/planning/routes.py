@@ -26,6 +26,7 @@ router = APIRouter(prefix="/groups/{group_id}/place-plans", tags=["place-plans"]
 class CreatePlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
     request_id: UUID  # 재시도해도 링크와 메시지가 중복되지 않게 하는 ID
+    share_in_chat: bool = True  # 기존 호출은 공유 유지, 장소 버튼에서는 False
 
 class DepartureIn(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
@@ -114,9 +115,10 @@ def create_plan(group_id: int, body: CreatePlan, user: User = Depends(get_curren
         return {"id": existing.id, "href": f"/recommend?groupId={group_id}&planId={existing.id}"}
     href = f"/recommend?groupId={group_id}&planId={plan_id}"
     db.add(PlacePlan(id=plan_id, group_id=group_id, created_by=user.id, revision=0))
-    # 추천 계획과 공유 채팅 메시지를 함께 저장한다.
-    db.add(Message(group_id=group_id, user_id=user.id,
-        text=f"약속 장소를 함께 정해요. 각자 출발지를 입력해 주세요.\n{href}"))
+    # 채팅으로 공유할 때만 메시지를 만든다. 장소 버튼은 공유하지 않고 추천 페이지로 이동한다.
+    if body.share_in_chat:
+        db.add(Message(group_id=group_id, user_id=user.id,
+            text=f"약속 장소를 함께 정해요. 각자 출발지를 입력해 주세요.\n{href}"))
     try:
         db.commit()
     except IntegrityError:

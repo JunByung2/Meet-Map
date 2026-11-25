@@ -6,8 +6,8 @@ import ActionPanel, { useActionMessages } from './ActionPanel'
 import styles from './shared.module.css'
 
 /**
- * 모바일·태블릿 채팅 위쪽: "투표 · 장소 선택"을 한 줄로 접어 두고, 누르면 채팅 위에 덮어서
- * 민영이 디자인(투표 → 장소 선택)을 보여 준다. 채팅 높이는 그대로, PC 에서는 보이지 않는다.
+ * 모바일·태블릿 채팅 위쪽: 투표 목록을 접어 두고, 누르면 채팅 위에 표시한다.
+ * 채팅 높이는 그대로, PC에서는 보이지 않는다.
  */
 export default function SharedBar({
   messages,
@@ -21,7 +21,7 @@ export default function SharedBar({
   onPost: (text: string) => Promise<unknown> | void
 }) {
   const [open, setOpen] = useState(false)
-  const { votes, places } = useActionMessages(messages)
+  const { votes } = useActionMessages(messages)
 
   return (
     <div className={styles.wrap}>
@@ -29,13 +29,12 @@ export default function SharedBar({
         type="button"
         className={styles.bar}
         aria-expanded={open}
-        aria-label={`투표 ${votes.length}개 · 장소 ${places.length}개 ${open ? '닫기' : '열기'}`}
+        aria-label={`투표 ${votes.length}개 ${open ? '닫기' : '열기'}`}
         onClick={() => setOpen((v) => !v)}
       >
-        <span className={styles.label}>투표·장소</span>
+        <span className={styles.label}>투표</span>
         <span className={styles.badges}>
           <span className={styles.badge}>투표 {votes.length}</span>
-          <span className={styles.badge}>장소 {places.length}</span>
         </span>
         <span className={styles.chev} aria-hidden>{open ? '▲' : '▼'}</span>
       </button>

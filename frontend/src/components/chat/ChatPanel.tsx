@@ -4,7 +4,7 @@ import Link from 'next/link'
 import type { GroupDetail, Me } from '@/hooks/useGroupContext'
 import { useGroupMessages } from '@/hooks/useGroupMessages'
 
-import { useEffect, useLayoutEffect, useState, useRef } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { pickName, useNameMode } from '@/lib/nameMode'
 import { api, ApiError } from '@/lib/api'
 import { useStartPlacePlan } from '@/features/recommendation/useStartPlacePlan'
@@ -15,7 +15,6 @@ import OutgoingPhotos from './OutgoingPhotos'
 import PhotoViewerWindow from './PhotoViewerWindow'
 import { useOutgoingPhotos } from '@/hooks/useOutgoingPhotos'
 
-import ChatSidebar from './ChatSidebar'
 import { useArrivals } from '@/hooks/useArrivals'
 import styles from './chat.module.css'
 import sel from './chatSelect.module.css'
@@ -78,6 +77,8 @@ export default function ChatPanel({
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
   }, []);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [voteOpen, setVoteOpen] = useState(false);
   // 약속장소 추천 화면에서 "채팅에서 투표 만들기"로 넘어오면 담은 장소로 투표 창을 연다
   const [votePlaces, setVotePlaces] = useState<PlaceValue[]>([]);
@@ -355,35 +356,12 @@ export default function ChatPanel({
     setStatus(`${tool} 기능은 다음 단계에서 연결할 예정이에요.`);
   };
 
-  // PC right panel height; mobile sizing belongs to AppShell.
-  const layoutRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = layoutRef.current;
-    if (!el) return;
-    const mq = window.matchMedia("(min-width: 1051px)");
-    const fit = () => {
-      if (!mq.matches) {
-        el.style.removeProperty("height");
-        return;
-      }
-      const top = el.getBoundingClientRect().top + window.scrollY
-      const h = Math.max(280, Math.round(window.innerHeight - top - 12))
-      el.style.setProperty('height', `${h}px`, 'important')
-    }
-    fit()
-    const timers = [60, 300, 900].map((ms) => window.setTimeout(fit, ms))
-    window.addEventListener('resize', fit)
-    mq.addEventListener('change', fit)
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null
-    ro?.observe(document.body)
-    return () => {
-      timers.forEach((t) => window.clearTimeout(t));
-      window.removeEventListener("resize", fit);
-      mq.removeEventListener("change", fit);
-      ro?.disconnect();
-      el.style.removeProperty("height");
-    };
-  }, []);
+  // 전체 페이지는 CSS로 뷰포트에 고정하고, 메시지와 오른쪽 패널만 스크롤합니다.
+  // 예전 JS 높이 계산은 헤더/탭 크기 변화에 따른 불필요한 바깥 스크롤의 원인이었습니다.
+  const query = searchQuery.trim().toLocaleLowerCase('ko-KR');
+  const shownMessages = query
+    ? messages.filter((m) => (m.text ?? '').toLocaleLowerCase('ko-KR').includes(query))
+    : messages;
 
   const meetPanel = (
     <MeetModePanel
@@ -398,15 +376,64 @@ export default function ChatPanel({
 
   return (
     <>
-      <div
-        className={`page-head ${styles.head}`}
-        style={{ justifyContent: "flex-end" }}
-      >
-        <ChatSidebar members={group.members} groupId={group.id} />
-      </div>
-
-      <div className={styles.layout} ref={layoutRef}>
+      <div className={styles.layout}>
         <div className={styles.chatMain}>
+          <div className={styles.roomHeader}>
+            <div className={styles.roomHeading}>
+              <span className={styles.roomKicker}>GROUP CHAT</span>
+              <h1 className={styles.roomName}>{group.name}</h1>
+              <span className={styles.roomMembers}>
+                <span className={styles.roomStatusDot} aria-hidden="true" />
+                멤버 {group.members.length}명
+              </span>
+            </div>
+            <div className={styles.roomActions}>
+              <Link href={`/groups/${group.id}/photos`} className={styles.roomActionLink}>
+                사진 모아보기
+              </Link>
+              <Link href={`/groups/${group.id}/records`} className={styles.roomActionLink}>
+                추억 보기
+              </Link>
+              <button
+                type="button"
+                className={styles.roomSearchButton}
+                aria-expanded={searchOpen}
+                onClick={() => {
+                  setSearchOpen((open) => !open)
+                  setSearchQuery('')
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"
+                  fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m16 16 5 5" />
+                </svg>
+                대화 검색
+              </button>
+            </div>
+          </div>
+
+          {searchOpen && (
+            <div className={styles.searchBar}>
+              <input
+                className={styles.searchInput}
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="현재 불러온 메시지에서 검색"
+                aria-label="대화 검색어"
+                autoFocus
+              />
+              <span className={styles.searchCount}>
+                {query ? `${shownMessages.length}개 결과` : '검색어를 입력하세요'}
+              </span>
+              <button type="button" className={styles.searchClose}
+                onClick={() => { setSearchOpen(false); setSearchQuery('') }}>
+                닫기
+              </button>
+            </div>
+          )}
+
           {/* 모바일에서만: 카톡처럼 어떤 그룹 채팅방인지 맨 위에 보여 준다 */}
           {narrow && (
             <div className={styles.compactTop}>
@@ -419,13 +446,6 @@ export default function ChatPanel({
               <SharedBar messages={messages} groupId={group.id} myUserId={me.id} onPost={send} />
             </div>
           )}
-          <div className={`${styles.banner} ${styles.bannerMeet}`}>
-            <span>함께 정한 약속을 이곳에서 확인해 보세요.</span>
-            <Link href={`/groups/${group.id}/meetings`} className="link-arrow">
-              약속 보기 →
-            </Link>
-          </div>
-
           {focusDate && (
             <div className={styles.banner}>
               <span>
@@ -447,8 +467,13 @@ export default function ChatPanel({
             </p>
           )}
 
+          {query && shownMessages.length === 0 ? (
+            <div className={styles.searchEmpty} role="status">
+              현재 불러온 대화에서 검색 결과가 없어요.
+            </div>
+          ) : (
           <MessageList
-            messages={messages}
+            messages={shownMessages}
             loading={loading}
             myUserId={me.id}
             nameOf={nameOf}
@@ -466,6 +491,7 @@ export default function ChatPanel({
             selectedPhotos={selectedPhotos}
             onTogglePhoto={togglePhoto}
           />
+          )}
 
           <div className={styles.outgoingArea}>
           <OutgoingPhotos

@@ -23,17 +23,21 @@
   align-items: center;
   gap: 7px;
   padding: 7px 12px;
-  border: 1px solid var(--line, #e6ebe9);
-  border-radius: 999px;
-  background: var(--white, #fff);
-  color: inherit;
+  border: 1.5px solid var(--brown);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--brown);
   font-family: inherit;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
+.chip:hover {
+  background: var(--cream);
+}
 .chipOff {
   opacity: 0.45;
+  border-style: dashed;
 }
 .dot {
   display: inline-block;
@@ -43,38 +47,38 @@
   border-radius: 50%;
 }
 .count {
-  color: var(--muted, #6b7b78);
+  color: var(--muted);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .seg {
   display: inline-flex;
   padding: 3px;
-  border-radius: 999px;
-  background: var(--mist, #f3f6f5);
+  border: 1.5px solid var(--brown);
+  border-radius: 6px;
+  background: var(--cream);
 }
 .seg button {
   padding: 6px 14px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 4px;
   background: transparent;
-  color: var(--muted, #6b7b78);
+  color: var(--brown);
   font-family: inherit;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
 .seg .segOn {
-  background: var(--white, #fff);
-  color: var(--teal, #1f7a6d);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  background: var(--brown);
+  color: var(--cream);
 }
 
 .empty,
 .note {
   margin: 0;
-  color: var(--muted, #6b7b78);
+  color: var(--muted);
   font-size: 13px;
 }
 .empty {
@@ -94,13 +98,15 @@
   align-items: center;
   gap: 10px;
   padding: 4px 14px 4px 4px;
-  border: 1px solid var(--line, #e6ebe9);
-  border-radius: 10px;
-  background: var(--white, #fff);
+  border: 1.5px solid var(--brown);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--brown);
 }
 .rowOn {
-  border-color: var(--teal, #1f7a6d);
-  background: var(--mint, #e8f2ef);
+  border-color: var(--brown);
+  background: #efe0cb;
+  box-shadow: 3px 3px 0 var(--brown);
 }
 .rowMain {
   display: flex;
@@ -135,10 +141,21 @@
 }
 .rowLink {
   flex: none;
-  color: var(--teal, #1f7a6d);
-  font-size: 13px;
-  font-weight: 700;
+  padding: 6px 10px;
+  border: 1.5px solid var(--brown);
+  border-radius: 6px;
+  color: var(--brown);
+  font-size: 12px;
+  font-weight: 800;
   text-decoration: none;
+  white-space: nowrap;
+}
+.rowLink:hover {
+  background: var(--brown);
+  color: var(--cream);
+}
+.rowText :global(.muted) {
+  color: var(--muted);
 }
 
 @media (max-width: 650px) {

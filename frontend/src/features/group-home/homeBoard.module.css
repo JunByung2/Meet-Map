@@ -26,7 +26,7 @@
 }
 .ticket::before,
 .ticket::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 58%;
   width: 14px;
@@ -134,7 +134,28 @@
   font-family: var(--font-display);
   font-size: 13px;
   text-decoration: none;
-  clip-path: polygon(50% 0, 61% 16%, 78% 6%, 82% 25%, 100% 25%, 91% 43%, 100% 58%, 80% 63%, 80% 84%, 61% 78%, 50% 100%, 39% 80%, 21% 91%, 20% 69%, 0 65%, 10% 48%, 0 32%, 20% 28%, 20% 7%, 39% 17%);
+  clip-path: polygon(
+    50% 0,
+    61% 16%,
+    78% 6%,
+    82% 25%,
+    100% 25%,
+    91% 43%,
+    100% 58%,
+    80% 63%,
+    80% 84%,
+    61% 78%,
+    50% 100%,
+    39% 80%,
+    21% 91%,
+    20% 69%,
+    0 65%,
+    10% 48%,
+    0 32%,
+    20% 28%,
+    20% 7%,
+    39% 17%
+  );
 }
 .burst:hover {
   text-decoration: none;
@@ -159,6 +180,7 @@
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
+  gap: 5px; /* 아이콘과 글씨 사이 간격 */
 }
 .quickGrid a:hover {
   background: var(--cream);
@@ -168,6 +190,50 @@
 }
 .quickGrid a:nth-child(-n + 2) {
   border-bottom: 1px solid var(--brown);
+}
+/* 함께하는 친구: 위에는 제목 줄, 아래에는 프로필이 가로로 */
+.friends {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--brown);
+}
+.friendsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.friendsHead span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.friendsHead a {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.avatars {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.more8 {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--brown);
+  border-radius: 999px;
+  background: var(--paper);
+  font-size: 12px;
+  font-weight: 700;
 }
 .status {
   display: flex;
@@ -252,5 +318,92 @@
 @media (max-width: 760px) {
   .board {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (min-width: 1181px) and (min-height: 740px) {
+  .board {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    margin-bottom: 0;
+
+    grid-template-columns:
+      minmax(0, 1.42fr)
+      minmax(0, 0.95fr)
+      minmax(0, 0.68fr);
+
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .middle,
+  .right {
+    display: grid;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    min-height: 0;
+    gap: 14px;
+  }
+
+  .board > *,
+  .middle > *,
+  .right > * {
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .board :global(.panel) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .board :global(.panel-head) {
+    flex: none;
+  }
+
+  .board :global(.panel-body) {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .calendar :global(.panel-body) {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .ticket {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .ticketTop {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+
+  .ticketPeople,
+  .ticketActions {
+    flex-wrap: wrap;
+  }
+
+  .photoGrid {
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+
+  .photoGrid a {
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .photoGrid figure {
+    height: 100%;
+    aspect-ratio: auto;
   }
 }

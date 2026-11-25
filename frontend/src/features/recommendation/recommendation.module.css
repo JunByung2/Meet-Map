@@ -298,16 +298,12 @@
 }
 
 /* Keep the map directly below the member cards in the right column. */
-<<<<<<< Updated upstream
 .friendsAndMap {
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-width: 0;
 }
-=======
-.friendsAndMap { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
->>>>>>> Stashed changes
 
 /* ============================================================
    MOYEORAK · meeting place recommendation theme (brown/cream)
@@ -339,22 +335,14 @@
   color: var(--place-brown);
   font-size: 11px;
   font-weight: 900;
-<<<<<<< Updated upstream
   letter-spacing: 0.15em;
-=======
-  letter-spacing: .15em;
->>>>>>> Stashed changes
 }
 .page .header h1 {
   margin: 0 0 7px;
   font-size: clamp(25px, 2.4vw, 32px);
   font-weight: 900;
   line-height: 1.2;
-<<<<<<< Updated upstream
   letter-spacing: -0.03em;
-=======
-  letter-spacing: -.03em;
->>>>>>> Stashed changes
   color: var(--place-brown);
 }
 .page .header p {
@@ -399,11 +387,7 @@
   color: var(--place-brown);
   font-size: 10px;
   font-weight: 900;
-<<<<<<< Updated upstream
   letter-spacing: 0.15em;
-=======
-  letter-spacing: .15em;
->>>>>>> Stashed changes
 }
 .page .summaryBadge {
   border-radius: 5px;
@@ -413,25 +397,17 @@
   font-weight: 800;
   font-size: 12px;
 }
-<<<<<<< Updated upstream
 .page .panel {
   gap: 20px;
 }
-=======
-.page .panel { gap: 20px; }
->>>>>>> Stashed changes
 .page .departureLayout {
   grid-template-columns: minmax(250px, 0.9fr) minmax(0, 1.8fr);
   gap: 16px;
   align-items: stretch;
 }
-<<<<<<< Updated upstream
 .page .friendsAndMap {
   gap: 16px;
 }
-=======
-.page .friendsAndMap { gap: 16px; }
->>>>>>> Stashed changes
 
 /* The same dark header + cream body on every section card. */
 .page .origin,
@@ -446,7 +422,6 @@
   padding: 18px;
   color: var(--place-brown);
 }
-<<<<<<< Updated upstream
 .page .origin {
   gap: 12px;
   align-self: stretch;
@@ -460,12 +435,6 @@
 .page .recommendations {
   margin-top: 2px;
 }
-=======
-.page .origin { gap: 12px; align-self: stretch; }
-.page .friends { display: block; }
-.page .mapPanel { scroll-margin-top: 18px; }
-.page .recommendations { margin-top: 2px; }
->>>>>>> Stashed changes
 
 .page .sectionHead {
   display: flex;
@@ -480,13 +449,9 @@
   background: var(--place-brown);
   color: var(--place-paper);
 }
-<<<<<<< Updated upstream
 .page .origin > .sectionHead {
   display: block;
 }
-=======
-.page .origin > .sectionHead { display: block; }
->>>>>>> Stashed changes
 .page .sectionHead h2,
 .page .sectionHead h3 {
   margin: 2px 0 0;
@@ -494,27 +459,17 @@
   font-size: 20px;
   font-weight: 900;
   line-height: 1.2;
-<<<<<<< Updated upstream
   letter-spacing: -0.02em;
 }
 .page .sectionHead h3 {
   font-size: 19px;
 }
-=======
-  letter-spacing: -.02em;
-}
-.page .sectionHead h3 { font-size: 19px; }
->>>>>>> Stashed changes
 .page .sectionKicker {
   margin: 0;
   color: #fff0df;
   font-size: 10px;
   font-weight: 900;
-<<<<<<< Updated upstream
   letter-spacing: 0.16em;
-=======
-  letter-spacing: .16em;
->>>>>>> Stashed changes
   line-height: 1.3;
 }
 .page .sectionSubtitle {
@@ -524,13 +479,9 @@
   font-weight: 500;
   line-height: 1.5;
 }
-<<<<<<< Updated upstream
 .page .sectionHead > span {
   flex: none;
 }
-=======
-.page .sectionHead > span { flex: none; }
->>>>>>> Stashed changes
 .page .sectionHead .viewAll {
   flex: none;
   min-height: 38px;
@@ -567,42 +518,29 @@
   border-radius: 7px;
   background: var(--place-paper);
 }
-<<<<<<< Updated upstream
 .page .savedOrigin > span {
   color: var(--place-text-muted);
 }
-=======
-.page .savedOrigin > span { color: var(--place-text-muted); }
->>>>>>> Stashed changes
 .page .searchResults {
   padding: 12px;
   border: 1px solid var(--place-line);
   border-radius: 8px;
   background: #fff7ed;
 }
-<<<<<<< Updated upstream
 .page .searchResults h3 {
   color: var(--place-brown);
 }
-=======
-.page .searchResults h3 { color: var(--place-brown); }
->>>>>>> Stashed changes
 .page .resultCard {
   background: var(--place-paper);
   border: 1px solid #d9c7b4;
   border-radius: 7px;
 }
-<<<<<<< Updated upstream
 .page .resultCard:hover {
   border-color: #9c7d69;
 }
 .page .resultCard .placeName {
   color: var(--place-brown);
 }
-=======
-.page .resultCard:hover { border-color: #9c7d69; }
-.page .resultCard .placeName { color: var(--place-brown); }
->>>>>>> Stashed changes
 .page .primaryButton {
   border: 1px solid var(--place-brown);
   border-radius: 6px;
@@ -612,7 +550,6 @@
   font-weight: 800;
   cursor: pointer;
 }
-<<<<<<< Updated upstream
 .page .primaryButton:hover:not(:disabled) {
   background: var(--place-brown-hover);
 }
@@ -620,10 +557,6 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
-=======
-.page .primaryButton:hover:not(:disabled) { background: var(--place-brown-hover); }
-.page .primaryButton:disabled { opacity: .5; cursor: not-allowed; }
->>>>>>> Stashed changes
 
 /* Member cards retain the important per-person marker colors. */
 .page .memberGrid {
@@ -637,30 +570,21 @@
   border-radius: 7px;
   background: #fffaf3;
 }
-<<<<<<< Updated upstream
 .page .memberCard .memberTitle {
   color: var(--place-brown);
 }
-=======
-.page .memberCard .memberTitle { color: var(--place-brown); }
->>>>>>> Stashed changes
 .page .memberNumber {
   border: 1px solid #ffffff77;
   color: var(--place-brown);
 }
-<<<<<<< Updated upstream
 .page .memberActions {
   gap: 7px;
 }
-=======
-.page .memberActions { gap: 7px; }
->>>>>>> Stashed changes
 .page .memberActions button:first-child {
   padding: 4px 0;
   color: #356e60;
   font-weight: 800;
 }
-<<<<<<< Updated upstream
 .page .memberActions button:last-child {
   font-size: 11px;
 }
@@ -673,14 +597,6 @@
 .page .mapPanel > p {
   margin-top: 10px;
 }
-=======
-.page .memberActions button:last-child { font-size: 11px; }
-
-/* Kakao map sits inside a clean cream card. */
-.page .mapHeading { margin-bottom: 16px; }
-
-.page .mapPanel > p { margin-top: 10px; }
->>>>>>> Stashed changes
 
 /* Recommendation rankings and comparison cards. */
 .page .stationGrid {
@@ -701,33 +617,24 @@
   border-color: #3d937c;
   box-shadow: 0 0 0 2px #3d937c inset;
 }
-<<<<<<< Updated upstream
 .page .stats {
   margin-top: 14px;
 }
-=======
-.page .stats { margin-top: 14px; }
->>>>>>> Stashed changes
 .page .stats > div {
   padding: 11px 10px;
   border: 1px solid #e5d6c5;
   border-radius: 6px;
   background: var(--place-cream);
 }
-<<<<<<< Updated upstream
 .page .stats strong {
   font-size: clamp(16px, 1.45vw, 21px);
 }
-=======
-.page .stats strong { font-size: clamp(16px,1.45vw,21px); }
->>>>>>> Stashed changes
 .page .memberTimes {
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px dashed #bba998;
   gap: 10px;
 }
-<<<<<<< Updated upstream
 .page .timeTrack {
   background: #e8d9c8;
 }
@@ -737,11 +644,6 @@
 .page .selectedCard .timeTrack > span {
   background: #4f907a;
 }
-=======
-.page .timeTrack { background: #e8d9c8; }
-.page .timeTrack > span { background: #80b5a4; }
-.page .selectedCard .timeTrack > span { background: #4f907a; }
->>>>>>> Stashed changes
 .page .voteGuide {
   margin-top: 18px;
   padding: 12px 14px;
@@ -759,7 +661,6 @@
 }
 
 @media (max-width: 1100px) {
-<<<<<<< Updated upstream
   .page .stationGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -815,28 +716,4 @@
   .page .mapHeading .viewAll {
     margin-top: 8px;
   }
-=======
-  .page .stationGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 1000px) {
-  .page .departureLayout { grid-template-columns: 1fr; }
-  .page .memberGrid { grid-template-columns: repeat(auto-fit, minmax(135px,1fr)); }
-}
-@media (max-width: 680px) {
-  .page { padding: 8px 2px 28px; }
-  .page .header { align-items: flex-start; gap: 12px; }
-  .page .header h1 { font-size: 25px; }
-  .page .backLink { align-self: stretch; }
-  .page .summary { padding: 12px; }
-  .page .origin,
-  .page .friends,
-  .page .mapPanel,
-  .page .recommendations { padding: 12px; }
-  .page .sectionHead { margin: -12px -12px 14px; padding: 12px; }
-  .page .sectionHead h2, .page .sectionHead h3 { font-size: 17px; }
-  .page .stationGrid { grid-template-columns: 1fr; }
-  .page .memberGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .page .mapHeading { align-items: flex-start; }
-  .page .mapHeading .viewAll { margin-top: 8px; }
->>>>>>> Stashed changes
 }

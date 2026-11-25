@@ -1,24 +1,24 @@
-"use client";
+'use client'
 
-import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 
 import BaseKakaoMap, {
   connectionColor,
   memberColor,
   type MapPlace,
-} from "../map/BaseKakaoMap";
-import styles from "../map/map.module.css";
-import layout from "./recommendation.module.css";
-import css from "./nearby.module.css";
-import { usePlacePlan } from "./usePlacePlan";
-import NearbyPlaces, { type PickedPlace } from "./NearbyPlaces";
-import PickTray from "./PickTray";
-import { saveVotePicks } from "@/lib/votePicks";
+} from '../map/BaseKakaoMap'
+import styles from '../map/map.module.css'
+import layout from './recommendation.module.css'
+import css from './nearby.module.css'
+import { usePlacePlan } from './usePlacePlan'
+import NearbyPlaces, { type PickedPlace } from './NearbyPlaces'
+import PickTray from './PickTray'
+import { saveVotePicks } from '@/lib/votePicks'
 
 // 투표 후보로 담을 수 있는 최대 장소 수 (채팅 투표 항목 최대 개수와 같다)
-const MAX_PICKS = 6;
+const MAX_PICKS = 6
 
 // 상태 조회 응답이 같으면 지도는 다시 그리지 않아 사용자의 확대/이동을 유지한다.
 const StableKakaoMap = memo(
@@ -29,31 +29,31 @@ const StableKakaoMap = memo(
     previous.connectDepartures === next.connectDepartures &&
     previous.onPlaceClick === next.onPlaceClick &&
     JSON.stringify(previous.places) === JSON.stringify(next.places),
-);
+)
 
 interface SearchPlace {
-  id: string;
-  place_name: string;
-  road_address_name: string;
-  address_name: string;
-  x: string;
-  y: string;
+  id: string
+  place_name: string
+  road_address_name: string
+  address_name: string
+  x: string
+  y: string
 }
 
 function travelTime(minutes: number) {
-  if (!Number.isFinite(minutes) || minutes < 0) return "시간 정보 없음";
-  if (minutes > 0 && minutes < 1) return "1분 미만";
-  const whole = Math.floor(minutes);
-  const hours = Math.floor(whole / 60);
-  const rest = whole % 60;
-  if (hours === 0) return `${rest}분`;
-  return rest === 0 ? `${hours}시간` : `${hours}시간 ${rest}분`;
+  if (!Number.isFinite(minutes) || minutes < 0) return '시간 정보 없음'
+  if (minutes > 0 && minutes < 1) return '1분 미만'
+  const whole = Math.floor(minutes)
+  const hours = Math.floor(whole / 60)
+  const rest = whole % 60
+  if (hours === 0) return `${rest}분`
+  return rest === 0 ? `${hours}시간` : `${hours}시간 ${rest}분`
 }
 
 export default function RecommendationPage() {
-  const params = useSearchParams();
-  const groupId = params.get("groupId") ?? "";
-  const planId = params.get("planId") ?? "";
+  const params = useSearchParams()
+  const groupId = params.get('groupId') ?? ''
+  const planId = params.get('planId') ?? ''
   if (
     !/^[1-9]\d*$/.test(groupId) ||
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -69,7 +69,7 @@ export default function RecommendationPage() {
         </p>
         <Link href="/groups">내 그룹으로 돌아가기</Link>
       </section>
-    );
+    )
   }
   return (
     <DepartureEditor
@@ -77,15 +77,15 @@ export default function RecommendationPage() {
       groupId={groupId}
       planId={planId}
     />
-  );
+  )
 }
 
 function DepartureEditor({
   groupId,
   planId,
 }: {
-  groupId: string;
-  planId: string;
+  groupId: string
+  planId: string
 }) {
   const {
     plan,
@@ -95,64 +95,64 @@ function DepartureEditor({
     connected,
     saveDeparture: persistDeparture,
     recommend,
-  } = usePlacePlan(groupId, planId);
-  const router = useRouter();
-  const [editingUserId, setEditingUserId] = useState<number | null>(null);
-  const [keyword, setKeyword] = useState("");
-  const [results, setResults] = useState<SearchPlace[]>([]);
-  const [selectedId, setSelectedId] = useState("");
-  const mapSectionRef = useRef<HTMLElement>(null);
+  } = usePlacePlan(groupId, planId)
+  const router = useRouter()
+  const [editingUserId, setEditingUserId] = useState<number | null>(null)
+  const [keyword, setKeyword] = useState('')
+  const [results, setResults] = useState<SearchPlace[]>([])
+  const [selectedId, setSelectedId] = useState('')
+  const mapSectionRef = useRef<HTMLElement>(null)
   const selectRecommendation = (id: string) => {
-    setSelectedId(`recommend-${id}`);
+    setSelectedId(`recommend-${id}`)
     mapSectionRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  };
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }
   const handlePlaceClick = useCallback(
     (place: MapPlace) => setSelectedId(place.id),
     [],
-  );
-  const [searching, setSearching] = useState(false);
-  const [mapView, setMapView] = useState(0);
+  )
+  const [searching, setSearching] = useState(false)
+  const [mapView, setMapView] = useState(0)
   // 주변 장소(식당·카페 등)를 지도 마커로 보여 준다. 역마다 따로 보관한다.
-  const [nearby, setNearby] = useState<Record<string, MapPlace[]>>({});
+  const [nearby, setNearby] = useState<Record<string, MapPlace[]>>({})
   const setNearbyFor = useCallback((stationId: string, list: MapPlace[]) => {
     setNearby((cur) => {
       if (list.length === 0) {
-        if (!(stationId in cur)) return cur;
-        const rest = { ...cur };
-        delete rest[stationId];
-        return rest;
+        if (!(stationId in cur)) return cur
+        const rest = { ...cur }
+        delete rest[stationId]
+        return rest
       }
-      return { ...cur, [stationId]: list };
-    });
-  }, []);
+      return { ...cur, [stationId]: list }
+    })
+  }, [])
   const selectNearby = (id: string) => {
-    setSelectedId(id);
+    setSelectedId(id)
     mapSectionRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  };
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }
   // 투표 후보로 담은 장소
-  const [picks, setPicks] = useState<PickedPlace[]>([]);
-  const [pickNotice, setPickNotice] = useState("");
+  const [picks, setPicks] = useState<PickedPlace[]>([])
+  const [pickNotice, setPickNotice] = useState('')
   const togglePick = (place: PickedPlace) => {
-    setPickNotice("");
+    setPickNotice('')
     if (picks.some((p) => p.id === place.id)) {
-      setPicks(picks.filter((p) => p.id !== place.id));
-      return;
+      setPicks(picks.filter((p) => p.id !== place.id))
+      return
     }
     if (picks.length >= MAX_PICKS) {
-      setPickNotice(`투표 후보는 최대 ${MAX_PICKS}개까지 담을 수 있어요.`);
-      return;
+      setPickNotice(`투표 후보는 최대 ${MAX_PICKS}개까지 담을 수 있어요.`)
+      return
     }
-    setPicks([...picks, place]);
-  };
+    setPicks([...picks, place])
+  }
   // 담은 장소를 채팅의 투표 만들기 창으로 넘긴다
   const sendPicksToChat = () => {
-    if (picks.length < 2) return;
+    if (picks.length < 2) return
     saveVotePicks(
       groupId,
       picks.map((p) => ({
@@ -162,115 +162,115 @@ function DepartureEditor({
         lat: p.lat,
         lng: p.lng,
       })),
-    );
-    router.push(`/groups/${groupId}/chat`);
-  };
-  const [message, setMessage] = useState("");
-  const searchVersion = useRef(0);
-  const me = plan?.me;
+    )
+    router.push(`/groups/${groupId}/chat`)
+  }
+  const [message, setMessage] = useState('')
+  const searchVersion = useRef(0)
+  const me = plan?.me
   const group = {
     id: Number(groupId),
-    name: plan?.group_name ?? "",
+    name: plan?.group_name ?? '',
     members: plan?.members ?? [],
-  };
-  const departure = plan?.own_departure ?? null;
+  }
+  const departure = plan?.own_departure ?? null
   const editingMember =
     group.members.find((m) => m.user_id === editingUserId) ??
-    group.members.find((m) => m.user_id === me?.id);
-  const editingDeparture = editingMember?.departure ?? null;
+    group.members.find((m) => m.user_id === me?.id)
+  const editingDeparture = editingMember?.departure ?? null
 
   useEffect(
     () => () => {
-      searchVersion.current += 1;
+      searchVersion.current += 1
     },
     [],
-  );
+  )
 
   const searchPlaces = () => {
-    const query = keyword.trim();
+    const query = keyword.trim()
     if (!query || searching) {
-      if (!query) setMessage("출발지를 입력해 주세요.");
-      return;
+      if (!query) setMessage('출발지를 입력해 주세요.')
+      return
     }
 
-    const kakao = window.kakao;
+    const kakao = window.kakao
     if (!kakao?.maps?.services?.Places) {
-      setMessage("지도를 준비하고 있어요. 잠시 후 다시 검색해 주세요.");
-      return;
+      setMessage('지도를 준비하고 있어요. 잠시 후 다시 검색해 주세요.')
+      return
     }
 
-    const version = ++searchVersion.current;
-    setSearching(true);
-    setMessage("");
-    setSelectedId("");
+    const version = ++searchVersion.current
+    setSearching(true)
+    setMessage('')
+    setSelectedId('')
 
-    const service = new kakao.maps.services.Places();
+    const service = new kakao.maps.services.Places()
     service.keywordSearch(query, (data: SearchPlace[], status: string) => {
-      if (version !== searchVersion.current) return;
-      setSearching(false);
+      if (version !== searchVersion.current) return
+      setSearching(false)
       if (status === kakao.maps.services.Status.OK) {
-        setResults(data);
+        setResults(data)
       } else {
-        setResults([]);
+        setResults([])
         setMessage(
           status === kakao.maps.services.Status.ZERO_RESULT
-            ? "검색 결과가 없어요. 다른 검색어를 입력해 주세요."
-            : "검색에 실패했어요. 다시 시도해 주세요.",
-        );
+            ? '검색 결과가 없어요. 다른 검색어를 입력해 주세요.'
+            : '검색에 실패했어요. 다시 시도해 주세요.',
+        )
       }
-    });
-  };
+    })
+  }
 
   const saveDeparture = async (place: SearchPlace) => {
-    const latitude = Number(place.y);
-    const longitude = Number(place.x);
+    const latitude = Number(place.y)
+    const longitude = Number(place.x)
     if (
       !Number.isFinite(latitude) ||
       !Number.isFinite(longitude) ||
       Math.abs(latitude) > 90 ||
       Math.abs(longitude) > 180
     ) {
-      setMessage("장소 좌표가 올바르지 않습니다.");
-      return;
+      setMessage('장소 좌표가 올바르지 않습니다.')
+      return
     }
 
-    searchVersion.current += 1;
-    setSearching(false);
+    searchVersion.current += 1
+    setSearching(false)
     const saved = await persistDeparture(
       {
         place_id: place.id,
         name: place.place_name,
-        address: place.road_address_name || place.address_name || "",
+        address: place.road_address_name || place.address_name || '',
         latitude,
         longitude,
       },
       editingMember?.user_id,
-    );
-    if (!saved) return;
-    setResults([]);
-    setKeyword("");
-    setSelectedId("");
+    )
+    if (!saved) return
+    setResults([])
+    setKeyword('')
+    setSelectedId('')
     setMessage(
-      `${editingMember?.nickname ?? "멤버"}님의 출발지를 저장했어요. 입력한 멤버들의 위치로 추천받을 수 있어요.`,
-    );
-  };
+      `${editingMember?.nickname ?? '멤버'}님의 출발지를 저장했어요. 입력한 멤버들의 위치로 추천받을 수 있어요.`,
+    )
+  }
 
   const removeDeparture = async (targetUserId = editingMember?.user_id) => {
-    searchVersion.current += 1;
-    setSearching(false);
-    if (!(await persistDeparture(null, targetUserId))) return;
-    setResults([]);
-    setSelectedId("");
-    setMessage("");
-  };
+    searchVersion.current += 1
+    setSearching(false)
+    if (!(await persistDeparture(null, targetUserId))) return
+    setResults([])
+    setSelectedId('')
+    setMessage('')
+  }
 
-  const recommendations = !saving ? (plan?.result?.recommendations ?? []) : [];
+  const recommendations = !saving ? (plan?.result?.recommendations ?? []) : []
   const selectedRecommendation = recommendations.find(
     (place) => `recommend-${place.id}` === selectedId,
-  );
+  )
   const memberPlaces: MapPlace[] = group.members.flatMap((member, index) => {
     const saved =
-      member.departure ?? (member.user_id === me?.id ? departure : null);
+      member.departure ?? (member.user_id === me?.id ? departure : null)
     return saved
       ? [
           {
@@ -281,8 +281,8 @@ function DepartureEditor({
             memberNumber: index + 1,
           },
         ]
-      : [];
-  });
+      : []
+  })
 
   const nearbyPlaces: MapPlace[] = Array.from(
     new Map(
@@ -290,7 +290,7 @@ function DepartureEditor({
         .flat()
         .map((p) => [p.id, p] as const),
     ).values(),
-  );
+  )
   const mapPlaces: MapPlace[] = [
     ...memberPlaces,
     ...recommendations.map((place, index) => ({
@@ -305,31 +305,31 @@ function DepartureEditor({
       latitude: Number(place.y),
       longitude: Number(place.x),
     })),
-  ];
-  const readyCount = group.members.filter((member) => member.ready).length;
+  ]
+  const readyCount = group.members.filter((member) => member.ready).length
   const showAllDepartures = () => {
-    searchVersion.current += 1;
-    setSearching(false);
-    setResults([]);
-    setSelectedId("");
-    setMapView((value) => value + 1);
-  };
+    searchVersion.current += 1
+    setSearching(false)
+    setResults([])
+    setSelectedId('')
+    setMapView((value) => value + 1)
+  }
 
   if (!plan || !me)
     return (
       <section className={styles.page}>
         <h1>약속 장소 추천</h1>
-        <p role={error ? "alert" : "status"}>
-          {error || "그룹과 출발지 정보를 불러오고 있어요."}
+        <p role={error ? 'alert' : 'status'}>
+          {error || '그룹과 출발지 정보를 불러오고 있어요.'}
         </p>
         {error && (
           <p>
-            <Link href="/login">로그인하기</Link> ·{" "}
+            <Link href="/login">로그인하기</Link> ·{' '}
             <Link href="/groups">내 그룹</Link>
           </p>
         )}
       </section>
-    );
+    )
 
   return (
     <div className={`${styles.page} ${layout.page}`}>
@@ -364,41 +364,37 @@ function DepartureEditor({
         )}
         <p className={styles.hint}>
           {connected
-            ? "3초마다 멤버 출발지와 추천 결과를 확인해요."
-            : "연결 확인 중 · 마지막으로 확인한 상태입니다."}
+            ? '3초마다 멤버 출발지와 추천 결과를 확인해요.'
+            : '연결 확인 중 · 마지막으로 확인한 상태입니다.'}
         </p>
         <div className={layout.departureLayout}>
           <section className={`${styles.search} ${layout.origin}`}>
             <div className={layout.sectionHead}>
               <p className={layout.sectionKicker}>DEPARTURE</p>
               <h3>출발지를 알려 주세요</h3>
-<<<<<<< Updated upstream
               <p className={layout.sectionSubtitle}>
                 출발할 역이나 장소를 검색해 주세요.
               </p>
-=======
-              <p className={layout.sectionSubtitle}>출발할 역이나 장소를 검색해 주세요.</p>
->>>>>>> Stashed changes
             </div>
             <label className={layout.targetLabel}>
               누구의 출발지인가요?
               <select
                 className={styles.input}
-                value={editingMember?.user_id ?? ""}
+                value={editingMember?.user_id ?? ''}
                 disabled={saving}
                 onChange={(event) => {
-                  setEditingUserId(Number(event.target.value));
-                  searchVersion.current += 1;
-                  setSearching(false);
-                  setResults([]);
-                  setKeyword("");
-                  setMessage("");
+                  setEditingUserId(Number(event.target.value))
+                  searchVersion.current += 1
+                  setSearching(false)
+                  setResults([])
+                  setKeyword('')
+                  setMessage('')
                 }}
               >
                 {group.members.map((member) => (
                   <option key={member.user_id} value={member.user_id}>
                     {member.nickname}
-                    {member.user_id === me.id ? " (나)" : ""}
+                    {member.user_id === me.id ? ' (나)' : ''}
                   </option>
                 ))}
               </select>
@@ -424,19 +420,19 @@ function DepartureEditor({
             <form
               className={styles.searchRow}
               onSubmit={(event) => {
-                event.preventDefault();
-                searchPlaces();
+                event.preventDefault()
+                searchPlaces()
               }}
             >
               <input
                 className={styles.input}
-                aria-label={`${editingMember?.nickname ?? "멤버"}님 출발지 검색`}
+                aria-label={`${editingMember?.nickname ?? '멤버'}님 출발지 검색`}
                 placeholder="예: 홍대입구역"
                 value={keyword}
                 onChange={(event) => setKeyword(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" && event.nativeEvent.isComposing)
-                    event.preventDefault();
+                  if (event.key === 'Enter' && event.nativeEvent.isComposing)
+                    event.preventDefault()
                 }}
               />
               <button
@@ -444,7 +440,7 @@ function DepartureEditor({
                 className={`${styles.button} ${layout.primaryButton}`}
                 disabled={searching || saving}
               >
-                {searching ? "검색 중" : "검색"}
+                {searching ? '검색 중' : '검색'}
               </button>
             </form>
             {message && (
@@ -464,7 +460,7 @@ function DepartureEditor({
                 {results.map((place) => (
                   <div
                     key={place.id}
-                    className={`${styles.resultCard} ${selectedId === `search-${place.id}` ? styles.resultSelected : ""}`}
+                    className={`${styles.resultCard} ${selectedId === `search-${place.id}` ? styles.resultSelected : ''}`}
                   >
                     <button
                       type="button"
@@ -483,8 +479,8 @@ function DepartureEditor({
                       onClick={() => void saveDeparture(place)}
                     >
                       {saving
-                        ? "저장 중"
-                        : `${editingMember?.nickname ?? "멤버"}님 출발지로 저장`}
+                        ? '저장 중'
+                        : `${editingMember?.nickname ?? '멤버'}님 출발지로 저장`}
                     </button>
                   </div>
                 ))}
@@ -504,13 +500,13 @@ function DepartureEditor({
               </div>
               <div className={layout.memberGrid}>
                 {group.members.map((member, index) => {
-                  const isMe = member.user_id === me.id;
-                  const saved = member.departure ?? (isMe ? departure : null);
-                  const color = memberColor(index + 1);
+                  const isMe = member.user_id === me.id
+                  const saved = member.departure ?? (isMe ? departure : null)
+                  const color = memberColor(index + 1)
                   return (
                     <div
                       key={member.user_id}
-                      className={`${styles.memberCard} ${layout.memberCard} ${isMe ? styles.memberActive : ""}`}
+                      className={`${styles.memberCard} ${layout.memberCard} ${isMe ? styles.memberActive : ''}`}
                       style={{ borderTop: `4px solid ${color}` }}
                     >
                       <div className={layout.memberTitle}>
@@ -523,20 +519,20 @@ function DepartureEditor({
                         </span>
                         <p className={styles.memberName}>
                           {member.nickname}
-                          {isMe ? " (나)" : ""}
+                          {isMe ? ' (나)' : ''}
                         </p>
                       </div>
                       <p className={styles.memberDeparture}>
                         {saved?.name ??
                           (member.ready
-                            ? "출발지 정보를 불러오는 중"
-                            : "출발지 입력 대기 중")}
+                            ? '출발지 정보를 불러오는 중'
+                            : '출발지 입력 대기 중')}
                       </p>
                       {saved?.updated_by != null && (
                         <p className={styles.hint}>
                           {saved.updated_by === member.user_id
-                            ? "본인이 입력"
-                            : `${group.members.find((m) => m.user_id === saved.updated_by)?.nickname ?? "이전 그룹 멤버"}님이 대신 입력`}
+                            ? '본인이 입력'
+                            : `${group.members.find((m) => m.user_id === saved.updated_by)?.nickname ?? '이전 그룹 멤버'}님이 대신 입력`}
                         </p>
                       )}
                       <div className={layout.memberActions}>
@@ -563,7 +559,7 @@ function DepartureEditor({
                         )}
                       </div>
                     </div>
-                  );
+                  )
                 })}
               </div>
               <p className={styles.hint}>
@@ -576,13 +572,9 @@ function DepartureEditor({
               ref={mapSectionRef}
               className={`${styles.mapSection} ${layout.mapPanel}`}
             >
-<<<<<<< Updated upstream
               <div
                 className={`${styles.mapHeader} ${layout.mapHeading} ${layout.sectionHead}`}
               >
-=======
-              <div className={`${styles.mapHeader} ${layout.mapHeading} ${layout.sectionHead}`}>
->>>>>>> Stashed changes
                 <div>
                   <p className={layout.sectionKicker}>START POINTS MAP</p>
                   <h3>멤버 출발지 지도</h3>
@@ -609,12 +601,12 @@ function DepartureEditor({
               />
               <p className={styles.hint}>
                 멤버 출발지 {memberPlaces.length}곳이 지도에 표시돼요.
-                {selectedId.startsWith("recommend-") &&
+                {selectedId.startsWith('recommend-') &&
                 recommendations.some(
                   (place) => `recommend-${place.id}` === selectedId,
                 )
-                  ? " 멤버별 색상·번호의 선은 선택한 추천 역과의 위치 연결선이며 실제 이동 경로가 아닙니다."
-                  : " 추천 역을 누르면 각 멤버 출발지와 연결해서 볼 수 있어요."}
+                  ? ' 멤버별 색상·번호의 선은 선택한 추천 역과의 위치 연결선이며 실제 이동 경로가 아닙니다.'
+                  : ' 추천 역을 누르면 각 멤버 출발지와 연결해서 볼 수 있어요.'}
               </p>
               {selectedRecommendation && (
                 <div
@@ -624,28 +616,28 @@ function DepartureEditor({
                   <strong>{selectedRecommendation.name}까지 연결</strong>
                   <ul
                     style={{
-                      margin: "8px 0",
+                      margin: '8px 0',
                       paddingLeft: 0,
-                      listStyle: "none",
-                      display: "grid",
+                      listStyle: 'none',
+                      display: 'grid',
                       gap: 6,
                     }}
                   >
                     {group.members.map((member, index) => {
                       const position =
-                        plan?.result?.member_ids.indexOf(member.user_id) ?? -1;
+                        plan?.result?.member_ids.indexOf(member.user_id) ?? -1
                       const minutes =
                         position >= 0
                           ? selectedRecommendation.member_minutes[position]
-                          : undefined;
+                          : undefined
                       return memberPlaces.some(
                         (place) => place.id === `departure-${member.user_id}`,
                       ) ? (
                         <li
                           key={member.user_id}
                           style={{
-                            display: "flex",
-                            alignItems: "center",
+                            display: 'flex',
+                            alignItems: 'center',
                             gap: 8,
                           }}
                         >
@@ -658,14 +650,14 @@ function DepartureEditor({
                             }}
                           />
                           <span>
-                            {index + 1}번 {member.nickname} →{" "}
+                            {index + 1}번 {member.nickname} →{' '}
                             {selectedRecommendation.name}
-                            {typeof minutes === "number"
+                            {typeof minutes === 'number'
                               ? ` · 예상 ${travelTime(minutes)}`
-                              : ""}
+                              : ''}
                           </span>
                         </li>
-                      ) : null;
+                      ) : null
                     })}
                   </ul>
                   <p className={styles.hint}>
@@ -702,17 +694,17 @@ function DepartureEditor({
             onClick={() => void recommend()}
           >
             {recommending
-              ? "이동시간 비교 중…"
+              ? '이동시간 비교 중…'
               : plan.result
-                ? "약속 장소 다시 추천받기"
-                : "약속 장소 추천받기"}
+                ? '약속 장소 다시 추천받기'
+                : '약속 장소 추천받기'}
           </button>
           <p className={styles.hint}>
-            현재 계산 대상:{" "}
+            현재 계산 대상:{' '}
             {group.members
               .filter((m) => m.ready)
               .map((m) => m.nickname)
-              .join(", ") || "없음"}{" "}
+              .join(', ') || '없음'}{' '}
             · 미입력 {group.members.length - readyCount}명 제외
           </p>
           {recommending && (
@@ -722,9 +714,9 @@ function DepartureEditor({
           )}
           {plan.result && recommendations.length > 0 && (
             <p className={styles.hint}>
-              {plan.result.ranking_rule} · 조회 실패로 제외된 후보{" "}
+              {plan.result.ranking_rule} · 조회 실패로 제외된 후보{' '}
               {plan.result.excluded_count}곳<br />
-              {new Date(plan.result.generated_at).toLocaleString("ko-KR")} 조회
+              {new Date(plan.result.generated_at).toLocaleString('ko-KR')} 조회
               기준 예상 시간입니다. 같은 입력의 결과는 5분 동안 재사용해요.
             </p>
           )}
@@ -732,7 +724,7 @@ function DepartureEditor({
             {recommendations.map((place, index) => (
               <article
                 key={place.id}
-                className={`${css.stationCard} ${layout.stationCard} ${selectedId === `recommend-${place.id}` ? layout.selectedCard : ""}`}
+                className={`${css.stationCard} ${layout.stationCard} ${selectedId === `recommend-${place.id}` ? layout.selectedCard : ''}`}
               >
                 <div className={css.stationHead}>
                   <span className={css.rank} aria-label={`${index + 1}위`}>
@@ -758,12 +750,12 @@ function DepartureEditor({
                     <li key={id}>
                       <span>
                         {group.members.find((m) => m.user_id === id)
-                          ?.nickname ?? "멤버"}
+                          ?.nickname ?? '멤버'}
                       </span>
                       <span className={layout.timeTrack} aria-hidden="true">
                         <span
                           style={{
-                            width: `${typeof place.member_minutes[i] === "number" && Number.isFinite(place.member_minutes[i]) ? Math.min(100, Math.max(0, (place.member_minutes[i] / Math.max(1, ...recommendations.map((r) => (Number.isFinite(r.maximum) ? r.maximum : 0)))) * 100)) : 0}%`,
+                            width: `${typeof place.member_minutes[i] === 'number' && Number.isFinite(place.member_minutes[i]) ? Math.min(100, Math.max(0, (place.member_minutes[i] / Math.max(1, ...recommendations.map((r) => (Number.isFinite(r.maximum) ? r.maximum : 0)))) * 100)) : 0}%`,
                           }}
                         />
                       </span>
@@ -811,5 +803,5 @@ function DepartureEditor({
         </section>
       </div>
     </div>
-  );
+  )
 }

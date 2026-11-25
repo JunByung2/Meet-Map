@@ -360,10 +360,6 @@
   }
 }
 
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
 /* ==============================================================
    모여락 약속 페이지: "크게 보기" 달력 공통 테마
    달력 동작(월 이동, 상태 변경, 드래그, 멤버 숨기기)은 변경하지 않음
@@ -420,11 +416,7 @@
 .modalKicker {
   font-size: 11px;
   font-weight: 800;
-<<<<<<< Updated upstream
   letter-spacing: 0.16em;
-=======
-  letter-spacing: .16em;
->>>>>>> Stashed changes
 }
 
 .modalTitle {
@@ -461,7 +453,6 @@
 }
 
 /* 월 이동 / 오늘 / 필터 */
-<<<<<<< Updated upstream
 .modalBody .wrap {
   gap: 18px;
   color: var(--calendar-brown, #4a322c);
@@ -475,20 +466,11 @@
   gap: 10px;
   flex-wrap: wrap;
 }
-=======
-.modalBody .wrap { gap: 18px; color: var(--calendar-brown, #4a322c); }
-.modalBody .head { gap: 12px; padding-bottom: 13px; border-bottom: 1px solid #b9a693; }
-.modalBody .month { gap: 10px; flex-wrap: wrap; }
->>>>>>> Stashed changes
 .modalBody .monthLabel {
   min-width: auto;
   font-size: clamp(18px, 2vw, 25px);
   font-weight: 900;
-<<<<<<< Updated upstream
   letter-spacing: -0.03em;
-=======
-  letter-spacing: -.03em;
->>>>>>> Stashed changes
   color: #4a322c;
 }
 .modalBody .nav {
@@ -501,13 +483,9 @@
   font-size: 25px;
   line-height: 1;
 }
-<<<<<<< Updated upstream
 .modalBody .nav:hover {
   background: #e7d9c8;
 }
-=======
-.modalBody .nav:hover { background: #e7d9c8; }
->>>>>>> Stashed changes
 .modalBody .month :global(.btn) {
   min-height: 41px;
   border: 1.5px solid #4a322c;
@@ -517,7 +495,6 @@
   font-size: 14px;
   font-weight: 800;
 }
-<<<<<<< Updated upstream
 .modalBody .month :global(.btn):hover {
   background: #e8daca;
 }
@@ -555,20 +532,6 @@
 .modalBody .legend {
   gap: 7px;
 }
-=======
-.modalBody .month :global(.btn):hover { background: #e8daca; }
-
-.modalBody .seg { border: 1px solid #b89f89; border-radius: 8px; background: #fcf8f1; }
-.modalBody .segBtn { color: #4a322c; padding: 9px 13px; font-weight: 800; }
-.modalBody .segBtn + .segBtn { border-left: 1px solid #d6c5b3; }
-.modalBody .segBtn:hover { background: #e9ddcf; }
-.modalBody .segOn { background: #4d9384; color: white; }
-.modalBody .segOn:hover { background: #39796b; }
-
-/* 멤버 범례와 날짜 도구 */
-.modalBody .rowLabel { color: #4a322c; font-size: 13px; margin: 0 0 8px; }
-.modalBody .legend { gap: 7px; }
->>>>>>> Stashed changes
 .modalBody .who {
   border: 1px solid #d6c5b3;
   background: #fcf8f1;
@@ -576,7 +539,6 @@
   padding: 7px 12px 7px 9px;
   font-weight: 650;
 }
-<<<<<<< Updated upstream
 .modalBody .who:hover {
   background: #e7d9c8;
 }
@@ -590,12 +552,6 @@
   color: #866e60;
   font-size: 12px;
 }
-=======
-.modalBody .who:hover { background: #e7d9c8; }
-.modalBody .whoOff { opacity: .45; }
-.modalBody .tools { gap: 10px; }
-.modalBody .toolHint { color: #866e60; font-size: 12px; }
->>>>>>> Stashed changes
 
 /* 달력 표: 오른쪽 작은 달력과 같은 갈색 / 베이지색 격자 */
 .modalBody .grid {
@@ -620,17 +576,12 @@
   font-size: 13px;
   font-weight: 850;
 }
-<<<<<<< Updated upstream
 .modalBody .sun {
   color: #bb5347;
 }
 .modalBody .sat {
   color: #467aba;
 }
-=======
-.modalBody .sun { color: #bb5347; }
-.modalBody .sat { color: #467aba; }
->>>>>>> Stashed changes
 .modalBody .cell {
   min-width: 0;
   min-height: 93px;
@@ -642,7 +593,6 @@
   gap: 6px;
   background: #fcf8f1;
   color: #4a322c;
-<<<<<<< Updated upstream
   transition: background-color 0.15s ease;
 }
 .modalBody .cell:hover {
@@ -709,28 +659,6 @@
 .modalBody .countBad {
   color: #a7463c;
 }
-=======
-  transition: background-color .15s ease;
-}
-.modalBody .cell:hover { background: #f1e4d4; }
-.modalBody .cell:nth-child(7n + 8) .num { color: #bb5347; }
-.modalBody .cell:nth-child(7n + 14) .num { color: #467aba; }
-.modalBody .cell.out { background: #f4ecdf; opacity: .65; }
-.modalBody .cell.past { opacity: .6; }
-.modalBody .cell.allGood { background: #e4d7c7; border-color: #d6c5b3; }
-.modalBody .cell.blocked { background: #ebe1d5; opacity: .68; }
-.modalBody .cell.today { box-shadow: inset 0 0 0 2px #4a322c; opacity: 1; }
-.modalBody .cell.selected { background: #dcebe6; box-shadow: inset 0 0 0 2px #479182; opacity: 1; }
-.modalBody .cell.inDrag { background: #cadfd9; box-shadow: inset 0 0 0 2px #479182; opacity: 1; }
-.modalBody .num { font-size: 16px; font-weight: 850; }
-.modalBody .meet { color: #df981e; }
-.modalBody .bars { gap: 3px; }
-.modalBody .bar { height: 5px; }
-.modalBody .barOff { height: 7px; }
-.modalBody .count { color: #765b4f; font-size: 11px; }
-.modalBody .countGood { color: #2c7869; }
-.modalBody .countBad { color: #a7463c; }
->>>>>>> Stashed changes
 
 /* 날짜 클릭 시 상세 정보도 같은 디자인 */
 .modalBody .panel {
@@ -740,7 +668,6 @@
   padding: 16px 18px;
   color: #4a322c;
 }
-<<<<<<< Updated upstream
 .modalBody .panelTitle {
   font-size: 18px;
 }
@@ -842,37 +769,4 @@
   .modalBody .month :global(.btn) {
     min-height: 35px;
   }
-=======
-.modalBody .panelTitle { font-size: 18px; }
-.modalBody .groupLabel { color: #4a322c; min-width: 74px; }
-.modalBody .tag { background: #f0e4d4; color: #4a322c; }
-.modalBody .tagOff { background: #fcf8f1; border-color: #bca997; }
-.modalBody .panel :global(.btn) { border-radius: 7px; }
-
-@media (max-width: 800px) {
-  .modalBackdrop { padding: 10px; }
-  .modalCard { max-height: calc(100dvh - 20px); }
-  .modalHeader { padding: 13px 16px; }
-  .modalBody { padding: 14px 12px 20px; }
-  .modalBody .head { align-items: flex-start; }
-  .modalBody .cell { min-height: 70px; padding: 6px 5px; }
-  .modalBody .num { font-size: 13px; }
-  .modalBody .monthLabel { font-size: 19px; }
-  .modalBody .segBtn { padding: 8px 9px; font-size: 12px; }
-}
-@media (max-width: 640px) {
-  .modalTitle { font-size: 18px; }
-  .modalKicker { font-size: 9px; }
-  .modalClose { padding: 8px 10px; font-size: 12px; }
-  .modalBody .cell { min-height: 50px; aspect-ratio: auto; padding: 4px 3px; gap: 3px; overflow: hidden; }
-  .modalBody .dow { min-height: 27px; font-size: 11px; }
-  .modalBody .bars { display: flex; gap: 2px; }
-  .modalBody .bar { width: 6px; height: 6px; }
-  .modalBody .barAm, .modalBody .barPm { width: 6px; }
-  .modalBody .barOff { height: 6px; }
-  .modalBody .count { display: none; }
-  .modalBody .monthLabel { min-width: 0; }
-  .modalBody .nav { width: 35px; height: 35px; font-size: 21px; }
-  .modalBody .month :global(.btn) { min-height: 35px; }
->>>>>>> Stashed changes
 }

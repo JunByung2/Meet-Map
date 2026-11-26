@@ -46,3 +46,17 @@ button.rc-chip { border: 0; cursor: pointer; font-family: inherit; }
   .rc-photos { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
   .rc-photos a { aspect-ratio: 1 / 1; border-radius: 8px; }
 }
+
+/* 지난 기록 자세히 보기 - 모바일: 여백을 줄여 한 화면에 더 많이 보이게 (PC는 그대로) */
+@media (max-width: 650px) {
+  .rc-head { row-gap: 0; margin-bottom: 14px; }
+  .rc-head .page-title { font-size: 24px; line-height: 1.25; }
+  .rc-head .eyebrow { margin-bottom: 2px; }
+  .rc-head .page-title { grid-column: 1 / -1; grid-row: 2; margin-top: 4px; white-space: normal; overflow-wrap: anywhere; }
+  .rc-head .page-sub { overflow: visible; white-space: normal; text-overflow: clip; overflow-wrap: anywhere; }
+  .rc-head .page-sub { margin-top: 6px; font-size: 14px; line-height: 1.45; }
+  .rc-back { margin-bottom: 10px !important; }
+  .rc-detail { gap: 12px; }
+  .rc-detail .card { padding: 16px; }
+  .rc-detail .card > div:first-child { margin-bottom: 10px !important; }
+}

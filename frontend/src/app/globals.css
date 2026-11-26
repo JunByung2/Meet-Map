@@ -704,7 +704,13 @@ p {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: var(--bg, #f3f7f5);
+    /* 화면 전체를 덮는 고정 레이어라 PC 와 같은 하늘색 점무늬 바탕을 여기에 직접 준다 */
+    background-color: var(--sky);
+    background-image: radial-gradient(
+      rgba(70, 48, 43, 0.12) 0.7px,
+      transparent 0.7px
+    );
+    background-size: 8px 8px;
   }
   .app-shell[data-layout='chat'] > .shell-header {
     flex: none;
@@ -769,6 +775,16 @@ body {
 }
 .page-title {
   font-size: 36px;
+}
+/* 사진 · 사진 올리기 같은 안쪽 페이지 제목: 큰 제목 때문에 스크롤이 늘지 않도록 한 단계 작게 (PC 28px / 모바일 25px) */
+.page-title.page-title-sm {
+  font-size: 28px;
+  line-height: 1.25;
+}
+@media (max-width: 650px) {
+  .page-title.page-title-sm {
+    font-size: 25px;
+  }
 }
 .eyebrow {
   color: var(--teal-dark);
@@ -926,6 +942,8 @@ h3,
   gap: 12px;
 }
 .shell-header .brand {
+  font-family: var(--font-display);
+  font-weight: 400;
   justify-self: center;
   gap: 12px;
   height: 44px;
@@ -1279,6 +1297,89 @@ h3,
     margin: 0;
     padding: 15px 20px 16px;
     overflow: hidden;
+  }
+}
+
+/* ---------- 좁은 화면: 위쪽 바에 로그아웃이 들어가도록 아이콘으로 줄인다 ---------- */
+.header-logout-icon {
+  display: none;
+}
+@media (max-width: 520px) {
+  .header-logout-text {
+    display: none;
+  }
+  .header-logout-icon {
+    display: block;
+  }
+  .header-right .header-logout {
+    width: 32px;
+    height: 32px;
+    min-width: 0;
+    padding: 0;
+    display: inline-grid;
+    place-items: center;
+  }
+  /* 로고 양옆 점은 좁은 화면에서 숨겨 공간을 만든다 */
+  .shell-header .brand-dots {
+    display: none;
+  }
+  /* 시안의 모바일 상단바: 왼쪽 그룹 동그라미 · 가운데 로고 · 오른쪽 프로필(알림 자리) + 로그아웃 */
+  /* 양옆 칸 폭을 같게(1fr) 두어 로고가 화면 정가운데에 오게 한다 */
+  .shell-header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+  }
+  .shell-header .group-switch-wrap {
+    justify-self: start;
+  }
+  .shell-header .header-right {
+    justify-self: end;
+  }
+  .group-switch {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    gap: 0;
+  }
+  .group-switch .group-name,
+  .group-switch > svg {
+    display: none;
+  }
+  .group-mark {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+  .shell-header .brand {
+    height: 40px;
+    padding: 0 12px;
+    gap: 0;
+    font-size: 27px;
+    line-height: 1;
+    border-width: 2px;
+    border-radius: 4px;
+  }
+  .header-right {
+    gap: 6px;
+  }
+  .header-right .avatar,
+  .header-right .header-user > * {
+    flex: none;
+  }
+  .header-right .header-user .avatar,
+  .header-right .header-user img {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+  }
+  .header-right .header-logout {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
   }
 }
 

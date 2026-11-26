@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useLayoutEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { ChatLoadingMessages } from './ChatLoading'
 import Avatar from '@/components/Avatar'
 import type { ChatMessage } from '@/hooks/useGroupMessages'
@@ -66,6 +66,8 @@ export default function MessageList({
   onToggleSelect,
   selectedPhotos,
   onTogglePhoto,
+  tail,
+  tailKey = 0,
 }: {
   messages: ChatMessage[]
   loading: boolean
@@ -90,6 +92,10 @@ export default function MessageList({
   /** 묶음 사진에서 따로 고른 사진들 (말풍선 번호 → 첨부 번호들) 과 한 장 고르기 */
   selectedPhotos?: Map<number, Set<number>>
   onTogglePhoto?: (messageId: number, attId: number, allIds: number[]) => void
+  /** 대화 맨 아래에 이어서 보여 줄 것 (사진을 올리는 중인 말풍선) */
+  tail?: ReactNode
+  /** 이 값이 커지면(새 말풍선이 생기면) 맨 아래로 내려간다 */
+  tailKey?: number
 }) {
   const [menu, setMenu] = useState<{ id: number; x: number; y: number } | null>(
     null,
@@ -102,6 +108,33 @@ export default function MessageList({
   const anchors = useRef<Anchor[]>([])
   const snapping = useRef(false)
   const prepending = useRef<number | null>(null) // 이전 대화를 위에 붙이기 직전의 scrollHeight
+  const lastPin = useRef(0) // 우리가 직접 맨 아래로 내린 시각 (그 직후의 scroll 이벤트는 사용자가 내린 게 아니다)
+  const pinTimers = useRef<number[]>([])
+
+  /** 맨 아래로 내린다 */
+  function pinBottom() {
+    const box = boxRef.current
+    if (!box) return
+    lastPin.current = performance.now()
+    box.scrollTop = box.scrollHeight
+  }
+
+  /** 사진이 늦게 뜨며 높이가 커져도, 아직 사용자가 위로 올리지 않았다면 맨 아래를 유지한다 */
+  function keepBottom() {
+    if (!focusDate && nearBottom.current) pinBottom()
+  }
+
+  function settleBottom() {
+    pinTimers.current.forEach((t) => window.clearTimeout(t))
+    pinTimers.current = [150, 500, 1200, 2500].map((ms) => window.setTimeout(keepBottom, ms))
+  }
+
+  useEffect(
+    () => () => {
+      pinTimers.current.forEach((t) => window.clearTimeout(t))
+    },
+    [],
+  )
 
   // Position the loaded messages before paint, so old messages never flash at the top.
   useLayoutEffect(() => {
@@ -155,9 +188,23 @@ export default function MessageList({
       captureAnchors(box, anchors)
       return
     }
-    if (!focusDate || nearBottom.current) box.scrollTop = box.scrollHeight
+    if (!focusDate || nearBottom.current) {
+      nearBottom.current = true
+      pinBottom()
+      settleBottom()
+    }
     captureAnchors(box, anchors)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, focusDate, loading])
+
+  // 사진을 올리는 말풍선이 생기면 맨 아래로 내려서 바로 보이게 한다
+  useLayoutEffect(() => {
+    if (!tailKey) return
+    nearBottom.current = true
+    pinBottom()
+    settleBottom()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tailKey])
 
   async function loadOlder() {
     prepending.current = boxRef.current?.scrollHeight ?? null
@@ -170,7 +217,8 @@ export default function MessageList({
 
   function onScroll() {
     const box = boxRef.current
-    if (box)
+    // 우리가 방금 맨 아래로 내린 직후의 scroll 이벤트는, 그 사이 늘어난 높이 때문에 '위로 올렸다'로 오해하지 않게 무시한다
+    if (box && performance.now() - lastPin.current > 150)
       nearBottom.current =
         box.scrollHeight - box.scrollTop - box.clientHeight < 80
     if (box && !snapping.current) {
@@ -201,6 +249,7 @@ export default function MessageList({
               : '아직 메시지가 없어요. 첫 이야기를 남겨 보세요.'}
           </strong>
         </div>
+        {tail}
       </section>
     )
   }
@@ -210,6 +259,7 @@ export default function MessageList({
       className={styles.messages}
       ref={boxRef}
       onScroll={onScroll}
+      onLoadCapture={keepBottom}
       aria-live="polite"
     >
       {onLoadOlder && hasMore && (
@@ -330,6 +380,7 @@ export default function MessageList({
           </Fragment>
         )
       })}
+      {tail}
       {menu && (
         <>
           <div

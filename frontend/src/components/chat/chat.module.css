@@ -1888,3 +1888,163 @@
     margin-inline: auto;
   }
 }
+
+/* =====================================================================
+   모바일 채팅 색: PC 와 같은 갈색 · 종이색 · 점무늬로 맞춘다 (650px 이하만)
+   ===================================================================== */
+@media (max-width: 650px) {
+  .chatMain {
+    border: 2px solid var(--brown);
+    border-radius: 9px;
+    overflow: hidden;
+    background: var(--paper);
+  }
+  /* 맨 위 그룹 이름 줄: 갈색 띠 */
+  .compactTop {
+    background: var(--brown);
+    color: var(--cream);
+    margin: 0;
+    padding: 8px 10px;
+    border-radius: 0;
+  }
+  .compactTop .mobileTitle strong {
+    color: var(--cream);
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 20px;
+  }
+  .compactTop .mobileTitle span {
+    color: rgba(245, 235, 221, 0.75);
+  }
+  .compactTop .meetLauncher,
+  .compactTop :global(button:not(.meetLauncher)) {
+    background: transparent;
+    color: var(--cream);
+    border: 1px solid rgba(245, 235, 221, 0.6);
+    border-radius: 6px;
+    box-shadow: none;
+  }
+  .compactTop button,
+  .compactTop button * {
+    color: var(--cream);
+  }
+  /* 대화 영역: 종이색 + 점무늬 */
+  .messages,
+  .chatMain > .messages {
+    background-color: #f1e5d5; /* PC 대화 영역과 같은 누런색 */
+    background-image: radial-gradient(
+      rgba(70, 48, 43, 0.1) 0.65px,
+      transparent 0.7px
+    );
+    background-size: 10px 10px;
+    padding: 12px 10px;
+  }
+  .bubble {
+    border: 1px solid #6d5045;
+    border-radius: 10px 10px 10px 3px;
+    background: var(--paper);
+    color: var(--brown);
+    box-shadow: none;
+  }
+  .mine .bubble {
+    border: 1px solid var(--brown);
+    border-radius: 10px 10px 3px 10px;
+    background: var(--brown);
+    color: var(--cream);
+  }
+  .bubbleBare,
+  .mine .bubbleBare {
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: var(--brown);
+    box-shadow: none;
+  }
+  .mine .bubble a {
+    color: #ddf0df;
+  }
+  .sender {
+    color: var(--brown);
+    font-weight: 800;
+  }
+  .time {
+    color: #927c70;
+  }
+  .dateBand {
+    background: var(--cream);
+    color: var(--brown);
+    border: 1px solid var(--line);
+  }
+  /* 입력창: 위에 갈색 선, 종이색 바탕 */
+  .composer {
+    margin: 0;
+    border: 0;
+    border-top: 2px solid var(--brown);
+    border-radius: 0;
+    background: var(--paper);
+  }
+
+  /* PC 처럼 입력창 옆에 약속 · 장소 버튼을 둔다 (좁아서 아이콘만) */
+  .composerQuickActions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex: none;
+  }
+  .composerQuick {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--brown);
+    border-radius: 6px;
+    background: var(--cream);
+    color: var(--brown);
+    font-size: 0; /* 글자는 숨기고 아이콘만 (스크린리더용 이름은 aria-label 로 남아 있음) */
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .composerQuick svg {
+    display: block; /* 글자 줄 높이 때문에 아이콘이 위로 뜨는 것을 막는다 */
+    flex: none;
+    width: 18px;
+    height: 18px;
+  }
+  .composerQuick:disabled {
+    opacity: 0.5;
+  }
+  /* 글자를 입력하는 동안(입력창에 커서가 있고 내용이 비어 있지 않을 때)만 약속 · 장소 버튼을 접어
+     입력창을 넓힌다. 입력창을 눌렀을 뿐 비어 있으면 버튼은 그대로 보이고, 글자를 지우거나
+     보내면 다시 나타난다. (:focus-within 이 아니라 :has(input:focus) 라서 버튼을 누르는 순간 사라지지 않는다) */
+  .composerBottom:has(input:focus:not(:placeholder-shown)) .composerQuickActions {
+    display: none;
+  }
+  .composerBottom :global(.input) {
+    min-width: 0;
+  }
+}
+
+/* =====================================================================
+   모바일: 사진 올리는 중 말풍선 — 잘리지 않게 작게, 대화 영역과 같은 배경으로 (650px 이하만)
+   ===================================================================== */
+@media (max-width: 650px) {
+  .outgoingArea {
+    flex: 0 1 auto;
+    max-height: 34%;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 10px 8px;
+    background-color: #f1e5d5;
+    background-image: radial-gradient(
+      rgba(70, 48, 43, 0.1) 0.65px,
+      transparent 0.7px
+    );
+    background-size: 10px 10px;
+  }
+  .outgoingArea:empty {
+    display: none;
+  }
+}

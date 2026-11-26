@@ -233,14 +233,27 @@
 .mm-search {
   flex: 1;
   min-width: 240px;
-  max-width: 420px;
-  height: 48px;
-  padding: 0 16px;
+  max-width: 520px;
+  height: 56px;
+  padding: 0 18px;
   border: 1px solid var(--line);
   border-radius: var(--radius-ctl);
   background: var(--white);
   font: inherit;
+  font-size: 17px;
   color: var(--ink);
+}
+/* 선택한 장소 이름이 길면 칸 안에서 줄바꿈 (네모칸 밖으로 안 삐져나가게) */
+.mm-place-chip {
+  display: block;
+  height: auto;
+  max-width: 100%;
+  padding: 7px 14px;
+  border-radius: 16px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
 }
 .mm-search:focus {
   outline: 2px solid var(--teal);
@@ -576,7 +589,7 @@
     width: 100%;
     min-width: 0;
     max-width: none;
-    height: 48px;
+    height: 56px;
     box-sizing: border-box;
   }
   .mm-chips {

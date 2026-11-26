@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PlacePicker from "@/components/PlacePicker";
@@ -8,7 +8,7 @@ import PhotoShell from "@/components/PhotoShell";
 import { ApiError } from "@/lib/api";
 import { shrinkImage } from "@/lib/imageShrink";
 import { coordToPlace, loadKakao } from "@/lib/kakao";
-import { distanceMeters, estimatePlace, readPhotoGps, type Gps } from "@/lib/photoGps";
+import { distanceMeters, estimatePlace, getCurrentGps, readPhotoGps, type Gps } from "@/lib/photoGps";
 import { hasAllowedExtension, MAX_BYTES, MAX_FILES, type PlaceValue } from "@/lib/photos";
 
 type Status = "wait" | "up" | "done" | "fail";
@@ -56,6 +56,14 @@ export default function UploadPage() {
 function Upload({ groupId, onApiError }: { groupId: string; onApiError: (e: unknown) => string }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const camGpsRef = useRef<Promise<Gps | null> | null>(null); // 카메라를 연 순간 폰의 위치 (찍은 곳과 같아요)
+  // 터치 기기(폰·태블릿)에서만 카메라 버튼을 보여줘요
+  const canCamera = useSyncExternalStore(
+    () => () => {},
+    () => typeof navigator !== "undefined" && navigator.maxTouchPoints > 0,
+    () => false,
+  );
   const placeTouchedRef = useRef(false); // 사용자가 장소를 직접 고르거나 해제했다면 자동 입력으로 덮어쓰지 않아요
   const autoPlacedRef = useRef(false);
   const [items, setItems] = useState<Item[]>([]);
@@ -135,6 +143,7 @@ function Upload({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
       ...added.map((a) => ({ id: a.id, file: a.file, caption: "", preview: URL.createObjectURL(a.file), status: "wait" as Status })),
     ]);
     if (inputRef.current) inputRef.current.value = "";
+    if (cameraRef.current) cameraRef.current.value = "";
     void readLocations(added, fallback);
   }
 
@@ -231,7 +240,7 @@ function Upload({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
       <div className="page-head">
         <div>
           <p className="eyebrow">그룹 사진</p>
-          <h1 className="page-title">사진 올리기</h1>
+          <h1 className="page-title page-title-sm">사진 올리기</h1>
           <p className="page-sub">올린 사진은 이 그룹의 친구들만 볼 수 있어요.</p>
         </div>
       </div>
@@ -263,6 +272,30 @@ function Upload({ groupId, onApiError }: { groupId: string; onApiError: (e: unkn
               accept="image/*"
               onChange={(e) => onFiles(e.target.files)}
             />
+            {canCamera && (
+              <>
+                <input
+                  ref={cameraRef}
+                  type="file"
+                  hidden
+                  accept="image/*"
+                  capture="environment"
+                  onChange={(e) => onFiles(e.target.files, camGpsRef.current)}
+                />
+                <button
+                  type="button"
+                  className="btn secondary sm"
+                  style={{ marginTop: 10 }}
+                  disabled={busy || started}
+                  onClick={() => {
+                    camGpsRef.current = getCurrentGps(); // 카메라를 열기 전에 위치를 잡기 시작해요 (위치 권한 창이 먼저 뜰 수 있어요)
+                    cameraRef.current?.click();
+                  }}
+                >
+                  📷 카메라로 찍기
+                </button>
+              </>
+            )}
             {items.length > 0 && (
               <div className="ph-loc" role="status" aria-live="polite">
                 {loc.reading ? (

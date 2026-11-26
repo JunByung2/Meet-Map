@@ -1033,3 +1033,239 @@
     margin: 14px auto 4px;
   }
 }
+
+/* ===== 모바일(650px 이하) 추억 화면 (피그마 시안) =====
+   PC·태블릿에서는 모바일 전용 블록(.mhm)을 숨기고, 모바일에서는 기존 카드 묶음(.mh-grid)과 머리말을 숨긴다. */
+.mhm {
+  display: none;
+}
+@media (max-width: 650px) {
+  .mh-pagehead,
+  .mh-grid {
+    display: none;
+  }
+  .mhm {
+    display: block;
+    margin-top: -6px;
+  }
+
+  /* 머리말: ARCHIVE / 우리의 추억 + 사진 올리기(카메라) 버튼 */
+  .mhm-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 2px 16px;
+  }
+  .mhm-head p {
+    margin: 0 0 4px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--brown);
+  }
+  .mhm-head h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 400;
+    line-height: 1.15;
+    color: var(--brown);
+  }
+  .mhm-cam {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 54px;
+    height: 54px;
+    border-radius: 12px;
+    background: var(--brown);
+    color: var(--cream);
+    box-shadow: 0 2px 0 rgba(70, 48, 43, 0.25);
+  }
+
+  /* 폴더 모양 탭 */
+  .mhm-actions { display: flex; align-items: flex-end; gap: 8px; }
+  .mhm-all { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border: 2px solid var(--brown); border-radius: 999px; background: var(--cream); color: var(--brown); font-size: 12px; font-weight: 700; text-decoration: none; }
+  .mhm-tabs {
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+    border-bottom: 2px solid var(--brown);
+  }
+  .mhm-tabs button {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+    height: 42px;
+    padding: 0 4px;
+    border: 2px solid var(--brown);
+    border-bottom: 0;
+    border-radius: 10px 10px 0 0;
+    background: #dccdb8;
+    color: var(--brown);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .mhm-tabs button.on {
+    height: 48px;
+    margin-bottom: -2px;
+    background: var(--cream);
+  }
+  .mhm-tabs svg {
+    flex: none;
+  }
+
+  .mhm-body {
+    padding-top: 14px;
+  }
+
+  /* 2열 카드 */
+  .mhm-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 10px;
+  }
+  .mhm-card {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    padding: 6px 6px 8px;
+    border: 2px solid var(--brown);
+    border-radius: 8px;
+    background: var(--cream);
+    color: var(--brown);
+    text-decoration: none;
+  }
+  .mhm-img {
+    position: relative;
+    display: block;
+    aspect-ratio: 1.38;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--peach);
+  }
+  .mhm-img img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .mhm-count {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    min-width: 20px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    background: rgba(70, 48, 43, 0.82);
+    color: var(--cream);
+    font-size: 11px;
+    line-height: 1.5;
+    text-align: center;
+  }
+  .mhm-card strong {
+    padding: 0 2px;
+    font-size: 14px;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mhm-card small {
+    padding: 0 2px;
+    font-size: 11px;
+    color: #8a7770;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* 페이지 번호 */
+  .mhm-pager {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin: 18px 0 6px;
+  }
+  .mhm-pager button {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 8px;
+    border: 2px solid var(--brown);
+    border-radius: 6px;
+    background: var(--cream);
+    color: var(--brown);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .mhm-pager button.on {
+    background: var(--brown);
+    color: var(--cream);
+  }
+  .mhm-pager button:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  /* 기록 탭: PC "지난 기록" 목록과 같은 모양 (사진 왼쪽 · 글 오른쪽) */
+  .mhm-body .rc-list {
+    gap: 12px;
+  }
+  .mhm-body .rc-card {
+    border: 2px solid var(--brown);
+    border-radius: 8px;
+    background: var(--cream);
+  }
+  .mhm-body .rc-cover {
+    width: 104px;
+  }
+  .mhm-body .rc-body {
+    padding: 10px 12px;
+  }
+  .mhm-body .rc-del {
+    top: 8px;
+    right: 8px;
+  }
+
+  .mhm-empty {
+    padding: 28px 8px;
+    text-align: center;
+    color: var(--muted);
+  }
+  .mhm-skel {
+    height: 240px;
+    border-radius: 8px;
+    background: rgba(245, 235, 221, 0.6);
+  }
+
+  /* 추억 지도 탭 */
+  .mhm-map {
+    padding: 10px;
+    border: 2px solid var(--brown);
+    border-radius: 8px;
+    background: var(--cream);
+  }
+  .mhm-maphead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 2px 8px;
+    color: var(--brown);
+  }
+  .mhm-maphead a {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--brown);
+  }
+}

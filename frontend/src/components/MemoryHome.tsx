@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PhotoCalendar from "@/components/PhotoCalendar";
+import MemoryMobile from "@/components/MemoryMobile";
 import { MemoryMapPreview } from "@/features/memory/MemoryMap";
 import { api } from "@/lib/api";
 import { formatMeetDate, type MeetingRecord } from "@/lib/records";
@@ -35,7 +36,8 @@ function useNearScreen<T extends HTMLElement>() {
 
 /**
  * 추억 화면: 탭으로 갈아타지 않고 지난 기록(달력) · 추억지도 · 사진을 한 페이지에 정리해 보여 준다.
- * PC 는 두 칸(왼쪽 지난 기록, 오른쪽 지도+사진), 모바일은 한 칸으로 쌓는다.
+ * PC 는 두 칸(왼쪽 지난 기록, 오른쪽 지도+사진), 태블릿은 한 칸으로 쌓고,
+ * 모바일(650px 이하)은 MemoryMobile(시안: 사진 / 기록 / 추억 지도 탭)을 대신 보여 준다.
  */
 export default function MemoryHome({ groupId, onApiError }: { groupId: string; onApiError: (e: unknown) => string }) {
   const router = useRouter();
@@ -76,6 +78,15 @@ export default function MemoryHome({ groupId, onApiError }: { groupId: string; o
   const recent = (records ?? []).slice(0, 3);
 
   return (
+    <>
+    <MemoryMobile
+      groupId={groupId}
+      groups={groups}
+      records={records}
+      photosReady={photos !== null}
+      error={error}
+      onRecordRemoved={(id) => setRecords((cur) => (cur ? cur.filter((x) => x.id !== id) : cur))}
+    />
     <div className="mh-grid">
       <section className="card mh-records">
         <div className="mh-title">
@@ -157,5 +168,6 @@ export default function MemoryHome({ groupId, onApiError }: { groupId: string; o
       </section>
       </div>
     </div>
+    </>
   );
 }

@@ -313,7 +313,7 @@ export default function MemoryMap({
           {place && memory ? (
             <>
               <section className="card" data-testid="memory-card">
-                <span className="chip">선택한 장소 · {place.name}</span>
+                <span className="chip mm-place-chip">선택한 장소 · {place.name}</span>
                 <button
                   type="button"
                   className="mm-photo mm-photo-link"

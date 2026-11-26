@@ -25,6 +25,8 @@ type CalendarProps = {
   meetings?: MeetingLite[]
   listHref?: string
   dashboard?: boolean
+  /** true면 모바일(650px 이하)에서 달력 칸 높이를 낮춘다. 모든 칸이 같은 높이로 줄어든다. */
+  compactMobile?: boolean
   /** true면 날짜를 선택했을 때만 달력 아래 상세 목록을 보여준다. */
   selectionOnly?: boolean
 }
@@ -73,6 +75,7 @@ export default function GroupsMeetingCalendar({
   meetings: given,
   listHref,
   dashboard = false,
+  compactMobile = false,
   selectionOnly = false,
 }: CalendarProps) {
   const todayKey = ymd(new Date())
@@ -272,7 +275,7 @@ export default function GroupsMeetingCalendar({
 
   return (
     <div
-      className={`${css.wrap} ${dashboard ? css.dashboard : ''}`}
+      className={`${css.wrap} ${dashboard ? css.dashboard : ''} ${compactMobile ? css.compactMobile : ''}`}
       data-selected={selected ? 'true' : 'false'}
       style={calendarStyle}
       onKeyDown={(event) => {

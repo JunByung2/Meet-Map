@@ -8,7 +8,7 @@ export default function MemoriesPage() {
     <PhotoShell active="memories">
       {({ groupId, onApiError }) => (
         <>
-          <div className="mt-head">
+          <div className="mt-head mh-pagehead">
             <div>
               <p className="eyebrow">함께 남긴 순간</p>
               <p className="page-sub">

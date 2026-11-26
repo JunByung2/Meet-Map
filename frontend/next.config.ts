@@ -59,7 +59,17 @@ const nextConfig: NextConfig = {
   // 로컬 장거리 추천이 여러 멤버의 경로를 조회하는 동안 연결을 유지한다.
   experimental: { proxyTimeout: 180_000 },
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }]
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      // 서비스 워커는 항상 최신 파일을 확인하게 한다
+      {
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Content-Type', value: 'application/javascript; charset=utf-8' },
+        ],
+      },
+    ]
   },
   async rewrites() {
     return [
